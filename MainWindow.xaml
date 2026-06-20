@@ -73,16 +73,50 @@
             </Grid>
 
             <Grid x:Name="PanelDamage" Visibility="Collapsed" Background="#0a0a0a">
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <TextBlock Text="Medidor de Dano" Foreground="#c9a227" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Em construção — Fase 4 do plano." Foreground="#9ca3af" FontSize="13" Margin="0,8,0,0" HorizontalAlignment="Center"/>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <StackPanel Grid.Row="0" Margin="16,12,16,8">
+                    <TextBlock Text="Medidor de Dano — sessão atual" Foreground="#c9a227" FontSize="18" FontWeight="Bold"/>
+                    <TextBlock Foreground="#9ca3af" FontSize="12" Margin="0,4,0,8" TextWrapping="Wrap"
+                               Text="Ranking de dano e cura por jogador. Aguardando calibração dos códigos de evento (ver Network/GameEventCodes.cs) — fica zerado até lá, é esperado."/>
+                    <Button x:Name="BtnDamageReset" Content="Reiniciar sessão" Click="BtnDamageReset_Click"
+                            Padding="14,6" Background="#262626" Foreground="White" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Left"/>
                 </StackPanel>
+                <ListView x:Name="ListDamage" Grid.Row="1" Margin="16,0,16,16" Background="#111111" Foreground="White" BorderThickness="0">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="Jogador" Width="300" DisplayMemberBinding="{Binding PlayerKey}"/>
+                            <GridViewColumn Header="Dano" Width="150" DisplayMemberBinding="{Binding Damage}"/>
+                            <GridViewColumn Header="Cura" Width="150" DisplayMemberBinding="{Binding Healing}"/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
             </Grid>
 
             <Grid x:Name="PanelFame" Visibility="Collapsed" Background="#0a0a0a">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <TextBlock Text="Fama &amp; Prata" Foreground="#c9a227" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Em construção — Fase 3 do plano." Foreground="#9ca3af" FontSize="13" Margin="0,8,0,0" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="TxtFameSessionStart" Foreground="#9ca3af" FontSize="12" Margin="0,4,0,16" HorizontalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Border Background="#111111" CornerRadius="6" Padding="24,16" Margin="0,0,12,0">
+                            <StackPanel>
+                                <TextBlock Text="FAMA GANHA" Foreground="#9ca3af" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtFameTotal" Text="0" Foreground="#7dd3fc" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="#111111" CornerRadius="6" Padding="24,16">
+                            <StackPanel>
+                                <TextBlock Text="PRATA GANHA" Foreground="#9ca3af" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtSilverTotal" Text="0" Foreground="#facc15" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                    <Button x:Name="BtnFameReset" Content="Reiniciar sessão" Click="BtnFameReset_Click"
+                            Padding="14,6" Margin="0,20,0,0" Background="#262626" Foreground="White" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Center"/>
+                    <TextBlock Foreground="#6b7280" FontSize="11" Margin="0,16,0,0" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="420"
+                               Text="Aguardando calibração dos códigos de evento (ver Network/GameEventCodes.cs) — fica zerado até lá, é esperado."/>
                 </StackPanel>
             </Grid>
         </Grid>

@@ -23,6 +23,9 @@ public partial class MainWindow : Window
 
     private readonly PacketCaptureService _capture = new();
     private readonly ObservableCollection<LootEventRow> _lootRows = new();
+    private readonly ObservableCollection<DamageMeterEntry> _damageRows = new();
+    private readonly FameSilverTracker _fameTracker = new();
+    private readonly DamageMeterTracker _damageTracker = new();
     private bool _capturing;
 
     public MainWindow()
@@ -32,9 +35,39 @@ public partial class MainWindow : Window
         SetActiveTab(BtnSite);
 
         ListLootEvents.ItemsSource = _lootRows;
+        ListDamage.ItemsSource = _damageRows;
+
+        // Mesmo stream de pacote alimenta as 3 abas — não precisa de captura separada
+        // por aba, é só "quem está interessado em qual Code" (ver GameEventCodes.cs).
         _capture.EventReceived += OnPhotonEvent;
+        _capture.EventReceived += _fameTracker.HandleEvent;
+        _capture.EventReceived += _damageTracker.HandleEvent;
         _capture.StatusChanged += status => Dispatcher.Invoke(() => TxtCaptureStatus.Text = status);
+
+        _fameTracker.Updated += () => Dispatcher.Invoke(RefreshFamePanel);
+        _damageTracker.Updated += () => Dispatcher.Invoke(RefreshDamagePanel);
+        RefreshFamePanel();
     }
+
+    // ── Fama & Prata (Fase 3) ───────────────────────────────────────────────
+    private void RefreshFamePanel()
+    {
+        TxtFameTotal.Text = _fameTracker.TotalFame.ToString("N0");
+        TxtSilverTotal.Text = _fameTracker.TotalSilver.ToString("N0");
+        TxtFameSessionStart.Text = $"Sessão desde {_fameTracker.SessionStart:HH:mm:ss}";
+    }
+
+    private void BtnFameReset_Click(object sender, RoutedEventArgs e) => _fameTracker.Reset();
+
+    // ── Medidor de Dano (Fase 4) ────────────────────────────────────────────
+    private void RefreshDamagePanel()
+    {
+        _damageRows.Clear();
+        foreach (var entry in _damageTracker.Entries.OrderByDescending(x => x.Damage))
+            _damageRows.Add(entry);
+    }
+
+    private void BtnDamageReset_Click(object sender, RoutedEventArgs e) => _damageTracker.Reset();
 
     // ── Loot Log (modo calibração — Fase 2) ─────────────────────────────────
     private void BtnCaptureToggle_Click(object sender, RoutedEventArgs e)
