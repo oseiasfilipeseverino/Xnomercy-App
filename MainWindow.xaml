@@ -47,10 +47,29 @@
             <wv2:WebView2 x:Name="WebView" Visibility="Visible"/>
 
             <Grid x:Name="PanelLoot" Visibility="Collapsed" Background="#0a0a0a">
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <TextBlock Text="Loot Log" Foreground="#c9a227" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Em construção — Fase 2 do plano." Foreground="#9ca3af" FontSize="13" Margin="0,8,0,0" HorizontalAlignment="Center"/>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <StackPanel Grid.Row="0" Margin="16,12,16,8">
+                    <TextBlock Text="Loot Log — modo calibração" Foreground="#c9a227" FontSize="18" FontWeight="Bold"/>
+                    <TextBlock Foreground="#9ca3af" FontSize="12" Margin="0,4,0,8" TextWrapping="Wrap"
+                               Text="Mostrando todos os eventos de rede decodificados (ainda não filtrados por tipo). Jogue uma sessão curta — pegar item do chão, abrir baú — e observe qual 'Code' aparece nesses momentos, pra calibrarmos o filtro de loot."/>
+                    <StackPanel Orientation="Horizontal">
+                        <Button x:Name="BtnCaptureToggle" Content="Iniciar captura" Click="BtnCaptureToggle_Click"
+                                Padding="14,6" Background="#c0392b" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                        <TextBlock x:Name="TxtCaptureStatus" Text="Parado" Foreground="#9ca3af" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                    </StackPanel>
                 </StackPanel>
+                <ListView x:Name="ListLootEvents" Grid.Row="1" Margin="16,0,16,16" Background="#111111" Foreground="White" BorderThickness="0">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="Hora" Width="90" DisplayMemberBinding="{Binding Time}"/>
+                            <GridViewColumn Header="Code" Width="60" DisplayMemberBinding="{Binding Code}"/>
+                            <GridViewColumn Header="Parâmetros" Width="900" DisplayMemberBinding="{Binding Summary}"/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
             </Grid>
 
             <Grid x:Name="PanelDamage" Visibility="Collapsed" Background="#0a0a0a">

@@ -1,22 +1,83 @@
+using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Web.WebView2.Core;
+using XnomercyApp.Network;
 
 namespace XnomercyApp;
+
+public sealed class LootEventRow
+{
+    public string Time { get; init; } = "";
+    public byte Code { get; init; }
+    public string Summary { get; init; } = "";
+}
 
 public partial class MainWindow : Window
 {
     private const string SiteUrl = "https://nome-xnomercy-site-production.up.railway.app";
+    private const int MaxLootRows = 500; // evita a lista crescer sem limite numa sessão longa
 
     // Permite fechar de verdade pelo menu da bandeja (em vez de só minimizar).
     private bool _exitRequested;
+
+    private readonly PacketCaptureService _capture = new();
+    private readonly ObservableCollection<LootEventRow> _lootRows = new();
+    private bool _capturing;
 
     public MainWindow()
     {
         InitializeComponent();
         _ = InitWebViewAsync();
         SetActiveTab(BtnSite);
+
+        ListLootEvents.ItemsSource = _lootRows;
+        _capture.EventReceived += OnPhotonEvent;
+        _capture.StatusChanged += status => Dispatcher.Invoke(() => TxtCaptureStatus.Text = status);
     }
+
+    // ── Loot Log (modo calibração — Fase 2) ─────────────────────────────────
+    private void BtnCaptureToggle_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_capturing)
+        {
+            _capturing = _capture.Start();
+            BtnCaptureToggle.Content = _capturing ? "Parar captura" : "Iniciar captura";
+        }
+        else
+        {
+            _capture.Stop();
+            _capturing = false;
+            BtnCaptureToggle.Content = "Iniciar captura";
+            TxtCaptureStatus.Text = "Parado";
+        }
+    }
+
+    private void OnPhotonEvent(PhotonEvent evt)
+    {
+        var summary = string.Join("  ", evt.Parameters.Select(kv => $"[{kv.Key}]={Describe(kv.Value)}"));
+        Dispatcher.Invoke(() =>
+        {
+            _lootRows.Insert(0, new LootEventRow
+            {
+                Time = DateTime.Now.ToString("HH:mm:ss"),
+                Code = evt.Code,
+                Summary = summary,
+            });
+            while (_lootRows.Count > MaxLootRows)
+                _lootRows.RemoveAt(_lootRows.Count - 1);
+        });
+    }
+
+    private static string Describe(object? value) => value switch
+    {
+        null => "null",
+        byte[] bytes => $"byte[{bytes.Length}]",
+        object?[] arr => $"array[{arr.Length}]",
+        System.Collections.IDictionary => "dict{...}",
+        Protocol16Deserializer.UnknownValue u => $"?type{u.TypeCode}",
+        _ => value.ToString() ?? "",
+    };
 
     private async Task InitWebViewAsync()
     {
@@ -88,6 +149,7 @@ public partial class MainWindow : Window
     private void TrayMenu_Exit_Click(object sender, RoutedEventArgs e)
     {
         _exitRequested = true;
+        _capture.Dispose();
         Close();
         Application.Current.Shutdown();
     }

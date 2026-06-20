@@ -12,10 +12,12 @@
   <ItemGroup>
     <PackageReference Include="Hardcodet.NotifyIcon.Wpf" Version="2.0.1" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4022.49" />
+    <PackageReference Include="PacketDotNet" Version="1.4.8" />
+    <PackageReference Include="SharpPcap" Version="6.3.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="icon.ico"/>
+    <Resource Include="icon.ico" />
   </ItemGroup>
 
 </Project>
