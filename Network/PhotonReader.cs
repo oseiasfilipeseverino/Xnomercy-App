@@ -1,3 +1,5 @@
+using System.IO;
+
 namespace XnomercyApp.Network;
 
 /// <summary>
@@ -64,6 +66,12 @@ public sealed class PhotonReader
 
     public byte[] ReadBytesRaw(int count)
     {
+        // Segunda camada de proteção: nunca aloca/lê além do que o buffer realmente
+        // tem, mesmo que algum cálculo upstream tenha saído errado (pacote malformado).
+        // Isso evita que um valor de tamanho corrompido vire uma alocação gigante.
+        if (count < 0 || count > Remaining)
+            throw new InvalidDataException($"Leitura de {count} bytes excede o buffer (restam {Remaining}).");
+
         var result = new byte[count];
         Array.Copy(_buf, _pos, result, 0, count);
         _pos += count;

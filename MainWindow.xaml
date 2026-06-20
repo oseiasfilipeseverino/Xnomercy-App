@@ -60,6 +60,9 @@
                                 Padding="14,6" Background="#c0392b" Foreground="White" BorderThickness="0" Cursor="Hand"/>
                         <TextBlock x:Name="TxtCaptureStatus" Text="Parado" Foreground="#9ca3af" VerticalAlignment="Center" Margin="12,0,0,0"/>
                     </StackPanel>
+                    <TextBlock Text="Amostra hex (primeiros pacotes UDP, 64 bytes):" Foreground="#9ca3af" FontSize="11" Margin="0,10,0,2"/>
+                    <TextBox x:Name="TxtHexSample" IsReadOnly="True" TextWrapping="Wrap" FontFamily="Consolas"
+                             FontSize="11" Background="#111111" Foreground="#7dd3fc" BorderThickness="0" MaxHeight="100"/>
                 </StackPanel>
                 <ListView x:Name="ListLootEvents" Grid.Row="1" Margin="16,0,16,16" Background="#111111" Foreground="White" BorderThickness="0">
                     <ListView.View>

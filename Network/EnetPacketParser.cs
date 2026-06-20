@@ -42,9 +42,18 @@ public static class EnetPacketParser
             int commandLength = r.ReadInt32();
             r.Skip(4);                 // ReliableSequenceNumber
 
-            int payloadLen = commandLength - CommandHeaderSize;
-            if (payloadLen < 0 || cmdStart + commandLength > udpData.Length)
+            // IMPORTANTE: usa aritmética em long pra checar os limites. commandLength
+            // vem de bytes do pacote — se a estrutura estiver desalinhada (pacote fora
+            // do formato esperado), pode vir como um número gigante/negativo; somar
+            // direto em int (cmdStart + commandLength) pode estourar e "dar a volta",
+            // passando a checagem por engano e tentando alocar um array de bilhões de
+            // bytes (foi isso que causou o consumo de memória disparar). Em long isso
+            // nunca estoura, então a checagem sempre pega o caso malformado de verdade.
+            long payloadLenLong = (long)commandLength - CommandHeaderSize;
+            if (commandLength <= 0 || payloadLenLong < 0 || (long)cmdStart + commandLength > udpData.Length)
                 yield break; // pacote truncado/mal formado — para a leitura aqui
+
+            int payloadLen = (int)payloadLenLong;
 
             if (commandType == CommandSendUnreliable)
             {

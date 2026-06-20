@@ -47,6 +47,19 @@ public partial class MainWindow : Window
         _fameTracker.Updated += () => Dispatcher.Invoke(RefreshFamePanel);
         _damageTracker.Updated += () => Dispatcher.Invoke(RefreshDamagePanel);
         RefreshFamePanel();
+
+        // Diagnóstico (calibração) — mostra a cada segundo quantos pacotes brutos
+        // chegaram, pra sabermos se o problema é filtro/porta (fica 0) ou decodificação
+        // (sobe mas não vira evento).
+        var diagTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        diagTimer.Tick += (_, _) =>
+        {
+            if (!_capturing) return;
+            TxtCaptureStatus.Text =
+                $"Pacotes brutos: {_capture.DiagRawPackets} | Payloads extraídos: {_capture.DiagAppPayloadsExtracted} | Eventos decodificados: {_capture.DiagEventsDecoded}";
+            TxtHexSample.Text = string.Join("\n", _capture.DiagSampleHex);
+        };
+        diagTimer.Start();
     }
 
     // ── Fama & Prata (Fase 3) ───────────────────────────────────────────────
@@ -153,14 +166,11 @@ public partial class MainWindow : Window
                 : (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFromString("#9ca3af")!;
     }
 
-    // ── Bandeja do sistema: minimizar fecha a janela, não o processo ────────
+    // ── Bandeja do sistema: só o "X" esconde a janela, minimizar é normal ──
+    // (antes minimizar também escondia pra bandeja, o que confundia — agora
+    // minimizar só manda pra barra de tarefas, do jeito que o Windows já faz).
     private void Window_StateChanged(object? sender, EventArgs e)
     {
-        if (WindowState == WindowState.Minimized)
-        {
-            Hide();
-            TrayIcon.ShowBalloonTip("XnoMercy", "Continuando em segundo plano.", Hardcodet.Wpf.TaskbarNotification.BalloonIcon.None);
-        }
     }
 
     private void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
