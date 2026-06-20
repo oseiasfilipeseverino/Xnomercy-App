@@ -1,0 +1,84 @@
+<Window x:Class="XnomercyApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        xmlns:tb="http://www.hardcodet.net/taskbar"
+        xmlns:local="clr-namespace:XnomercyApp"
+        mc:Ignorable="d"
+        Title="XnoMercy" Height="800" Width="1280"
+        Background="#0a0a0a"
+        StateChanged="Window_StateChanged"
+        Closing="Window_Closing">
+
+    <Window.Resources>
+        <Style TargetType="Button" x:Key="TabBtn">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#9ca3af"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="48"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Barra de abas -->
+        <Border Grid.Row="0" Background="#111111" BorderBrush="#262626" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="XNOMERCY" Foreground="#c9a227" FontWeight="Bold" FontSize="15"
+                           Margin="16,0,24,0" VerticalAlignment="Center"/>
+                <Button x:Name="BtnSite" Content="Site" Style="{StaticResource TabBtn}" Click="TabButton_Click" Tag="site" Foreground="White"/>
+                <Button x:Name="BtnLoot" Content="Loot Log" Style="{StaticResource TabBtn}" Click="TabButton_Click" Tag="loot"/>
+                <Button x:Name="BtnDamage" Content="Medidor de Dano" Style="{StaticResource TabBtn}" Click="TabButton_Click" Tag="damage"/>
+                <Button x:Name="BtnFame" Content="Fama &amp; Prata" Style="{StaticResource TabBtn}" Click="TabButton_Click" Tag="fame"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Conteúdo -->
+        <Grid Grid.Row="1">
+            <wv2:WebView2 x:Name="WebView" Visibility="Visible"/>
+
+            <Grid x:Name="PanelLoot" Visibility="Collapsed" Background="#0a0a0a">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="Loot Log" Foreground="#c9a227" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Em construção — Fase 2 do plano." Foreground="#9ca3af" FontSize="13" Margin="0,8,0,0" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+
+            <Grid x:Name="PanelDamage" Visibility="Collapsed" Background="#0a0a0a">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="Medidor de Dano" Foreground="#c9a227" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Em construção — Fase 4 do plano." Foreground="#9ca3af" FontSize="13" Margin="0,8,0,0" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+
+            <Grid x:Name="PanelFame" Visibility="Collapsed" Background="#0a0a0a">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="Fama &amp; Prata" Foreground="#c9a227" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Em construção — Fase 3 do plano." Foreground="#9ca3af" FontSize="13" Margin="0,8,0,0" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
+
+        <!-- Ícone da bandeja do sistema -->
+        <tb:TaskbarIcon x:Name="TrayIcon"
+                         ToolTipText="XnoMercy"
+                         IconSource="icon.ico"
+                         TrayMouseDoubleClick="TrayIcon_DoubleClick">
+            <tb:TaskbarIcon.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Abrir" Click="TrayIcon_DoubleClick"/>
+                    <MenuItem Header="Sair" Click="TrayMenu_Exit_Click"/>
+                </ContextMenu>
+            </tb:TaskbarIcon.ContextMenu>
+        </tb:TaskbarIcon>
+    </Grid>
+</Window>
