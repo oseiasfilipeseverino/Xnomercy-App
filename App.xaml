@@ -4,6 +4,8 @@
              xmlns:local="clr-namespace:XnomercyApp"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+        <!-- Mesmas fontes do site: Teko (títulos) e Barlow (corpo) -->
+        <FontFamily x:Key="FontHead">pack://application:,,,/Fonts/#Teko</FontFamily>
+        <FontFamily x:Key="FontBody">pack://application:,,,/Fonts/#Barlow</FontFamily>
     </Application.Resources>
 </Application>

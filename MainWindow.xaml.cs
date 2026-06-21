@@ -65,13 +65,17 @@ public partial class MainWindow : Window
     private volatile bool _fameDirty;
     private volatile bool _damageDirty;
     private volatile bool _advancedVisible;   // só processa a lista crua quando o modo avançado está à vista
+    private bool _loggedIn;
+    private static System.Windows.Media.Brush B(string hex) =>
+        new System.Windows.Media.BrushConverter().ConvertFromString(hex) as System.Windows.Media.Brush ?? System.Windows.Media.Brushes.Gray;
+    private static readonly System.Windows.Media.Brush NavActiveBrush = B("#dc2626");  // vermelho do site
+    private static readonly System.Windows.Media.Brush NavIdleBrush   = B("#888888");
 
     public MainWindow()
     {
         InitializeComponent();
         _ = InitWebViewAsync();
         _ = ItemCatalog.EnsureLoadedAsync(); // carrega em segundo plano, mesma base de nomes do site
-        SetActiveTab(BtnSite);
 
         ListLootEvents.ItemsSource = _lootRows;
         ListMarkedEvents.ItemsSource = _markedRows;
@@ -195,6 +199,10 @@ public partial class MainWindow : Window
             BtnCaptureToggle.Content = "Iniciar captura";
             TxtCaptureStatus.Text = "Parado";
         }
+        // Indicador global de captura na sidebar (visível de qualquer aba)
+        CaptureDot.Fill = _capturing ? B("#22c55e") : B("#666666");
+        CaptureStateLabel.Text = _capturing ? "Capturando" : "Captura parada";
+        CaptureStateLabel.Foreground = _capturing ? B("#22c55e") : B("#888888");
     }
 
     // Marcação manual de momento: usuário clica bem na hora que pega um item.
@@ -298,6 +306,10 @@ public partial class MainWindow : Window
     // no momento exato. Arquivo: %LocalAppData%\XnomercyApp\events_diag.txt
     private static int _diagCount;
     private static readonly object _diagLock = new();
+    // [Conditional("DEBUG")]: no build Release (produção, o que a guild vai usar), as
+    // chamadas a este método são removidas pelo compilador — zero custo. Só roda no
+    // build Debug, pra calibração de novos códigos de evento.
+    [System.Diagnostics.Conditional("DEBUG")]
     private static void DiagLogBigEvent(PhotonEvent evt)
     {
         if (evt.EventCode < 0 || _diagCount >= 800) return;
@@ -481,37 +493,68 @@ public partial class MainWindow : Window
 
         var env = await CoreWebView2Environment.CreateAsync(userDataFolder: userDataFolder);
         await WebView.EnsureCoreWebView2Async(env);
-        WebView.CoreWebView2.Navigate(SiteUrl);
+
+        // O WebView começa na página de mercado (que exige login). Se não estiver logado,
+        // o site redireciona pro /login (Discord). Quando o login completa, a navegação
+        // termina numa página do site que NÃO é /login — aí revelamos o menu lateral.
+        WebView.CoreWebView2.NavigationCompleted += (_, _) =>
+        {
+            LoginLoading.Visibility = Visibility.Collapsed;   // some assim que a 1ª página carrega
+            var url = WebView.Source?.ToString() ?? "";
+            if (!_loggedIn
+                && url.StartsWith(SiteUrl, StringComparison.OrdinalIgnoreCase)
+                && !url.Contains("/login", StringComparison.OrdinalIgnoreCase))
+            {
+                _loggedIn = true;
+                OnLoggedIn();
+            }
+        };
+        WebView.CoreWebView2.Navigate(SiteUrl + "/mercado");
     }
 
-    // ── Navegação entre abas ──────────────────────────────────────────────
-    private void TabButton_Click(object sender, RoutedEventArgs e)
+    // Login concluído: mostra o menu lateral e abre o Loot Log por padrão.
+    private void OnLoggedIn()
+    {
+        SidebarCol.Width = new GridLength(210);
+        Sidebar.Visibility = Visibility.Visible;
+        SetActiveNav(NavLoot);
+        ShowPanel("loot");
+    }
+
+    // ── Menu lateral ──────────────────────────────────────────────────────
+    private void Nav_Click(object sender, RoutedEventArgs e)
     {
         var btn = (Button)sender;
-        SetActiveTab(btn);
+        SetActiveNav(btn);
+        ShowPanel((string)btn.Tag);
+    }
 
+    private void ShowPanel(string tag)
+    {
         WebView.Visibility = Visibility.Collapsed;
         PanelLoot.Visibility = Visibility.Collapsed;
         PanelDamage.Visibility = Visibility.Collapsed;
         PanelFame.Visibility = Visibility.Collapsed;
 
-        switch ((string)btn.Tag)
+        switch (tag)
         {
-            case "site":   WebView.Visibility = Visibility.Visible; break;
             case "loot":   PanelLoot.Visibility = Visibility.Visible; break;
             case "damage": PanelDamage.Visibility = Visibility.Visible; break;
             case "fame":   PanelFame.Visibility = Visibility.Visible; break;
+            case "craft":
+                // Craft = página de mercado do site embutida (reaproveita a calculadora pronta).
+                if (WebView.CoreWebView2 != null && !(WebView.Source?.ToString().Contains("/mercado") ?? false))
+                    WebView.CoreWebView2.Navigate(SiteUrl + "/mercado");
+                WebView.Visibility = Visibility.Visible;
+                break;
         }
-        // Só monta a lista crua de eventos quando o modo avançado da aba Loot está à vista.
-        _advancedVisible = PanelLoot.Visibility == Visibility.Visible && BtnAdvancedMode.IsChecked == true;
+        _advancedVisible = tag == "loot" && BtnAdvancedMode.IsChecked == true;
     }
 
-    private void SetActiveTab(Button active)
+    private void SetActiveNav(Button active)
     {
-        foreach (var btn in new[] { BtnSite, BtnLoot, BtnDamage, BtnFame })
-            btn.Foreground = (btn == active)
-                ? (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFromString("#c9a227")!
-                : (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFromString("#9ca3af")!;
+        foreach (var btn in new[] { NavLoot, NavDamage, NavFame, NavCraft })
+            btn.Foreground = btn == active ? NavActiveBrush : NavIdleBrush;
     }
 
     // ── Bandeja do sistema: só o "X" esconde a janela, minimizar é normal ──

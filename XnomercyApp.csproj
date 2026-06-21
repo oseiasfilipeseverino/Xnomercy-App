@@ -18,6 +18,10 @@
 
   <ItemGroup>
     <Resource Include="icon.ico" />
+    <Resource Include="Fonts\Teko.ttf" />
+    <Resource Include="Fonts\Barlow-Regular.ttf" />
+    <Resource Include="Fonts\Barlow-Medium.ttf" />
+    <Resource Include="Fonts\Barlow-SemiBold.ttf" />
   </ItemGroup>
 
 </Project>
