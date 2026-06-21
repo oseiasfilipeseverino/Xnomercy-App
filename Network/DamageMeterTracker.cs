@@ -2,64 +2,79 @@ namespace XnomercyApp.Network;
 
 public sealed class DamageMeterEntry
 {
-    public string PlayerKey { get; init; } = "";
+    public long ObjectId { get; init; }
     public long Damage { get; set; }
     public long Healing { get; set; }
 }
 
 /// <summary>
-/// Ranking de dano/cura por jogador durante o evento PvE atual. Mesmo aviso do
-/// FameSilverTracker: só agrega de fato depois que GameEventCodes.DamageDealt /
-/// HealingDone forem calibrados.
+/// Ranking de dano/cura por jogador durante a sessão atual. O Albion não tem um
+/// evento dedicado de "dano" — tudo é derivado de HealthUpdate (code 6): toda vez
+/// que a vida de alguém muda, vem junto quem causou a mudança (CauserId) e o
+/// objeto afetado (AffectedObjectId). Negativo = dano, positivo = cura.
+///
+/// Guardamos por ObjectId (CauserId); o nome é resolvido no display via
+/// PlayerRegistry (evento NewCharacter).
+///
+/// THREAD-SAFE: HandleEvent roda na thread de captura (background) e Snapshot na
+/// thread da UI. Um lock protege o dicionário — sem ele, iterar na UI enquanto a
+/// captura escreve dava "Collection was modified" (crash) em combate.
 /// </summary>
 public sealed class DamageMeterTracker
 {
-    private readonly Dictionary<string, DamageMeterEntry> _entries = new();
+    private readonly Dictionary<long, DamageMeterEntry> _entries = new();
+    private readonly object _lock = new();
 
-    public IReadOnlyCollection<DamageMeterEntry> Entries => _entries.Values;
     public event Action? Updated;
+
+    /// <summary>Cópia imutável das entradas atuais — segura pra ler na thread da UI.</summary>
+    public IReadOnlyList<DamageMeterEntry> Snapshot()
+    {
+        lock (_lock)
+        {
+            var list = new List<DamageMeterEntry>(_entries.Count);
+            foreach (var e in _entries.Values)
+                list.Add(new DamageMeterEntry { ObjectId = e.ObjectId, Damage = e.Damage, Healing = e.Healing });
+            return list;
+        }
+    }
 
     public void HandleEvent(PhotonEvent evt)
     {
-        bool isDamage = evt.Code == GameEventCodes.DamageDealt && GameEventCodes.IsCalibrated(GameEventCodes.DamageDealt);
-        bool isHealing = evt.Code == GameEventCodes.HealingDone && GameEventCodes.IsCalibrated(GameEventCodes.HealingDone);
-        if (!isDamage && !isHealing) return;
+        if (evt.EventCode != GameEventCodes.HealthUpdate) return;
+        if (!evt.Parameters.TryGetValue(2, out var changeObj)) return;
+        if (!evt.Parameters.TryGetValue(6, out var causerObj)) return;
 
-        // Chave do jogador causador e o valor numérico também dependem de qual
-        // posição do parâmetro o Albion usa — parte da calibração pendente.
-        string playerKey = evt.Parameters.Count > 0 ? evt.Parameters.Keys.First().ToString()! : "?";
-        if (!TryGetLong(evt, out long amount)) return;
-
-        if (!_entries.TryGetValue(playerKey, out var entry))
+        double change = changeObj switch
         {
-            entry = new DamageMeterEntry { PlayerKey = playerKey };
-            _entries[playerKey] = entry;
-        }
+            int i => i,
+            long l => l,
+            float f => f,
+            double d => d,
+            _ => 0,
+        };
+        if (change == 0) return;
 
-        if (isDamage) entry.Damage += amount;
-        if (isHealing) entry.Healing += amount;
+        long? causerId = causerObj switch { int i => i, long l => l, short s => s, _ => null };
+        if (causerId is null) return;
+        if (PlayerRegistry.IsMob(causerId.Value)) return;   // desconsidera dano de mob
+
+        lock (_lock)
+        {
+            if (!_entries.TryGetValue(causerId.Value, out var entry))
+            {
+                entry = new DamageMeterEntry { ObjectId = causerId.Value };
+                _entries[causerId.Value] = entry;
+            }
+            if (change < 0) entry.Damage += (long)Math.Round(-change);
+            else entry.Healing += (long)Math.Round(change);
+        }
         Updated?.Invoke();
     }
 
     public void Reset()
     {
-        _entries.Clear();
+        lock (_lock) _entries.Clear();
         Updated?.Invoke();
-    }
-
-    private static bool TryGetLong(PhotonEvent evt, out long value)
-    {
-        foreach (var v in evt.Parameters.Values)
-        {
-            switch (v)
-            {
-                case int i: value = i; return true;
-                case long l: value = l; return true;
-                case float f: value = (long)f; return true;
-                case double d: value = (long)d; return true;
-            }
-        }
-        value = 0;
-        return false;
     }
 }

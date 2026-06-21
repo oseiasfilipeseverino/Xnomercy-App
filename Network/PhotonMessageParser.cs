@@ -1,6 +1,25 @@
+using System;
+
 namespace XnomercyApp.Network;
 
-public sealed record PhotonEvent(byte Code, Dictionary<byte, object?> Parameters);
+public sealed record PhotonEvent(byte Code, Dictionary<byte, object?> Parameters)
+{
+    // O código REAL do evento Albion vem no parâmetro 252 (lido como short, então
+    // passa de 255 — ex: OtherGrabbedLoot = 277). O byte Code do header do Photon é
+    // ignorado pra roteamento, exatamente como o AlbionParser do SAP faz. Retorna -1
+    // quando não há param 252 (eventos internos/transporte que não são do jogo).
+    public int EventCode
+    {
+        get
+        {
+            if (Parameters.TryGetValue(252, out var v) && v != null)
+            {
+                try { return Convert.ToInt32(v); } catch { return -1; }
+            }
+            return -1;
+        }
+    }
+}
 public sealed record PhotonOperationRequest(byte OperationCode, Dictionary<byte, object?> Parameters);
 public sealed record PhotonOperationResponse(byte OperationCode, short ReturnCode, string? DebugMessage, Dictionary<byte, object?> Parameters);
 
@@ -11,28 +30,13 @@ public sealed record PhotonOperationResponse(byte OperationCode, short ReturnCod
 /// </summary>
 public static class PhotonMessageParser
 {
-    public static PhotonEvent ReadEventData(PhotonReader r)
-    {
-        byte code = r.ReadByte();
-        var parameters = Protocol16Deserializer.ReadParameterTable(r);
-        return new PhotonEvent(code, parameters);
-    }
+    // Albion usa o Protocol18 do Photon (confirmado empiricamente — o Protocol16
+    // "clássico" não decodificava nada real; ver Network/README.md).
+    public static PhotonEvent ReadEventData(PhotonReader r) => Protocol18Deserializer.DeserializeEventData(r);
 
-    public static PhotonOperationRequest ReadOperationRequest(PhotonReader r)
-    {
-        byte opCode = r.ReadByte();
-        var parameters = Protocol16Deserializer.ReadParameterTable(r);
-        return new PhotonOperationRequest(opCode, parameters);
-    }
+    public static PhotonOperationRequest ReadOperationRequest(PhotonReader r) => Protocol18Deserializer.DeserializeOperationRequest(r);
 
-    public static PhotonOperationResponse ReadOperationResponse(PhotonReader r)
-    {
-        byte opCode = r.ReadByte();
-        short returnCode = r.ReadInt16();
-        string? debugMsg = Protocol16Deserializer.ReadValue(r) as string;
-        var parameters = Protocol16Deserializer.ReadParameterTable(r);
-        return new PhotonOperationResponse(opCode, returnCode, debugMsg, parameters);
-    }
+    public static PhotonOperationResponse ReadOperationResponse(PhotonReader r) => Protocol18Deserializer.DeserializeOperationResponse(r);
 
     /// <summary>
     /// Tipo da mensagem de nível de aplicação, primeiro byte do payload Photon

@@ -86,5 +86,53 @@ public sealed class PhotonReader
         return System.Text.Encoding.UTF8.GetString(bytes);
     }
 
+    // ── Little-endian: valores de aplicação do Protocol18 ───────────────────────
+    // O Protocol18 do Albion usa little-endian para escalares (diferente do
+    // transporte ENet, que é big-endian — por isso métodos separados).
+    public short ReadInt16LE()
+    {
+        short v = (short)(_buf[_pos] | (_buf[_pos + 1] << 8));
+        _pos += 2;
+        return v;
+    }
+
+    public ushort ReadUInt16LE() => (ushort)ReadInt16LE();
+
+    public float ReadSingleLE()
+    {
+        var bytes = ReadBytesRaw(4);
+        if (!BitConverter.IsLittleEndian) Array.Reverse(bytes);
+        return BitConverter.ToSingle(bytes, 0);
+    }
+
+    public double ReadDoubleLE()
+    {
+        var bytes = ReadBytesRaw(8);
+        if (!BitConverter.IsLittleEndian) Array.Reverse(bytes);
+        return BitConverter.ToDouble(bytes, 0);
+    }
+
+    // String do Protocol18: tamanho em varint (não 2 bytes fixos), depois UTF-8.
+    public string ReadStringP18()
+    {
+        int len = (int)ReadVarUInt32();
+        if (len == 0) return string.Empty;
+        var bytes = ReadBytesRaw(len);
+        return System.Text.Encoding.UTF8.GetString(bytes);
+    }
+
+    public uint ReadVarUInt32()
+    {
+        uint value = 0; int shift = 0;
+        while (shift != 35)
+        {
+            byte cur = ReadByte();
+            value |= (uint)(cur & 0x7F) << shift;
+            shift += 7;
+            if ((cur & 0x80) == 0) break;
+        }
+        return value;
+    }
+
     public void Skip(int count) => _pos += count;
 }

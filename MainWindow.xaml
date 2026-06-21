@@ -52,27 +52,99 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 <StackPanel Grid.Row="0" Margin="16,12,16,8">
-                    <TextBlock Text="Loot Log — modo calibração" Foreground="#c9a227" FontSize="18" FontWeight="Bold"/>
-                    <TextBlock Foreground="#9ca3af" FontSize="12" Margin="0,4,0,8" TextWrapping="Wrap"
-                               Text="Mostrando todos os eventos de rede decodificados (ainda não filtrados por tipo). Jogue uma sessão curta — pegar item do chão, abrir baú — e observe qual 'Code' aparece nesses momentos, pra calibrarmos o filtro de loot."/>
-                    <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Loot Log" Foreground="#c9a227" FontSize="18" FontWeight="Bold"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                         <Button x:Name="BtnCaptureToggle" Content="Iniciar captura" Click="BtnCaptureToggle_Click"
                                 Padding="14,6" Background="#c0392b" Foreground="White" BorderThickness="0" Cursor="Hand"/>
                         <TextBlock x:Name="TxtCaptureStatus" Text="Parado" Foreground="#9ca3af" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                        <Button x:Name="BtnExportCsv" Content="Exportar CSV" Click="BtnExportCsv_Click"
+                                Padding="14,6" Background="#1f5b2e" Foreground="White" BorderThickness="0" Cursor="Hand" Margin="20,0,0,0"/>
+                        <ToggleButton x:Name="BtnAdvancedMode" Content="Modo avançado" Click="BtnAdvancedMode_Click"
+                                      Padding="14,6" Background="#262626" Foreground="White" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"/>
                     </StackPanel>
-                    <TextBlock Text="Amostra hex (primeiros pacotes UDP, 64 bytes):" Foreground="#9ca3af" FontSize="11" Margin="0,10,0,2"/>
-                    <TextBox x:Name="TxtHexSample" IsReadOnly="True" TextWrapping="Wrap" FontFamily="Consolas"
-                             FontSize="11" Background="#111111" Foreground="#7dd3fc" BorderThickness="0" MaxHeight="100"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <CheckBox x:Name="ChkHideMob" Content="Esconder saque de monstro" IsChecked="False" Click="LootFilter_Changed"
+                                  Foreground="#cbd5e1" VerticalAlignment="Center"/>
+                    </StackPanel>
                 </StackPanel>
-                <ListView x:Name="ListLootEvents" Grid.Row="1" Margin="16,0,16,16" Background="#111111" Foreground="White" BorderThickness="0">
+
+                <!-- Visão limpa (padrão): feed social de loot (evento 277) -->
+                <ListView x:Name="ListCleanLoot" Grid.Row="1" Margin="16,0,16,16" Background="#111111" Foreground="White" BorderThickness="0" FontSize="14">
                     <ListView.View>
                         <GridView>
                             <GridViewColumn Header="Hora" Width="90" DisplayMemberBinding="{Binding Time}"/>
-                            <GridViewColumn Header="Code" Width="60" DisplayMemberBinding="{Binding Code}"/>
-                            <GridViewColumn Header="Parâmetros" Width="900" DisplayMemberBinding="{Binding Summary}"/>
+                            <GridViewColumn Header="Quem pegou" Width="150" DisplayMemberBinding="{Binding Looter}"/>
+                            <GridViewColumn Header="" Width="40">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Image Source="{Binding ItemIcon}" Width="32" Height="32"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Item" Width="300" DisplayMemberBinding="{Binding Item}"/>
+                            <GridViewColumn Header="De quem" Width="150" DisplayMemberBinding="{Binding From}"/>
                         </GridView>
                     </ListView.View>
                 </ListView>
+
+                <!-- Modo avançado (oculto por padrão): dados brutos pra depuração -->
+                <Grid x:Name="PanelAdvanced" Grid.Row="1" Visibility="Collapsed" Background="#0a0a0a">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto" MaxHeight="220"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0" Margin="0,0,0,8">
+                        <TextBlock Foreground="#9ca3af" FontSize="12" TextWrapping="Wrap"
+                                   Text="Mostrando todos os eventos de rede decodificados, sem filtro. Clique no botão dourado bem na hora que pegar o item — os eventos próximos ficam fixos na caixa verde abaixo."/>
+                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                            <Button x:Name="BtnMarkMoment" Content="📍 Marquei o momento!" Click="BtnMarkMoment_Click"
+                                    Padding="14,6" Background="#c9a227" Foreground="Black" FontWeight="Bold" BorderThickness="0" Cursor="Hand"/>
+                            <Button x:Name="BtnClearMarked" Content="Limpar marcados" Click="BtnClearMarked_Click"
+                                    Padding="14,6" Background="#262626" Foreground="White" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Border Grid.Row="1" Background="#0d1f12" BorderBrush="#1f5b2e" BorderThickness="1" Margin="0,0,0,8">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="📍 Eventos marcados (candidatos a loot)" Foreground="#4ade80" FontWeight="Bold" Margin="8,6,8,4"/>
+                            <ListView x:Name="ListMarkedEvents" Grid.Row="1" Background="Transparent" Foreground="White" BorderThickness="0" MaxHeight="180">
+                                <ListView.View>
+                                    <GridView>
+                                        <GridViewColumn Header="Hora" Width="100" DisplayMemberBinding="{Binding Time}"/>
+                                        <GridViewColumn Header="Code" Width="60" DisplayMemberBinding="{Binding Code}"/>
+                                        <GridViewColumn Header="Parâmetros" Width="900" DisplayMemberBinding="{Binding Summary}"/>
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                        </Grid>
+                    </Border>
+
+                    <ListView x:Name="ListLootEvents" Grid.Row="2" Background="#111111" Foreground="White" BorderThickness="0">
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsNearMark}" Value="True">
+                                        <Setter Property="Background" Value="#1f5b2e"/>
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ListView.ItemContainerStyle>
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Hora" Width="100" DisplayMemberBinding="{Binding Time}"/>
+                                <GridViewColumn Header="Code" Width="60" DisplayMemberBinding="{Binding Code}"/>
+                                <GridViewColumn Header="Parâmetros" Width="900" DisplayMemberBinding="{Binding Summary}"/>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                </Grid>
             </Grid>
 
             <Grid x:Name="PanelDamage" Visibility="Collapsed" Background="#0a0a0a">
@@ -83,16 +155,28 @@
                 <StackPanel Grid.Row="0" Margin="16,12,16,8">
                     <TextBlock Text="Medidor de Dano — sessão atual" Foreground="#c9a227" FontSize="18" FontWeight="Bold"/>
                     <TextBlock Foreground="#9ca3af" FontSize="12" Margin="0,4,0,8" TextWrapping="Wrap"
-                               Text="Ranking de dano e cura por jogador. Aguardando calibração dos códigos de evento (ver Network/GameEventCodes.cs) — fica zerado até lá, é esperado."/>
-                    <Button x:Name="BtnDamageReset" Content="Reiniciar sessão" Click="BtnDamageReset_Click"
-                            Padding="14,6" Background="#262626" Foreground="White" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Left"/>
+                               Text="Ranking de dano e cura por jogador, do que mais deu dano para o que menos deu. Nome e arma aparecem quando o jogador entra na sua tela (evento NewCharacter)."/>
+                    <StackPanel Orientation="Horizontal">
+                        <Button x:Name="BtnDamageReset" Content="Reiniciar sessão" Click="BtnDamageReset_Click"
+                                Padding="14,6" Background="#262626" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                        <Button x:Name="BtnDamageCopy" Content="Copiar medidor" Click="BtnDamageCopy_Click"
+                                Padding="14,6" Background="#1f5b2e" Foreground="White" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"/>
+                    </StackPanel>
                 </StackPanel>
                 <ListView x:Name="ListDamage" Grid.Row="1" Margin="16,0,16,16" Background="#111111" Foreground="White" BorderThickness="0">
                     <ListView.View>
                         <GridView>
-                            <GridViewColumn Header="Jogador" Width="300" DisplayMemberBinding="{Binding PlayerKey}"/>
-                            <GridViewColumn Header="Dano" Width="150" DisplayMemberBinding="{Binding Damage}"/>
-                            <GridViewColumn Header="Cura" Width="150" DisplayMemberBinding="{Binding Healing}"/>
+                            <GridViewColumn Header="" Width="40">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Image Source="{Binding WeaponIcon}" Width="30" Height="30"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Jogador" Width="230" DisplayMemberBinding="{Binding Player}"/>
+                            <GridViewColumn Header="Dano" Width="110" DisplayMemberBinding="{Binding Damage}"/>
+                            <GridViewColumn Header="% Dano" Width="80" DisplayMemberBinding="{Binding DamagePct}"/>
+                            <GridViewColumn Header="Cura" Width="110" DisplayMemberBinding="{Binding Healing}"/>
                         </GridView>
                     </ListView.View>
                 </ListView>
@@ -103,23 +187,32 @@
                     <TextBlock Text="Fama &amp; Prata" Foreground="#c9a227" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"/>
                     <TextBlock x:Name="TxtFameSessionStart" Foreground="#9ca3af" FontSize="12" Margin="0,4,0,16" HorizontalAlignment="Center"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <Border Background="#111111" CornerRadius="6" Padding="24,16" Margin="0,0,12,0">
+                        <Border Background="#111111" CornerRadius="6" Padding="22,16" Margin="0,0,12,0">
                             <StackPanel>
-                                <TextBlock Text="FAMA GANHA" Foreground="#9ca3af" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                <TextBlock x:Name="TxtFameTotal" Text="0" Foreground="#7dd3fc" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <Ellipse Width="22" Height="22" Fill="#ef4444" HorizontalAlignment="Center"/>
+                                <TextBlock Text="FAMA VERMELHA" Foreground="#9ca3af" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                                <TextBlock x:Name="TxtFameTotal" Text="0" Foreground="#f87171" FontSize="26" FontWeight="Bold" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="#111111" CornerRadius="6" Padding="24,16">
+                        <Border Background="#111111" CornerRadius="6" Padding="22,16" Margin="0,0,12,0">
                             <StackPanel>
-                                <TextBlock Text="PRATA GANHA" Foreground="#9ca3af" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                <TextBlock x:Name="TxtSilverTotal" Text="0" Foreground="#facc15" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <Ellipse Width="22" Height="22" Fill="#facc15" HorizontalAlignment="Center"/>
+                                <TextBlock Text="FAMA AMARELA" Foreground="#9ca3af" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                                <TextBlock x:Name="TxtYellowFameTotal" Text="—" Foreground="#fde047" FontSize="26" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="#111111" CornerRadius="6" Padding="22,16">
+                            <StackPanel>
+                                <Ellipse Width="22" Height="22" Fill="#cbd5e1" HorizontalAlignment="Center"/>
+                                <TextBlock Text="PRATA" Foreground="#9ca3af" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                                <TextBlock x:Name="TxtSilverTotal" Text="0" Foreground="#e2e8f0" FontSize="26" FontWeight="Bold" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
                     <Button x:Name="BtnFameReset" Content="Reiniciar sessão" Click="BtnFameReset_Click"
                             Padding="14,6" Margin="0,20,0,0" Background="#262626" Foreground="White" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Center"/>
-                    <TextBlock Foreground="#6b7280" FontSize="11" Margin="0,16,0,0" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="420"
-                               Text="Aguardando calibração dos códigos de evento (ver Network/GameEventCodes.cs) — fica zerado até lá, é esperado."/>
+                    <TextBlock x:Name="TxtFameHint" Foreground="#6b7280" FontSize="11" Margin="0,16,0,0" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="440"
+                               Text="Fama amarela (facção/standing) ainda em calibração — me diga de qual conteúdo ela vem pra eu achar o código."/>
                 </StackPanel>
             </Grid>
         </Grid>
