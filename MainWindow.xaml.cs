@@ -142,7 +142,15 @@ public partial class MainWindow : Window
     private void RefreshDamagePanel()
     {
         _damageRows.Clear();
-        var entries = _damageTracker.Snapshot().OrderByDescending(x => x.Damage).ToList();
+        bool hideUnnamed = ChkHideUnnamed.IsChecked == true;
+        var entries = _damageTracker.Snapshot()
+            // "Ocultar sem nome": tira os #número (mob não detectado, invocação, etc.),
+            // deixando só jogadores resolvidos. Resolve na hora o "muito dano sem nome".
+            .Where(x => !hideUnnamed || !PlayerRegistry.NameOf(x.ObjectId).StartsWith('#'))
+            .OrderByDescending(x => x.Damage)
+            .ToList();
+        // Com o filtro ligado, a % passa a ser entre os jogadores mostrados (faz mais
+        // sentido pra comparar a galera do grupo do que diluir no dano do que foi escondido).
         long total = entries.Sum(x => x.Damage);
         foreach (var e in entries)
         {
@@ -168,6 +176,9 @@ public partial class MainWindow : Window
     }
 
     private void BtnDamageReset_Click(object sender, RoutedEventArgs e) => _damageTracker.Reset();
+
+    // Liga/desliga "ocultar sem nome" — só redesenha (o filtro é aplicado no refresh).
+    private void DamageFilter_Changed(object sender, RoutedEventArgs e) => RefreshDamagePanel();
 
     // Copia o ranking de dano pro clipboard, em texto — pra colar no Discord da guild.
     private void BtnDamageCopy_Click(object sender, RoutedEventArgs e)
