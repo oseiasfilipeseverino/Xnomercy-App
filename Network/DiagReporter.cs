@@ -1,4 +1,5 @@
 using System.Net.Http;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 
@@ -19,8 +20,13 @@ public static class DiagReporter
     private const string SiteUrl = "https://nome-xnomercy-site-production.up.railway.app";
     private const string Endpoint = "/api/app/diag";
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(10) };
+    // Versão real do build (ex: "1.0.6+a1b2c3d") — vem do -p:Version do publish junto com
+    // o hash do commit (SourceLink). Mostra exatamente o que cada tester está rodando no
+    // diagnóstico, em vez da versão fixa do assembly (que ficava sempre "1.0.0.0").
     private static readonly string AppVersion =
-        System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "?";
+        System.Reflection.Assembly.GetExecutingAssembly()
+            .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()?.InformationalVersion
+        ?? System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "?";
 
     public static void Report(string kind, string content)
     {
