@@ -4,10 +4,11 @@
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
-        <!-- Pede elevação automática ao abrir (UAC), sem precisar clicar "Executar como
-             administrador" manualmente. Necessário porque a captura de pacote (Npcap)
-             exige privilégio de admin no Windows pra abrir o driver. -->
-        <requestedExecutionLevel level="requireAdministrator" uiAccess="false"/>
+        <!-- "requireAdministrator" aqui quebra o instalador do Velopack (ele tenta abrir
+             o app recém-instalado sem ser admin, e dá erro "operação requer elevação").
+             A auto-elevação fica em código (Program.cs), que roda DEPOIS dos ganchos do
+             Velopack — assim o instalador funciona normal e o app ainda sempre abre admin. -->
+        <requestedExecutionLevel level="asInvoker" uiAccess="false"/>
       </requestedPrivileges>
     </security>
   </trustInfo>
