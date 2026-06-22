@@ -66,6 +66,7 @@ public partial class MainWindow : Window
     private readonly FameSilverTracker _fameTracker = new();
     private readonly DamageMeterTracker _damageTracker = new();
     private bool _capturing;
+    private bool _paused;
     private volatile bool _fameDirty;
     private volatile bool _damageDirty;
     private volatile bool _advancedVisible;   // só processa a lista crua quando o modo avançado está à vista
@@ -93,10 +94,9 @@ public partial class MainWindow : Window
 
         // Mesmo stream de pacote alimenta as 3 abas — não precisa de captura separada
         // por aba, é só "quem está interessado em qual Code" (ver GameEventCodes.cs).
-        _capture.EventReceived += OnPhotonEvent;
-        _capture.EventReceived += PlayerRegistry.HandleEvent;
-        _capture.EventReceived += _fameTracker.HandleEvent;
-        _capture.EventReceived += _damageTracker.HandleEvent;
+        // Passa tudo por um dispatcher único pra poder pausar a contagem (botão Pausar)
+        // sem precisar desligar a captura de pacote em si.
+        _capture.EventReceived += OnCaptureEvent;
         _capture.StatusChanged += status => Dispatcher.BeginInvoke(() => TxtCaptureStatus.Text = status);
 
         // Em vez de atualizar a UI a cada evento (em combate são centenas/seg, o que
@@ -192,6 +192,18 @@ public partial class MainWindow : Window
         _advancedVisible = advanced && PanelLoot.Visibility == Visibility.Visible;
     }
 
+    // Recebe todo evento decodificado do pacote e repassa pros trackers — exceto
+    // enquanto pausado, onde o pacote continua sendo capturado (Npcap não é desligado)
+    // mas nada é contado: loot/dano/fama ficam exatamente como estavam até despausar.
+    private void OnCaptureEvent(PhotonEvent evt)
+    {
+        if (_paused) return;
+        OnPhotonEvent(evt);
+        PlayerRegistry.HandleEvent(evt);
+        _fameTracker.HandleEvent(evt);
+        _damageTracker.HandleEvent(evt);
+    }
+
     private void BtnCaptureToggle_Click(object sender, RoutedEventArgs e)
     {
         if (!_capturing)
@@ -203,17 +215,42 @@ public partial class MainWindow : Window
         {
             _capture.Stop();
             _capturing = false;
+            _paused = false;
             BtnCaptureToggle.Content = "Iniciar captura";
+            BtnPauseToggle.Content = "Pausar";
             TxtCaptureStatus.Text = "Parado";
             // Com a captura parada, os arquivos de diagnóstico não estão mais sendo
             // escritos — momento seguro pra enviar pro Discord (com consentimento).
             // Assim o tester não precisa fechar e reabrir o app pra mandar os dados.
             DiagReporter.ReportDiagFiles();
         }
-        // Indicador global de captura na sidebar (visível de qualquer aba)
-        CaptureDot.Fill = _capturing ? B("#22c55e") : B("#666666");
-        CaptureStateLabel.Text = _capturing ? "Capturando" : "Captura parada";
-        CaptureStateLabel.Foreground = _capturing ? B("#22c55e") : B("#888888");
+        UpdateCaptureIndicator();
+    }
+
+    // Pausa só a contagem (loot/dano/fama) — a captura de pacote continua rodando,
+    // então despausar não perde nada que tenha chegado nesse meio tempo, só ignora.
+    private void BtnPauseToggle_Click(object sender, RoutedEventArgs e)
+    {
+        _paused = !_paused;
+        BtnPauseToggle.Content = _paused ? "Despausar" : "Pausar";
+        UpdateCaptureIndicator();
+    }
+
+    // Indicador global de captura na sidebar (visível de qualquer aba)
+    private void UpdateCaptureIndicator()
+    {
+        if (_paused)
+        {
+            CaptureDot.Fill = B("#facc15");
+            CaptureStateLabel.Text = "Pausado";
+            CaptureStateLabel.Foreground = B("#facc15");
+        }
+        else
+        {
+            CaptureDot.Fill = _capturing ? B("#22c55e") : B("#666666");
+            CaptureStateLabel.Text = _capturing ? "Capturando" : "Captura parada";
+            CaptureStateLabel.Foreground = _capturing ? B("#22c55e") : B("#888888");
+        }
     }
 
     // Marcação manual de momento: usuário clica bem na hora que pega um item.
