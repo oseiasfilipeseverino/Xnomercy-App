@@ -317,7 +317,10 @@ public partial class MainWindow : Window
     // [Conditional("DEBUG")]: no build Release (produção, o que a guild vai usar), as
     // chamadas a este método são removidas pelo compilador — zero custo. Só roda no
     // build Debug, pra calibração de novos códigos de evento.
+    // DEBUG (dev) OU BETA (build de teste mandado pra guild): roda em ambos. Em Release
+    // final (produção), some — é removido pelo compilador, custo zero.
     [System.Diagnostics.Conditional("DEBUG")]
+    [System.Diagnostics.Conditional("BETA")]
     private static void DiagLogBigEvent(PhotonEvent evt)
     {
         if (evt.EventCode < 0 || _diagCount >= 800) return;
@@ -359,6 +362,7 @@ public partial class MainWindow : Window
     private static int _diagNamedCount;
     private static readonly object _diagNamedLock = new();
     [System.Diagnostics.Conditional("DEBUG")]
+    [System.Diagnostics.Conditional("BETA")]
     private static void DiagLogNamedEvent(PhotonEvent evt)
     {
         if (evt.EventCode < 0 || evt.EventCode == GameEventCodes.NewCharacter || _diagNamedCount >= 500) return;
@@ -612,6 +616,34 @@ public partial class MainWindow : Window
         _canCraft = canCraft;
         SidebarCol.Width = new GridLength(210);
         Sidebar.Visibility = Visibility.Visible;
+
+        if (!ConsentStore.HasAsked)
+        {
+            PanelConsent.Visibility = Visibility.Visible;
+            return;   // segue pro Loot Log depois que responder (ver BtnConsentYes/No)
+        }
+        // Já respondeu antes: se aceitou, manda o que foi coletado na sessão passada
+        // (seguro aqui — a captura ainda não começou, é manual).
+        DiagReporter.ReportDiagFiles();
+        SetActiveNav(NavLoot);
+        ShowPanel("loot");
+    }
+
+    // Pergunta de consentimento pro diagnóstico (ver PanelConsent no XAML) — uma vez só,
+    // fica salvo em disco (ConsentStore) e nunca mais pergunta de novo.
+    private void BtnConsentYes_Click(object sender, RoutedEventArgs e)
+    {
+        ConsentStore.SetConsent(true);
+        DiagReporter.ReportDiagFiles();   // manda o que já tiver de sessões anteriores
+        PanelConsent.Visibility = Visibility.Collapsed;
+        SetActiveNav(NavLoot);
+        ShowPanel("loot");
+    }
+
+    private void BtnConsentNo_Click(object sender, RoutedEventArgs e)
+    {
+        ConsentStore.SetConsent(false);
+        PanelConsent.Visibility = Visibility.Collapsed;
         SetActiveNav(NavLoot);
         ShowPanel("loot");
     }

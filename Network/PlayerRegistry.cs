@@ -73,6 +73,7 @@ public static class PlayerRegistry
     private static int _diagCount;
     private static readonly object _diagLock = new();
     [System.Diagnostics.Conditional("DEBUG")]
+    [System.Diagnostics.Conditional("BETA")]
     private static void DiagLogNewCharacter(PhotonEvent evt, long id, PlayerInfo info)
     {
         if (_diagCount >= 300) return;

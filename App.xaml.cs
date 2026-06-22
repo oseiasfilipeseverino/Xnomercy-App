@@ -48,5 +48,8 @@ public partial class App : Application
                 $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {ex}\n\n");
         }
         catch { /* não há o que fazer se nem o log grava */ }
+
+        // Manda pra liderança via Discord (só com consentimento — ver PanelConsent).
+        Network.DiagReporter.Report("crash", ex.ToString());
     }
 }

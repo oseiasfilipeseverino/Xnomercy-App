@@ -100,6 +100,24 @@
                 </StackPanel>
             </Grid>
 
+            <!-- Pedido único de consentimento pro envio de diagnóstico (fase de teste).
+                 Some pra sempre depois da 1ª resposta (ver ConsentStore). -->
+            <Grid x:Name="PanelConsent" Visibility="Collapsed" Background="#080808">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520">
+                    <TextBlock Text="XNOMERCY" FontFamily="{StaticResource FontHead}" FontSize="30" Foreground="#c9a227" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    <TextBlock Foreground="#cbd5e1" FontSize="14" Margin="0,18,0,0" TextWrapping="Wrap" TextAlignment="Center"
+                               Text="Enquanto estamos testando, o app pode enviar erros e os eventos do Albion capturados (mesma informação do Loot Log / Medidor de Dano / Fama &amp; Prata) pro Discord da guild, pra ajudar a calibrar. Nada do seu sistema ou arquivos pessoais — só o que é do app e do jogo."/>
+                    <TextBlock Foreground="#6b7280" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap" TextAlignment="Center"
+                               Text="Só pergunta isso uma vez. Pode mudar de ideia depois falando com a liderança."/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
+                        <Button x:Name="BtnConsentYes" Content="Aceitar" Click="BtnConsentYes_Click"
+                                Padding="18,8" Background="#dc2626" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                        <Button x:Name="BtnConsentNo" Content="Não aceitar" Click="BtnConsentNo_Click"
+                                Padding="18,8" Margin="10,0,0,0" Background="#262626" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+
             <Grid x:Name="PanelLoot" Visibility="Collapsed" Background="#080808">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>

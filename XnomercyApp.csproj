@@ -13,6 +13,13 @@
     <StartupObject>XnomercyApp.Program</StartupObject>
   </PropertyGroup>
 
+  <!-- Build de teste (beta): liga os diagnósticos de calibração com a performance do
+       Release. Ativar com `dotnet publish ... -p:EnableBeta=true`. Sem isso, Release
+       final fica limpo (sem nenhum log de diagnóstico). -->
+  <PropertyGroup Condition="'$(EnableBeta)'=='true'">
+    <DefineConstants>$(DefineConstants);BETA</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <!-- App.xaml deixa de ser o ponto de entrada (isso agora é Program.cs) — mas
          continua sendo compilado normalmente como a definição XAML do Application. -->
