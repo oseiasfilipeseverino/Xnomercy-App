@@ -619,6 +619,10 @@ public partial class MainWindow : Window
 
         if (!ConsentStore.HasAsked)
         {
+            // Esconde o WebView: ele é um HWND do Chromium e renderiza POR CIMA de
+            // qualquer painel WPF (airspace), escondendo a tela de consentimento se
+            // ficar visível. Os outros painéis já fazem isso via ShowPanel.
+            WebView.Visibility = Visibility.Collapsed;
             PanelConsent.Visibility = Visibility.Visible;
             return;   // segue pro Loot Log depois que responder (ver BtnConsentYes/No)
         }
