@@ -20,6 +20,7 @@ public sealed class PacketCaptureService : IDisposable
     private static readonly int[] AlbionPorts = { 5055, 5056, 5057, 5058 };
 
     public event Action<PhotonEvent>? EventReceived;
+    public event Action<PhotonOperationResponse>? OpResponseReceived;
     public event Action<string>? StatusChanged;
 
     private readonly List<ICaptureDevice> _devices = new();
@@ -124,7 +125,10 @@ public sealed class PacketCaptureService : IDisposable
                 else if (msg is PhotonOperationRequest req)
                     DiagLogOperation("req", req.OperationCode, req.Parameters);
                 else if (msg is PhotonOperationResponse resp)
+                {
+                    OpResponseReceived?.Invoke(resp);   // self-detection (Join) e futuro grupo
                     DiagLogOperation("resp", resp.OperationCode, resp.Parameters);
+                }
             }
         }
         catch
@@ -144,12 +148,14 @@ public sealed class PacketCaptureService : IDisposable
     private static void DiagLogOperation(string kind, byte opCode, Dictionary<byte, object?> parms)
     {
         if (_opDiagCount >= 600) return;
-        // Só interessa operação com algum texto ou lista (roster = array de nomes). Números
-        // puros (movimento, sync) não ajudam e só encheriam o arquivo.
-        bool useful = parms.Values.Any(v =>
-            (v is string s && s.Length > 1 && !s.All(c => char.IsDigit(c) || c is ',' or '.' or '-'))
-            || v is object?[] { Length: > 0 });
-        if (!useful) return;
+        // Loga TODAS as operações (antes filtrava por texto/lista, mas as de party usam
+        // GUID de conta em byte[16] e escapavam do filtro). Operações são raras, então o
+        // volume é pequeno. Exceção: pula a telemetria de hardware do cliente (op real
+        // 300: GPU/CPU/OS) — fora do escopo "app e Albion" combinado e inútil pra grupo.
+        if (parms.TryGetValue(253, out var rc) && rc is not null)
+        {
+            try { if (Convert.ToInt32(rc) == 300) return; } catch { }
+        }
         lock (_opDiagLock)
         {
             if (_opDiagCount >= 600) return;
@@ -170,6 +176,9 @@ public sealed class PacketCaptureService : IDisposable
     private static string OpVal(object? v) => v switch
     {
         null => "null",
+        // GUID de conta/objeto vem como byte[16] — mostra o hex (curto) pra dar pra cruzar
+        // membros do grupo. Arrays maiores ficam só com o tamanho pra não explodir o log.
+        byte[] b when b.Length <= 16 => $"byte[{b.Length}]={Convert.ToHexString(b)}",
         byte[] b => $"byte[{b.Length}]",
         object?[] a => $"arr[{a.Length}]={{{string.Join(",", a.Select(x => x?.ToString() ?? "null"))}}}",
         _ => v.ToString() ?? ""

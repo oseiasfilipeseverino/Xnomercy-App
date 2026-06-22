@@ -97,6 +97,8 @@ public partial class MainWindow : Window
         // Passa tudo por um dispatcher único pra poder pausar a contagem (botão Pausar)
         // sem precisar desligar a captura de pacote em si.
         _capture.EventReceived += OnCaptureEvent;
+        // Operação de Join → descobre "Você" cedo (resolve seu próprio dano sem nome).
+        _capture.OpResponseReceived += PlayerRegistry.HandleOpResponse;
         _capture.StatusChanged += status => Dispatcher.BeginInvoke(() => TxtCaptureStatus.Text = status);
 
         // Em vez de atualizar a UI a cada evento (em combate são centenas/seg, o que

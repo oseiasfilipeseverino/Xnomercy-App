@@ -128,6 +128,19 @@ public static class PlayerRegistry
         }
     }
 
+    // Operação de Join na zona (código real em [253]==2): traz o SEU ObjectId em [0] e
+    // seu nome em [2]. É a forma mais cedo e confiável de saber quem é "Você" — antes só
+    // descobríamos no 1º evento de fama/prata, então no começo da sessão seu próprio dano
+    // aparecia como "#id" (ex: o causador com a maior fatia de dano sem nome).
+    public static void HandleOpResponse(PhotonOperationResponse op)
+    {
+        if (op.Parameters.TryGetValue(253, out var rc) && ToLong(rc) == 2
+            && op.Parameters.TryGetValue(0, out var sid) && ToLong(sid) is long self && self > 0)
+        {
+            SelfObjectId = self;
+        }
+    }
+
     public static PlayerInfo? Get(long objectId) => _byId.TryGetValue(objectId, out var v) ? v : null;
 
     public static string NameOf(long objectId)
