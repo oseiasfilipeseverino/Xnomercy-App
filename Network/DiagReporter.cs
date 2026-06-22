@@ -46,6 +46,15 @@ public static class DiagReporter
         _ = Task.Run(SendDiagFilesAsync);   // background, não trava a UI
     }
 
+    // Versão aguardável — usada antes de sair de verdade (menu da bandeja "Sair"),
+    // pra garantir que o envio termine antes do processo morrer. Sem isso, o
+    // fire-and-forget de ReportDiagFiles() ficava pra trás e os dados se perdiam.
+    public static Task ReportDiagFilesAsync()
+    {
+        if (!ConsentStore.HasConsented) return Task.CompletedTask;
+        return SendDiagFilesAsync();
+    }
+
     private static async Task SendDiagFilesAsync()
     {
         var dir = System.IO.Path.Combine(

@@ -787,8 +787,12 @@ public partial class MainWindow : Window
         Activate();
     }
 
-    private void TrayMenu_Exit_Click(object sender, RoutedEventArgs e)
+    private async void TrayMenu_Exit_Click(object sender, RoutedEventArgs e)
     {
+        // Sair pela bandeja matava o processo direto, sem esperar o diagnóstico
+        // (fire-and-forget) terminar de enviar — perdia os dados de calibração de quem
+        // fechava o app em vez de clicar "Parar captura". Espera até 5s pelo envio.
+        await Task.WhenAny(DiagReporter.ReportDiagFilesAsync(), Task.Delay(5000));
         _exitRequested = true;
         _capture.Dispose();
         Close();
