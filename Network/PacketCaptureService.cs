@@ -112,11 +112,19 @@ public sealed class PacketCaptureService : IDisposable
                     catch { /* diagnóstico não pode derrubar a captura */ }
                 }
 
-                if (PhotonMessageParser.TryParseApplicationMessage(appPayload) is PhotonEvent evt)
+                var msg = PhotonMessageParser.TryParseApplicationMessage(appPayload);
+                if (msg is PhotonEvent evt)
                 {
                     DiagEventsDecoded++;
                     EventReceived?.Invoke(evt);
                 }
+                // Operações (request/response) também são decodificadas, mas hoje não são
+                // consumidas em runtime — só logadas em beta pra calibrar o evento de grupo
+                // (o roster da party vem como operação, não como evento broadcast).
+                else if (msg is PhotonOperationRequest req)
+                    DiagLogOperation("req", req.OperationCode, req.Parameters);
+                else if (msg is PhotonOperationResponse resp)
+                    DiagLogOperation("resp", resp.OperationCode, resp.Parameters);
             }
         }
         catch
@@ -125,6 +133,47 @@ public sealed class PacketCaptureService : IDisposable
             // descarta e segue capturando. Nunca deve derrubar o app.
         }
     }
+
+    // Diagnóstico de operações (só beta): grava operações que carregam texto ou listas,
+    // que é onde o roster da party deve estar. Capado pra não crescer demais nem virar
+    // ruído. Arquivo: %LocalAppData%\XnomercyApp\ops_diag.txt. Some no Release final.
+    private static int _opDiagCount;
+    private static readonly object _opDiagLock = new();
+    [System.Diagnostics.Conditional("DEBUG")]
+    [System.Diagnostics.Conditional("BETA")]
+    private static void DiagLogOperation(string kind, byte opCode, Dictionary<byte, object?> parms)
+    {
+        if (_opDiagCount >= 600) return;
+        // Só interessa operação com algum texto ou lista (roster = array de nomes). Números
+        // puros (movimento, sync) não ajudam e só encheriam o arquivo.
+        bool useful = parms.Values.Any(v =>
+            (v is string s && s.Length > 1 && !s.All(c => char.IsDigit(c) || c is ',' or '.' or '-'))
+            || v is object?[] { Length: > 0 });
+        if (!useful) return;
+        lock (_opDiagLock)
+        {
+            if (_opDiagCount >= 600) return;
+            _opDiagCount++;
+            try
+            {
+                var dir = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp");
+                System.IO.Directory.CreateDirectory(dir);
+                var text = string.Join(" ", parms.OrderBy(k => k.Key).Select(kv => $"[{kv.Key}]={OpVal(kv.Value)}"));
+                System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "ops_diag.txt"),
+                    $"{kind} op={opCode} {text}\n");
+            }
+            catch { }
+        }
+    }
+
+    private static string OpVal(object? v) => v switch
+    {
+        null => "null",
+        byte[] b => $"byte[{b.Length}]",
+        object?[] a => $"arr[{a.Length}]={{{string.Join(",", a.Select(x => x?.ToString() ?? "null"))}}}",
+        _ => v.ToString() ?? ""
+    };
 
     public void Stop()
     {

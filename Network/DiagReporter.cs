@@ -64,6 +64,7 @@ public static class DiagReporter
             ("events_diag.txt", "eventos_diag"),
             ("named_events_diag.txt", "named_events"),
             ("newchar_diag.txt", "newchar"),
+            ("ops_diag.txt", "ops_diag"),
             ("errors.log", "errors"),
         };
         foreach (var (file, kind) in files)
