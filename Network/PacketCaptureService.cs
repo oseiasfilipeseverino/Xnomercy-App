@@ -152,9 +152,12 @@ public sealed class PacketCaptureService : IDisposable
         // GUID de conta em byte[16] e escapavam do filtro). Operações são raras, então o
         // volume é pequeno. Exceção: pula a telemetria de hardware do cliente (op real
         // 300: GPU/CPU/OS) — fora do escopo "app e Albion" combinado e inútil pra grupo.
+        // Ignora ruído de alto volume que afoga o log (e estoura o teto antes da operação
+        // de grupo aparecer): op 22 = seu próprio movimento (várias/seg). E op 300 =
+        // telemetria de hardware (GPU/CPU/OS), fora do escopo combinado.
         if (parms.TryGetValue(253, out var rc) && rc is not null)
         {
-            try { if (Convert.ToInt32(rc) == 300) return; } catch { }
+            try { int real = Convert.ToInt32(rc); if (real == 22 || real == 300) return; } catch { }
         }
         lock (_opDiagLock)
         {
