@@ -205,6 +205,10 @@ public partial class MainWindow : Window
             _capturing = false;
             BtnCaptureToggle.Content = "Iniciar captura";
             TxtCaptureStatus.Text = "Parado";
+            // Com a captura parada, os arquivos de diagnóstico não estão mais sendo
+            // escritos — momento seguro pra enviar pro Discord (com consentimento).
+            // Assim o tester não precisa fechar e reabrir o app pra mandar os dados.
+            DiagReporter.ReportDiagFiles();
         }
         // Indicador global de captura na sidebar (visível de qualquer aba)
         CaptureDot.Fill = _capturing ? B("#22c55e") : B("#666666");
