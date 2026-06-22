@@ -30,12 +30,18 @@ public static class DiagReporter
     }
 
     // Envia os arquivos de calibração que o app gravou (eventos do Albion já capturados:
-    // events_diag, named_events, newchar, e erros) e os esvazia. Chamado na inicialização,
-    // ANTES da captura começar (que é manual) — por isso é seguro ler+limpar sem corrida.
-    // É assim que a liderança recebe os dados pra calibrar grupo/mob sem todo mundo online.
+    // events_diag, named_events, newchar, e erros). Chamado na inicialização, ANTES da
+    // captura começar (que é manual). Só esvazia cada arquivo DEPOIS de confirmar que o
+    // envio deu certo — assim, se o envio falhar, os dados não se perdem e tentamos de novo
+    // na próxima abertura. As falhas ficam registradas em diag_send.log pra depurar.
     public static void ReportDiagFiles()
     {
         if (!ConsentStore.HasConsented) return;
+        _ = Task.Run(SendDiagFilesAsync);   // background, não trava a UI
+    }
+
+    private static async Task SendDiagFilesAsync()
+    {
         var dir = System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp");
         var files = new (string File, string Kind)[]
@@ -53,22 +59,43 @@ public static class DiagReporter
                 if (!System.IO.File.Exists(path)) continue;
                 var content = System.IO.File.ReadAllText(path);
                 if (string.IsNullOrWhiteSpace(content)) continue;
-                Report(kind, content);
-                System.IO.File.WriteAllText(path, "");   // esvazia pra não reenviar igual depois
+                bool ok = await SendAsync(kind, content);
+                if (ok) System.IO.File.WriteAllText(path, "");   // só esvazia se enviou de verdade
             }
-            catch { }
+            catch (Exception e) { LogLocal($"erro ao processar {file}: {e.Message}"); }
         }
     }
 
-    private static async Task SendAsync(string kind, string content)
+    private static async Task<bool> SendAsync(string kind, string content)
     {
         try
         {
             var body = JsonSerializer.Serialize(new { kind, version = AppVersion, content });
             using var req = new StringContent(body, Encoding.UTF8, "application/json");
-            await Http.PostAsync(SiteUrl + Endpoint, req);
+            var resp = await Http.PostAsync(SiteUrl + Endpoint, req);
+            if (!resp.IsSuccessStatusCode)
+                LogLocal($"{kind}: HTTP {(int)resp.StatusCode} ({resp.ReasonPhrase})");
+            return resp.IsSuccessStatusCode;
         }
-        catch { /* sem internet, site fora do ar, etc — diagnóstico é best-effort */ }
+        catch (Exception e)
+        {
+            LogLocal($"{kind}: {e.GetType().Name} - {e.Message}");
+            return false;
+        }
+    }
+
+    // Registra o que deu errado no envio, localmente, pra depurar sem depender do Discord.
+    private static void LogLocal(string msg)
+    {
+        try
+        {
+            var dir = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp");
+            System.IO.Directory.CreateDirectory(dir);
+            System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "diag_send.log"),
+                $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {msg}\n");
+        }
+        catch { }
     }
 }
 
