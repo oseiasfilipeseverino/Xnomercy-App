@@ -38,7 +38,17 @@ public static class GameEventCodes
 
     // NewMob: [0]=ObjectId. Usado pra marcar quais ObjectIds são mobs e excluir o dano
     // deles do medidor (só dano de/para jogadores conta).
+    // SUSPEITA: os dados reais de calibração mostram esse código repetindo várias vezes
+    // por segundo com números tipo posição/vida — não parece "mob apareceu" (que devia
+    // disparar uma vez só). Mantido por ora porque ainda funciona como sinal de mob (não
+    // testamos remover), mas o código 74 abaixo é uma fonte mais confiável.
     public static int NewMob { get; set; } = 123;
+
+    // MobSpeak (mob solta uma fala/provocação, ex: ao puxar agro): [0]=tipo do mob em
+    // texto (ex: "@MOB_UNDEAD_PULLER_VETERAN") [4]=ObjectId do mob. Confirmação de alta
+    // confiança de que aquele ObjectId é mob — usado como 2ª fonte pro filtro, além do
+    // NewMob acima (só soma cobertura, não substitui).
+    public static int MobSpeak { get; set; } = 74;
 
     // HealthUpdate: [0]=ObjectId afetado [2]=variação de vida (negativo=dano,
     // positivo=cura) [6]=ObjectId de quem causou. Não existe evento dedicado de

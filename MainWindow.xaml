@@ -36,6 +36,28 @@
     </Window.Resources>
 
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Banner de atualização disponível (some por padrão) -->
+        <Border x:Name="UpdateBanner" Grid.Row="0" Background="#1f5b2e" Visibility="Collapsed">
+            <Grid Margin="16,8,16,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="UpdateBannerText" Grid.Column="0" Text="" Foreground="White" FontSize="13" VerticalAlignment="Center"/>
+                <Button x:Name="BtnUpdateDownload" Grid.Column="1" Content="Reiniciar e atualizar" Click="BtnUpdateDownload_Click"
+                        Padding="12,5" Background="#0f0f0f" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                <Button x:Name="BtnUpdateDismiss" Grid.Column="2" Content="✕" Click="BtnUpdateDismiss_Click"
+                        Padding="10,5" Margin="8,0,0,0" Background="Transparent" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1">
         <Grid.ColumnDefinitions>
             <ColumnDefinition x:Name="SidebarCol" Width="0"/>
             <ColumnDefinition Width="*"/>
@@ -44,16 +66,20 @@
         <!-- Menu lateral (aparece só depois do login) -->
         <Border x:Name="Sidebar" Grid.Column="0" Background="#0f0f0f" BorderBrush="#2a1515" BorderThickness="0,0,1,0" Visibility="Collapsed">
             <DockPanel LastChildFill="False">
-                <StackPanel DockPanel.Dock="Top">
-                    <TextBlock Text="XNOMERCY" Foreground="#c9a227" FontFamily="{StaticResource FontHead}" FontWeight="SemiBold" FontSize="26" Margin="22,18,22,14"/>
+                <Button x:Name="BtnToggleSidebar" DockPanel.Dock="Top" Content="☰" Click="ToggleSidebar_Click"
+                        Style="{StaticResource NavBtn}" Foreground="#888888" FontSize="18" Margin="0,8,0,0"/>
+                <StackPanel x:Name="SidebarTop" DockPanel.Dock="Top">
+                    <TextBlock Text="XNOMERCY" Foreground="#c9a227" FontFamily="{StaticResource FontHead}" FontWeight="SemiBold" FontSize="26" Margin="22,4,22,14"/>
                     <Border Height="1" Background="#2a1515" Margin="16,0,16,10"/>
                     <Button x:Name="NavLoot"   Content="Loot Log"        Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="loot"/>
                     <Button x:Name="NavDamage" Content="Medidor de Dano"  Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="damage"/>
                     <Button x:Name="NavFame"   Content="Fama &amp; Prata" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="fame"/>
                     <Button x:Name="NavCraft"  Content="Craft"           Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="craft"/>
                 </StackPanel>
-                <StackPanel DockPanel.Dock="Bottom" Margin="22,0,22,18">
+                <StackPanel x:Name="SidebarBottom" DockPanel.Dock="Bottom" Margin="22,0,22,18">
                     <Border Height="1" Background="#2a1515" Margin="-6,0,-6,12"/>
+                    <Button x:Name="BtnLogout" Content="Sair" Click="BtnLogout_Click" HorizontalAlignment="Left"
+                            Padding="0" Margin="0,0,0,10" Background="Transparent" Foreground="#dc2626" FontSize="13" Cursor="Hand" BorderThickness="0"/>
                     <StackPanel Orientation="Horizontal">
                         <Ellipse x:Name="CaptureDot" Width="9" Height="9" Fill="#666666" VerticalAlignment="Center"/>
                         <TextBlock x:Name="CaptureStateLabel" Text="Captura parada" Foreground="#888888" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center"/>
@@ -210,6 +236,18 @@
                 </ListView>
             </Grid>
 
+            <!-- Mostrado quando a conta de teste não tem permissão pra essa aba -->
+            <Grid x:Name="PanelBlocked" Visibility="Collapsed" Background="#080808">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="600">
+                    <TextBlock Text="🔒" FontSize="48" HorizontalAlignment="Center"/>
+                    <TextBlock Text="VOCÊ ESTÁ BLOQUEADO DE ACESSAR ESSA PARTE!" Foreground="#dc2626"
+                               FontFamily="{StaticResource FontHead}" FontSize="30" FontWeight="SemiBold"
+                               HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,16,0,0"/>
+                    <TextBlock Text="Fale com a liderança da guild se precisar de acesso." Foreground="#888888"
+                               FontSize="13" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                </StackPanel>
+            </Grid>
+
             <Grid x:Name="PanelFame" Visibility="Collapsed" Background="#080808">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <TextBlock Text="Fama &amp; Prata" Foreground="#c9a227" FontFamily="{StaticResource FontHead}" FontSize="32" FontWeight="SemiBold" HorizontalAlignment="Center"/>
@@ -217,21 +255,21 @@
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <Border Background="#0f0f0f" CornerRadius="6" Padding="22,16" Margin="0,0,12,0">
                             <StackPanel>
-                                <Ellipse Width="22" Height="22" Fill="#ef4444" HorizontalAlignment="Center"/>
+                                <Image Source="Icons/fame.png" Width="26" Height="26" HorizontalAlignment="Center"/>
                                 <TextBlock Text="FAMA VERMELHA" Foreground="#888888" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
                                 <TextBlock x:Name="TxtFameTotal" Text="0" Foreground="#f87171" FontSize="26" FontWeight="Bold" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
                         <Border Background="#0f0f0f" CornerRadius="6" Padding="22,16" Margin="0,0,12,0">
                             <StackPanel>
-                                <Ellipse Width="22" Height="22" Fill="#facc15" HorizontalAlignment="Center"/>
+                                <Image Source="Icons/yellow_fame.png" Width="26" Height="26" HorizontalAlignment="Center"/>
                                 <TextBlock Text="FAMA AMARELA" Foreground="#888888" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
                                 <TextBlock x:Name="TxtYellowFameTotal" Text="—" Foreground="#fde047" FontSize="26" FontWeight="Bold" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
                         <Border Background="#0f0f0f" CornerRadius="6" Padding="22,16">
                             <StackPanel>
-                                <Ellipse Width="22" Height="22" Fill="#cbd5e1" HorizontalAlignment="Center"/>
+                                <Image Source="Icons/silver.png" Width="26" Height="26" HorizontalAlignment="Center"/>
                                 <TextBlock Text="PRATA" Foreground="#888888" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
                                 <TextBlock x:Name="TxtSilverTotal" Text="0" Foreground="#e2e8f0" FontSize="26" FontWeight="Bold" HorizontalAlignment="Center"/>
                             </StackPanel>
@@ -243,6 +281,7 @@
                                Text="Fama amarela (facção/standing) ainda em calibração — me diga de qual conteúdo ela vem pra eu achar o código."/>
                 </StackPanel>
             </Grid>
+        </Grid>
         </Grid>
 
         <!-- Ícone da bandeja do sistema -->

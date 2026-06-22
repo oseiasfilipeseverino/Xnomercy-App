@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Web.WebView2.Core;
+using Velopack;
 using XnomercyApp.Network;
 
 namespace XnomercyApp;
@@ -50,6 +51,9 @@ public partial class MainWindow : Window
     private const string SiteUrl = "https://nome-xnomercy-site-production.up.railway.app";
     private const int MaxLootRows = 500; // evita a lista crescer sem limite numa sessão longa
 
+    // Versão real agora vem do pacote Velopack (definida no `vpk pack --packVersion`),
+    // não precisa mais bumpar nada aqui à mão.
+
     // Permite fechar de verdade pelo menu da bandeja (em vez de só minimizar).
     private bool _exitRequested;
 
@@ -66,6 +70,8 @@ public partial class MainWindow : Window
     private volatile bool _damageDirty;
     private volatile bool _advancedVisible;   // só processa a lista crua quando o modo avançado está à vista
     private bool _loggedIn;
+    private bool _canTracker = true;   // Loot Log + Medidor de Dano + Fama & Prata (vêm juntos)
+    private bool _canCraft = true;
     private static System.Windows.Media.Brush B(string hex) =>
         new System.Windows.Media.BrushConverter().ConvertFromString(hex) as System.Windows.Media.Brush ?? System.Windows.Media.Brushes.Gray;
     private static readonly System.Windows.Media.Brush NavActiveBrush = B("#dc2626");  // vermelho do site
@@ -76,6 +82,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         _ = InitWebViewAsync();
         _ = ItemCatalog.EnsureLoadedAsync(); // carrega em segundo plano, mesma base de nomes do site
+        _ = CheckForUpdateAsync();
 
         ListLootEvents.ItemsSource = _lootRows;
         ListMarkedEvents.ItemsSource = _markedRows;
@@ -242,6 +249,7 @@ public partial class MainWindow : Window
     private void OnPhotonEvent(PhotonEvent evt)
     {
         DiagLogBigEvent(evt);   // calibração: loga eventos com números grandes (fama/prata)
+        DiagLogNamedEvent(evt); // calibração: loga eventos com texto (achar o código real de NewMob)
 
         var now = DateTime.Now;
         bool isGrabbedLoot = evt.EventCode == GameEventCodes.GrabbedLoot;
@@ -341,6 +349,38 @@ public partial class MainWindow : Window
         System.Array a => $"arr[{a.Length}]",
         _ => v.ToString() ?? ""
     };
+
+    // Diagnóstico de calibração: grava eventos que carregam TEXTO de verdade num
+    // parâmetro (não número, não byte[]) — é a assinatura de "alguém/algo apareceu
+    // com nome" (NewCharacter, e o que suspeito ser o NewMob real, já que o código
+    // 123 que mapeamos parece ser na verdade um sync de posição/vida repetitivo, sem
+    // nome nenhum — não bate com o padrão de "mob spawnou"). Pula o 29 (NewCharacter,
+    // já calibrado) pra focar no que falta achar. Arquivo: %LocalAppData%\XnomercyApp\named_events_diag.txt
+    private static int _diagNamedCount;
+    private static readonly object _diagNamedLock = new();
+    [System.Diagnostics.Conditional("DEBUG")]
+    private static void DiagLogNamedEvent(PhotonEvent evt)
+    {
+        if (evt.EventCode < 0 || evt.EventCode == GameEventCodes.NewCharacter || _diagNamedCount >= 500) return;
+        bool hasText = evt.Parameters.Values.Any(v => v is string s && s.Length > 1 && !s.All(c => char.IsDigit(c) || c == ',' || c == '.' || c == '-'));
+        if (!hasText) return;
+        lock (_diagNamedLock)
+        {
+            if (_diagNamedCount >= 500) return;
+            _diagNamedCount++;
+            try
+            {
+                var dir = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp");
+                System.IO.Directory.CreateDirectory(dir);
+                var parms = string.Join(" ", evt.Parameters.OrderBy(k => k.Key)
+                    .Select(kv => $"[{kv.Key}]={DiagVal(kv.Value)}"));
+                System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "named_events_diag.txt"),
+                    $"code={evt.EventCode} {parms}\n");
+            }
+            catch { }
+        }
+    }
 
     // OtherGrabbedLoot (277): [1]=de quem (corpo) [2]=quem pegou [3]=é prata? (bool)
     // [4]=índice do item [5]=quantidade. Os nomes já vêm como texto no evento.
@@ -494,34 +534,115 @@ public partial class MainWindow : Window
         var env = await CoreWebView2Environment.CreateAsync(userDataFolder: userDataFolder);
         await WebView.EnsureCoreWebView2Async(env);
 
+        // Esconde a navbar do site dentro do app — assim o Craft mostra só o conteúdo
+        // do mercado (sem Início/Dashboard/Gestão/etc), e o login fica limpo. Roda antes
+        // de cada página renderizar, sem piscar.
+        await WebView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
+            "(function(){var s=document.createElement('style');" +
+            "s.textContent='.navbar{display:none !important;}';" +
+            "(document.head||document.documentElement).appendChild(s);})();");
+
         // O WebView começa na página de mercado (que exige login). Se não estiver logado,
         // o site redireciona pro /login (Discord). Quando o login completa, a navegação
         // termina numa página do site que NÃO é /login — aí revelamos o menu lateral.
-        WebView.CoreWebView2.NavigationCompleted += (_, _) =>
+        WebView.CoreWebView2.NavigationCompleted += async (_, _) =>
         {
             LoginLoading.Visibility = Visibility.Collapsed;   // some assim que a 1ª página carrega
-            var url = WebView.Source?.ToString() ?? "";
-            if (!_loggedIn
-                && url.StartsWith(SiteUrl, StringComparison.OrdinalIgnoreCase)
-                && !url.Contains("/login", StringComparison.OrdinalIgnoreCase))
+
+            // Reforça o esconder da navbar a cada página (backup do script de injeção
+            // antecipada — caso ele não tenha pego a tempo em alguma navegação).
+            try
             {
-                _loggedIn = true;
-                OnLoggedIn();
+                await WebView.CoreWebView2.ExecuteScriptAsync(
+                    "(function(){document.querySelectorAll('.navbar').forEach(function(n){n.style.display='none';});})();");
             }
+            catch { }
+
+            if (_loggedIn) return;
+            var url = WebView.Source?.ToString() ?? "";
+            if (!url.StartsWith(SiteUrl, StringComparison.OrdinalIgnoreCase)) return; // discord etc
+            if (url.Contains("/login", StringComparison.OrdinalIgnoreCase)) return;   // ainda na tela de login
+
+            // Pergunta ao site se está logado e se pode acessar o Craft. /api/me pode não
+            // existir ainda (site antigo sem o sistema de login novo) — nesse caso (erro/
+            // resposta vazia) assume logado com Craft liberado, já que chegamos numa página
+            // que não é /login. Quando a rota existir, confiamos no campo logged_in de
+            // verdade — importante pro botão "Sair" funcionar (depois de deslogar, a home
+            // não é /login, mas logged_in vem false e não deve reabrir a sidebar).
+            bool loggedIn = true;
+            bool canCraft = true;
+            bool canTracker = true;
+            try
+            {
+                var raw = await WebView.CoreWebView2.ExecuteScriptAsync(
+                    "(function(){try{var x=new XMLHttpRequest();x.open('GET','/api/me',false);x.send();" +
+                    "if(x.status!==200)return '';return x.responseText;}catch(e){return '';}})()");
+                var inner = System.Text.Json.JsonSerializer.Deserialize<string>(raw) ?? "";
+                if (!string.IsNullOrEmpty(inner))
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(inner);
+                    var root = doc.RootElement;
+                    if (root.TryGetProperty("logged_in", out var li)) loggedIn = li.GetBoolean();
+                    if (root.TryGetProperty("can_craft", out var cc)) canCraft = cc.GetBoolean();
+                    if (root.TryGetProperty("can_tracker", out var ct)) canTracker = ct.GetBoolean();
+                }
+            }
+            catch { /* /api/me ainda não existe no site ou deu erro — segue com loggedIn=true */ }
+
+            if (!loggedIn)
+            {
+                // De verdade deslogado (ex: acabou de clicar "Sair") — manda pra tela de
+                // login em vez de reabrir a sidebar.
+                WebView.CoreWebView2.Navigate(SiteUrl + "/login");
+                return;
+            }
+
+            _loggedIn = true;
+            OnLoggedIn(canTracker, canCraft);
         };
-        WebView.CoreWebView2.Navigate(SiteUrl + "/mercado");
+        WebView.CoreWebView2.Navigate(SiteUrl + "/login");
     }
 
-    // Login concluído: mostra o menu lateral e abre o Loot Log por padrão.
-    private void OnLoggedIn()
+    // Login concluído: mostra o menu lateral. Os 4 botões ficam sempre visíveis —
+    // quem não tem permissão pra uma aba (conta de teste limitada) ainda vê o botão,
+    // mas clicar mostra um aviso grande de bloqueio em vez do conteúdo (ShowPanel).
+    private void OnLoggedIn(bool canTracker, bool canCraft)
     {
+        _canTracker = canTracker;
+        _canCraft = canCraft;
         SidebarCol.Width = new GridLength(210);
         Sidebar.Visibility = Visibility.Visible;
         SetActiveNav(NavLoot);
         ShowPanel("loot");
     }
 
+    // Desloga: limpa a sessão do site (cookie) e volta pra tela de login, sem
+    // precisar fechar e reabrir o app.
+    private void BtnLogout_Click(object sender, RoutedEventArgs e)
+    {
+        _loggedIn = false;
+        Sidebar.Visibility = Visibility.Collapsed;
+        SidebarCol.Width = new GridLength(0);
+        LoginLoading.Visibility = Visibility.Visible;
+        WebView.Visibility = Visibility.Visible;
+        PanelLoot.Visibility = Visibility.Collapsed;
+        PanelDamage.Visibility = Visibility.Collapsed;
+        PanelFame.Visibility = Visibility.Collapsed;
+        // ?to=login pula o pulo extra de cair na home e só depois navegar pro login —
+        // fica perceptivelmente mais rápido na troca de tela.
+        WebView.CoreWebView2?.Navigate(SiteUrl + "/logout?to=login");
+    }
+
     // ── Menu lateral ──────────────────────────────────────────────────────
+    private bool _sidebarCollapsed;
+    private void ToggleSidebar_Click(object sender, RoutedEventArgs e)
+    {
+        _sidebarCollapsed = !_sidebarCollapsed;
+        SidebarCol.Width = new GridLength(_sidebarCollapsed ? 48 : 210);
+        SidebarTop.Visibility = _sidebarCollapsed ? Visibility.Collapsed : Visibility.Visible;
+        SidebarBottom.Visibility = _sidebarCollapsed ? Visibility.Collapsed : Visibility.Visible;
+    }
+
     private void Nav_Click(object sender, RoutedEventArgs e)
     {
         var btn = (Button)sender;
@@ -535,6 +656,15 @@ public partial class MainWindow : Window
         PanelLoot.Visibility = Visibility.Collapsed;
         PanelDamage.Visibility = Visibility.Collapsed;
         PanelFame.Visibility = Visibility.Collapsed;
+        PanelBlocked.Visibility = Visibility.Collapsed;
+        _advancedVisible = false;
+
+        bool isTrackerTab = tag is "loot" or "damage" or "fame";
+        if ((isTrackerTab && !_canTracker) || (tag == "craft" && !_canCraft))
+        {
+            PanelBlocked.Visibility = Visibility.Visible;
+            return;
+        }
 
         switch (tag)
         {
@@ -587,4 +717,47 @@ public partial class MainWindow : Window
         Close();
         Application.Current.Shutdown();
     }
+
+    // ── Atualização (Velopack + GitHub Releases) ─────────────────────────────
+    // Atualização de verdade: baixa em segundo plano e aplica num reinício — não é só
+    // um aviso com link manual. Pra publicar: `vpk pack` gera o instalador/pacotes,
+    // `vpk upload github` sobe pra Releases do Xnomercy-App. Quem já tem o app instalado
+    // baixa sozinho na próxima abertura e só precisa clicar "Reiniciar e atualizar".
+    private UpdateManager? _updateMgr;
+    private Velopack.UpdateInfo? _pendingUpdate;
+
+    private async Task CheckForUpdateAsync()
+    {
+        try
+        {
+            _updateMgr = new UpdateManager(new Velopack.Sources.GithubSource(
+                "https://github.com/oseiasfilipeseverino/Xnomercy-App", null, false));
+            if (!_updateMgr.IsInstalled) return;   // rodando direto do dotnet build (dev) — nada a checar
+
+            var info = await _updateMgr.CheckForUpdatesAsync();
+            if (info == null) return;              // já está na última versão
+
+            await _updateMgr.DownloadUpdatesAsync(info);
+            _pendingUpdate = info;
+            Dispatcher.BeginInvoke(() =>
+            {
+                UpdateBannerText.Text = $"Nova versão baixada: v{info.TargetFullRelease.Version} — reinicie pra aplicar";
+                UpdateBanner.Visibility = Visibility.Visible;
+            });
+        }
+        catch
+        {
+            // Sem internet, rate-limit do GitHub, etc. — o app funciona normal sem o aviso.
+        }
+    }
+
+    private void BtnUpdateDownload_Click(object sender, RoutedEventArgs e)
+    {
+        if (_updateMgr == null || _pendingUpdate == null) return;
+        _exitRequested = true;
+        _capture.Dispose();
+        _updateMgr.ApplyUpdatesAndRestart(_pendingUpdate);
+    }
+
+    private void BtnUpdateDismiss_Click(object sender, RoutedEventArgs e) => UpdateBanner.Visibility = Visibility.Collapsed;
 }

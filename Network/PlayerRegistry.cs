@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Linq;
 
 namespace XnomercyApp.Network;
 
@@ -39,7 +40,14 @@ public static class PlayerRegistry
         }
         if (evt.EventCode == GameEventCodes.NewMob)
         {
-            if (evt.Parameters.TryGetValue(0, out var mid) && ToLong(mid) is long m) _mobs[m] = 1;
+            if (evt.Parameters.TryGetValue(0, out var mid) && ToLong(mid) is long m) RegisterMob(m);
+            return;
+        }
+        if (evt.EventCode == GameEventCodes.MobSpeak)
+        {
+            // 2ª fonte, mais confiável: o mob "falou" (provocação/agro), então o [4] é
+            // garantidamente um ObjectId de mob, independente do NewMob ter disparado certo.
+            if (evt.Parameters.TryGetValue(4, out var mid) && ToLong(mid) is long m) RegisterMob(m);
             return;
         }
         if (evt.EventCode != GameEventCodes.NewCharacter) return;
@@ -49,8 +57,50 @@ public static class PlayerRegistry
         if (evt.Parameters.TryGetValue(1, out var n)) info.Name = n?.ToString() ?? "";
         if (evt.Parameters.TryGetValue(8, out var g)) info.Guild = g?.ToString() ?? "";
         if (evt.Parameters.TryGetValue(40, out var eq) && eq is not null) info.MainHand = FirstEquip(eq);
-        if (info.Name.Length > 0) _byId[id] = info;
+        DiagLogNewCharacter(evt, id, info);   // calibração: ver se [1]/[8]/[40] batem com o jogo real
+        if (info.Name.Length > 0)
+        {
+            _byId[id] = info;
+            if (_byId.Count > 20000) _byId.Clear();   // mesmo teto de segurança que os mobs
+        }
     }
+
+    // Diagnóstico de calibração: grava TODO NewCharacter recebido (até 300), com todos os
+    // parâmetros crus, pra comparar com quem realmente apareceu na tela. Se o nome de um
+    // amigo visível não aparecer aqui, o evento não chegou (perda de pacote/filtro errado);
+    // se aparecer com [1] vazio/estranho, o índice do nome mudou e precisa ser recalibrado.
+    // Arquivo: %LocalAppData%\XnomercyApp\newchar_diag.txt
+    private static int _diagCount;
+    private static readonly object _diagLock = new();
+    [System.Diagnostics.Conditional("DEBUG")]
+    private static void DiagLogNewCharacter(PhotonEvent evt, long id, PlayerInfo info)
+    {
+        if (_diagCount >= 300) return;
+        lock (_diagLock)
+        {
+            if (_diagCount >= 300) return;
+            _diagCount++;
+            try
+            {
+                var dir = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp");
+                System.IO.Directory.CreateDirectory(dir);
+                var parms = string.Join(" ", evt.Parameters.OrderBy(k => k.Key)
+                    .Select(kv => $"[{kv.Key}]={DiagVal(kv.Value)}"));
+                System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "newchar_diag.txt"),
+                    $"id={id} resolvedName=\"{info.Name}\" resolvedGuild=\"{info.Guild}\" {parms}\n");
+            }
+            catch { }
+        }
+    }
+
+    private static string DiagVal(object? v) => v switch
+    {
+        null => "null",
+        byte[] b => $"byte[{b.Length}]={Convert.ToHexString(b)}",
+        object?[] a => $"arr[{a.Length}]={{{string.Join(",", a.Select(x => x?.ToString() ?? "null"))}}}",
+        _ => v.ToString() ?? ""
+    };
 
     public static PlayerInfo? Get(long objectId) => _byId.TryGetValue(objectId, out var v) ? v : null;
 
@@ -61,6 +111,15 @@ public static class PlayerRegistry
     }
 
     public static bool IsMob(long objectId) => _mobs.ContainsKey(objectId);
+
+    private static void RegisterMob(long id)
+    {
+        _mobs[id] = 1;
+        // Teto de segurança: numa sessão longa (várias horas, muitas zonas), isso
+        // cresceria sem limite. Limpa e deixa repopular — ObjectIds de mob mudam de
+        // zona mesmo assim, então não perde nada de relevante mantendo isso pequeno.
+        if (_mobs.Count > 20000) _mobs.Clear();
+    }
 
     public static void Clear() { _byId.Clear(); _mobs.Clear(); }
 

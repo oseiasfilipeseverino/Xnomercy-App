@@ -7,13 +7,28 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>icon.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Main() customizado (Program.cs) em vez do gerado automaticamente pelo WPF —
+         necessário pro VelopackApp.Build().Run() rodar bem no início do processo. -->
+    <StartupObject>XnomercyApp.Program</StartupObject>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- App.xaml deixa de ser o ponto de entrada (isso agora é Program.cs) — mas
+         continua sendo compilado normalmente como a definição XAML do Application. -->
+    <ApplicationDefinition Remove="App.xaml" />
+    <Page Include="App.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Hardcodet.NotifyIcon.Wpf" Version="2.0.1" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4022.49" />
     <PackageReference Include="PacketDotNet" Version="1.4.8" />
     <PackageReference Include="SharpPcap" Version="6.3.1" />
+    <PackageReference Include="Velopack" Version="1.2.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -22,6 +37,9 @@
     <Resource Include="Fonts\Barlow-Regular.ttf" />
     <Resource Include="Fonts\Barlow-Medium.ttf" />
     <Resource Include="Fonts\Barlow-SemiBold.ttf" />
+    <Resource Include="Icons\fame.png" />
+    <Resource Include="Icons\yellow_fame.png" />
+    <Resource Include="Icons\silver.png" />
   </ItemGroup>
 
 </Project>

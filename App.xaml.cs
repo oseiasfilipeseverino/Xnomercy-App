@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Threading;
+using Velopack;
 
 namespace XnomercyApp;
 
@@ -14,6 +15,8 @@ public partial class App : Application
 {
     protected override void OnStartup(StartupEventArgs e)
     {
+        // VelopackApp.Build().Run() agora roda em Program.Main (recomendação do Velopack —
+        // precisa ser a 1ª coisa do processo, antes até da inicialização do WPF).
         base.OnStartup(e);
 
         DispatcherUnhandledException += (_, args) =>

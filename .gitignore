@@ -3,3 +3,5 @@ obj/
 *.user
 *.log
 .vs/
+publish_test/
+release_test/
