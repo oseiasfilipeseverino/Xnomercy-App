@@ -26,7 +26,17 @@ public static class GameEventCodes
     // NewSimpleItem: [0]=ObjectId [1]=índice do item (tipo) [2]=quantidade
     // [4]=valor estimado [7]=durabilidade. (Mantido só pro modo avançado/diagnóstico.)
     public static int LootPickup { get; set; } = 32;        // NewSimpleItem
-    public static int LootPickupEquipment { get; set; } = 30; // NewEquipmentItem (armas/armaduras, estrutura parecida)
+    // ERA 30 por engano — a calibração com dados reais mostrou que 30 é o Move do
+    // jogador (ver Move abaixo), não pickup de equipamento. Desligado (não sabemos o
+    // código real do NewEquipmentItem e ele só servia pro modo avançado).
+    public static int LootPickupEquipment { get; set; } = Unknown;
+
+    // Move: posição/movimento de um jogador. Dispara continuamente pra cada jogador
+    // por perto. [0]=ObjectId [5]=Nome [7]/[8]=posição. É a fonte CONTÍNUA de
+    // ObjectId -> nome: diferente do NewCharacter (29, só dispara quando o jogador
+    // entra na tela), o Move resolve o nome de quem já estava na cena, acabando com os
+    // "#12345" no medidor de dano. Confirmado na calibração (232 amostras, todas com nome).
+    public static int Move { get; set; } = 30;
     public static int FameGain { get; set; } = 82;          // UpdateFame (fama vermelha/combate)
     public static int YellowFame { get; set; } = 84;        // UpdateReSpecPoints (jogo mostra como "🟡", [2]=ganho)
     public static int SilverGain { get; set; } = 81;        // UpdateMoney

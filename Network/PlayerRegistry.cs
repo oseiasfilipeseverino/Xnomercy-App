@@ -50,6 +50,14 @@ public static class PlayerRegistry
             if (evt.Parameters.TryGetValue(4, out var mid) && ToLong(mid) is long m) RegisterMob(m);
             return;
         }
+        if (evt.EventCode == GameEventCodes.Move)
+        {
+            // Move dispara várias vezes/seg pra cada jogador por perto, trazendo
+            // [0]=ObjectId e [5]=Nome. Resolve o nome de quem já estava na cena antes do
+            // app abrir (NewCharacter só dispara na entrada), eliminando os "#12345".
+            HandleMoveName(evt);
+            return;
+        }
         if (evt.EventCode != GameEventCodes.NewCharacter) return;
         if (!evt.Parameters.TryGetValue(0, out var idObj) || ToLong(idObj) is not long id) return;
 
@@ -102,6 +110,23 @@ public static class PlayerRegistry
         object?[] a => $"arr[{a.Length}]={{{string.Join(",", a.Select(x => x?.ToString() ?? "null"))}}}",
         _ => v.ToString() ?? ""
     };
+
+    // Resolve nome a partir do evento Move (código 30). Mantém guild/arma se o
+    // NewCharacter já tiver preenchido (o Move não traz esses) — só garante o nome.
+    private static void HandleMoveName(PhotonEvent evt)
+    {
+        if (!evt.Parameters.TryGetValue(0, out var idObj) || ToLong(idObj) is not long id) return;
+        // Caminho rápido: Move repete muito; se já temos o nome desse id, não faz nada.
+        if (_byId.TryGetValue(id, out var existing) && existing.Name.Length > 0) return;
+        if (!evt.Parameters.TryGetValue(5, out var n) || n is not string name || name.Length == 0) return;
+
+        if (existing != null) existing.Name = name;   // tinha entrada sem nome — completa
+        else
+        {
+            _byId[id] = new PlayerInfo { Name = name };
+            if (_byId.Count > 20000) _byId.Clear();
+        }
+    }
 
     public static PlayerInfo? Get(long objectId) => _byId.TryGetValue(objectId, out var v) ? v : null;
 

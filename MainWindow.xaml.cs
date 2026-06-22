@@ -406,7 +406,10 @@ public partial class MainWindow : Window
     [System.Diagnostics.Conditional("BETA")]
     private static void DiagLogNamedEvent(PhotonEvent evt)
     {
-        if (evt.EventCode < 0 || evt.EventCode == GameEventCodes.NewCharacter || _diagNamedCount >= 500) return;
+        // Pula 29 (NewCharacter) e 30 (Move) — já calibrados e de alto volume; entupiam
+        // o log e escondiam códigos raros (ex: o evento de party que ainda procuramos).
+        if (evt.EventCode < 0 || evt.EventCode == GameEventCodes.NewCharacter
+            || evt.EventCode == GameEventCodes.Move || _diagNamedCount >= 500) return;
         bool hasText = evt.Parameters.Values.Any(v => v is string s && s.Length > 1 && !s.All(c => char.IsDigit(c) || c == ',' || c == '.' || c == '-'));
         if (!hasText) return;
         lock (_diagNamedLock)
