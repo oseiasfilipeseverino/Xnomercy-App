@@ -1,3 +1,5 @@
+using System.IO;
+
 namespace XnomercyApp.Network;
 
 /// <summary>
@@ -51,13 +53,16 @@ public static class Protocol18Deserializer
 
             case Protocol18Type.ByteArray:
             {
+                // ReadBytesRaw já valida contra o que resta no buffer (não precisa de
+                // ReadCount aqui), mas o cast pra int sozinho já podia ficar negativo
+                // antes dessa checagem — por isso ReadBytesRaw também rejeita count < 0.
                 int len = ReadVarUInt32(r);
                 return r.ReadBytesRaw(len);
             }
             case Protocol18Type.Array:
             case Protocol18Type.ObjectArray:
             {
-                int count = ReadVarUInt32(r);
+                int count = ReadCount(r);
                 byte elementType = type == Protocol18Type.Array ? r.ReadByte() : (byte)0;
                 var arr = new object?[count];
                 for (int i = 0; i < count; i++)
@@ -66,7 +71,7 @@ public static class Protocol18Deserializer
             }
             case Protocol18Type.StringArray:
             {
-                int count = ReadVarUInt32(r);
+                int count = ReadCount(r);
                 var arr = new string?[count];
                 for (int i = 0; i < count; i++)
                     arr[i] = r.ReadStringP18();
@@ -74,42 +79,42 @@ public static class Protocol18Deserializer
             }
             case Protocol18Type.BooleanArray:
             {
-                int count = ReadVarUInt32(r);
+                int count = ReadCount(r);
                 var arr = new bool[count];
                 for (int i = 0; i < count; i++) arr[i] = r.ReadBool();
                 return arr;
             }
             case Protocol18Type.ShortArray:
             {
-                int count = ReadVarUInt32(r);
+                int count = ReadCount(r);
                 var arr = new short[count];
                 for (int i = 0; i < count; i++) arr[i] = r.ReadInt16LE();
                 return arr;
             }
             case Protocol18Type.FloatArray:
             {
-                int count = ReadVarUInt32(r);
+                int count = ReadCount(r);
                 var arr = new float[count];
                 for (int i = 0; i < count; i++) arr[i] = r.ReadSingleLE();
                 return arr;
             }
             case Protocol18Type.DoubleArray:
             {
-                int count = ReadVarUInt32(r);
+                int count = ReadCount(r);
                 var arr = new double[count];
                 for (int i = 0; i < count; i++) arr[i] = r.ReadDoubleLE();
                 return arr;
             }
             case Protocol18Type.CompressedIntArray:
             {
-                int count = ReadVarUInt32(r);
+                int count = ReadCount(r);
                 var arr = new int[count];
                 for (int i = 0; i < count; i++) arr[i] = ReadZigZagInt32(r);
                 return arr;
             }
             case Protocol18Type.CompressedLongArray:
             {
-                int count = ReadVarUInt32(r);
+                int count = ReadCount(r);
                 var arr = new long[count];
                 for (int i = 0; i < count; i++) arr[i] = ReadZigZagInt64(r);
                 return arr;
@@ -118,7 +123,7 @@ public static class Protocol18Deserializer
             {
                 byte keyType = r.ReadByte();
                 byte valType = r.ReadByte();
-                int count = ReadVarUInt32(r);
+                int count = ReadCount(r);
                 var dict = new Dictionary<object, object?>();
                 for (int i = 0; i < count; i++)
                 {
@@ -130,7 +135,7 @@ public static class Protocol18Deserializer
             }
             case Protocol18Type.Hashtable:
             {
-                int count = ReadVarUInt32(r);
+                int count = ReadCount(r);
                 var table = new Dictionary<object, object?>();
                 for (int i = 0; i < count; i++)
                 {
@@ -195,6 +200,19 @@ public static class Protocol18Deserializer
             dict[key] = val;
         }
         return dict;
+    }
+
+    // Lê um contador de array/dicionário e valida contra o que resta no buffer ANTES
+    // de alocar. Sem isso, um pacote malformado (ou corrompido em trânsito) com um
+    // contador gigante alocava `new T[count]` direto, podendo derrubar o app com
+    // OutOfMemoryException antes de qualquer leitura real detectar o problema. Cada
+    // elemento consome no mínimo 1 byte, então count nunca pode passar de Remaining.
+    private static int ReadCount(PhotonReader r)
+    {
+        int count = ReadVarUInt32(r);
+        if (count < 0 || count > r.Remaining)
+            throw new IOException($"Contador de array/dicionário ({count}) excede o buffer (restam {r.Remaining}).");
+        return count;
     }
 
     // ── Varint + zigzag (mesmo algoritmo do Protocol Buffers — público e genérico) ──

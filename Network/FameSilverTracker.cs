@@ -22,46 +22,67 @@ public sealed class FameSilverTracker
     private long _fameRaw;         // soma da fama vermelha (já com premium/bolsa) ×10000
     private long _yellowRaw;       // soma da fama amarela ×10000
     private long _silverRaw;       // soma dos ganhos de prata ×10000
+    private readonly object _lock = new();
 
     public event Action? Updated;
 
     public void HandleEvent(PhotonEvent evt)
     {
+        // Mesmo padrão de lock do DamageMeterTracker: a thread de captura escreve aqui
+        // e a UI lê TotalFame/TotalYellowFame/TotalSilver ao mesmo tempo — sem isso, os
+        // totais podiam corromper ou perder incrementos sob concorrência.
         if (evt.EventCode == GameEventCodes.FameGain && TryGetParam(evt, 2, out long fameWithZoneRaw))
         {
+            // Pacote malformado/corrompido podia mandar fama negativa aqui — um evento
+            // de ganho de fama nunca é negativo de verdade, então descarta com segurança.
+            if (fameWithZoneRaw < 0) return;
             // Fórmula do jogo (mesma do Statistics Analysis Tool):
             //   fama exibida = fama_com_zona [2] × (1,5 se Premium [5]) + fama_da_bolsa [10]
             // Assim batemos com o número que o jogo mostra (com o bônus de +50% da Premium
             // e o bônus de bolsa de visão), em vez de só a fama base creditada.
             bool premium = evt.Parameters.TryGetValue(5, out var p) && p is bool pb && pb;
-            long satchelRaw = TryGetParam(evt, 10, out long s) ? s : 0;
+            long satchelRaw = TryGetParam(evt, 10, out long s) && s > 0 ? s : 0;
             long gainedRaw = (premium ? fameWithZoneRaw * 3 / 2 : fameWithZoneRaw) + satchelRaw;
-            _fameRaw += gainedRaw;
-            TotalFame = _fameRaw / 10000;
+            lock (_lock)
+            {
+                _fameRaw += gainedRaw;
+                TotalFame = _fameRaw / 10000;
+            }
             Updated?.Invoke();
         }
         else if (evt.EventCode == GameEventCodes.YellowFame && TryGetParam(evt, 2, out long yellowGain))
         {
-            _yellowRaw += yellowGain;
-            TotalYellowFame = _yellowRaw / 10000;
+            if (yellowGain < 0) return;
+            lock (_lock)
+            {
+                _yellowRaw += yellowGain;
+                TotalYellowFame = _yellowRaw / 10000;
+            }
             Updated?.Invoke();
         }
         else if (evt.EventCode == GameEventCodes.SilverTaken && TryGetParam(evt, 3, out long silverAmt))
         {
-            _silverRaw += silverAmt;
-            TotalSilver = _silverRaw / 10000;
+            if (silverAmt < 0) return;
+            lock (_lock)
+            {
+                _silverRaw += silverAmt;
+                TotalSilver = _silverRaw / 10000;
+            }
             Updated?.Invoke();
         }
     }
 
     public void Reset()
     {
-        TotalFame = 0;
-        TotalYellowFame = 0;
-        TotalSilver = 0;
-        _fameRaw = 0;
-        _yellowRaw = 0;
-        _silverRaw = 0;
+        lock (_lock)
+        {
+            TotalFame = 0;
+            TotalYellowFame = 0;
+            TotalSilver = 0;
+            _fameRaw = 0;
+            _yellowRaw = 0;
+            _silverRaw = 0;
+        }
         SessionStart = DateTime.Now;
         Updated?.Invoke();
     }

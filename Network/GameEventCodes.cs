@@ -60,10 +60,29 @@ public static class GameEventCodes
     // NewMob acima (só soma cobertura, não substitui).
     public static int MobSpeak { get; set; } = 74;
 
+    // MobKilled (mob foi abatido): [0] e [4]=ObjectId do mob (repetido) [3]=tag do tipo
+    // (ex: "@MOB_UNDEAD_ARCHER_STANDARD") [5]=nome de quem deu o último hit. Confirmado
+    // na calibração junto com dungeon: o causador de dano que sobrava como #número era
+    // exatamente o ObjectId que apareceu aqui como mob morto. 3ª fonte do filtro de mob.
+    public static int MobKilled { get; set; } = 166;
+
     // HealthUpdate: [0]=ObjectId afetado [2]=variação de vida (negativo=dano,
     // positivo=cura) [6]=ObjectId de quem causou. Não existe evento dedicado de
     // "dano" no Albion — é tudo derivado daqui.
     public static int HealthUpdate { get; set; } = 6;
+
+    // PartyInviteAccepted: dispara no lado de quem CONVIDOU, quando o convidado aceita.
+    // [0]=nome de quem aceitou [1]=True. Confirmado em teste real (convite + aceite).
+    public static int PartyInviteAccepted { get; set; } = 240;
+
+    // PartyMemberStatus: broadcast periódico (repete enquanto estiverem no mesmo grupo,
+    // dispara nos dois sentidos — não importa quem convidou). [1]=nome do membro
+    // [6]=guild dele. Confirmado em 3 testes (convidando e sendo convidado).
+    public static int PartyMemberStatus { get; set; } = 229;
+
+    // PartyMemberLeft: alguém saiu/foi removido do grupo. [2]=nome de quem saiu.
+    // Confirmado: disparou exatamente quando a expulsão aconteceu.
+    public static int PartyMemberLeft { get; set; } = 182;
 
     public static bool IsCalibrated(int code) => code != Unknown;
 }

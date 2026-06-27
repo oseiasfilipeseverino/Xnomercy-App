@@ -8,6 +8,20 @@ using XnomercyApp.Network;
 
 namespace XnomercyApp;
 
+// Converte a % de dano (0-100) na largura em pixels da barrinha do Medidor de Dano.
+// 140 = largura total da barra definida no XAML (GridViewColumn "% Dano").
+public sealed class PctToWidthConverter : System.Windows.Data.IValueConverter
+{
+    private const double MaxWidth = 140;
+    public object Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+    {
+        double pct = value is double d ? d : 0;
+        return Math.Clamp(pct, 0, 100) / 100.0 * MaxWidth;
+    }
+    public object ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
 public sealed class LootEventRow : INotifyPropertyChanged
 {
     public string Time { get; init; } = "";
@@ -42,6 +56,7 @@ public sealed class DamageRowDisplay
     public string Player { get; init; } = "";
     public long Damage { get; init; }
     public string DamagePct { get; init; } = "";
+    public double DamagePctValue { get; init; }   // 0-100, pra desenhar a barra (DamagePct é só o texto formatado)
     public long Healing { get; init; }
     public string? WeaponIcon { get; init; }   // URL do render oficial do item
 }
@@ -78,9 +93,27 @@ public partial class MainWindow : Window
     private static readonly System.Windows.Media.Brush NavActiveBrush = B("#dc2626");  // vermelho do site
     private static readonly System.Windows.Media.Brush NavIdleBrush   = B("#888888");
 
+    // Pinta a barra de título nativa (a faixa branca do Windows lá em cima) escura,
+    // pra combinar com o resto do app — sem isso ela vinha sempre clara/padrão do
+    // tema do Windows, independente do app ser todo dark. Funciona no Windows 10
+    // 1809+/11; em versões mais antigas a chamada simplesmente falha e é ignorada.
+    [System.Runtime.InteropServices.DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+    private const int DwmwaUseImmersiveDarkMode = 20;
+
     public MainWindow()
     {
         InitializeComponent();
+        SourceInitialized += (_, _) =>
+        {
+            try
+            {
+                var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+                int darkMode = 1;
+                DwmSetWindowAttribute(hwnd, DwmwaUseImmersiveDarkMode, ref darkMode, sizeof(int));
+            }
+            catch { /* Windows antigo sem suporte — fica com a barra padrão, sem travar nada */ }
+        };
         _ = InitWebViewAsync();
         _ = ItemCatalog.EnsureLoadedAsync(); // carrega em segundo plano, mesma base de nomes do site
         _ = CheckForUpdateAsync();
@@ -144,11 +177,25 @@ public partial class MainWindow : Window
     private void RefreshDamagePanel()
     {
         _damageRows.Clear();
-        bool hideUnnamed = ChkHideUnnamed.IsChecked == true;
+        bool showUnnamed = ChkShowUnnamed.IsChecked == true;
+        bool guildOnly = ChkGuildOnlyDamage.IsChecked == true;
+        bool partyOnly = ChkPartyOnlyDamage.IsChecked == true;
         var entries = _damageTracker.Snapshot()
-            // "Ocultar sem nome": tira os #número (mob não detectado, invocação, etc.),
-            // deixando só jogadores resolvidos. Resolve na hora o "muito dano sem nome".
-            .Where(x => !hideUnnamed || !PlayerRegistry.NameOf(x.ObjectId).StartsWith('#'))
+            // "Mostrar sem nome": por padrão (desmarcado) já filtra os #número (mob não
+            // detectado, invocação, etc.), deixando só jogadores resolvidos. Marcando,
+            // revela os #número de volta — é o oposto do que era antes ("ocultar").
+            .Where(x => showUnnamed || !PlayerRegistry.NameOf(x.ObjectId).StartsWith('#'))
+            // "Só minha guild": opcional, pra quando quiser ver só o desempenho da sua
+            // guild — o padrão continua mostrando todo mundo por perto. A guild do
+            // próprio usuário é resolvida em background (PlayerRegistry.OwnGuild); se
+            // ainda não resolveu, só você mesmo passa (evita falso positivo comparando
+            // "" com guild vazia de quem não tem guild).
+            .Where(x => !guildOnly || x.ObjectId == PlayerRegistry.SelfObjectId
+                        || (PlayerRegistry.OwnGuild.Length > 0
+                            && PlayerRegistry.GuildOf(x.ObjectId) == PlayerRegistry.OwnGuild))
+            // "Só meu grupo": rastreado via eventos de grupo calibrados (entrada por
+            // 229/240, saída por 182, com expiração de 60s como rede de segurança).
+            .Where(x => !partyOnly || PlayerRegistry.IsInPartyById(x.ObjectId))
             .OrderByDescending(x => x.Damage)
             .ToList();
         // Com o filtro ligado, a % passa a ser entre os jogadores mostrados (faz mais
@@ -159,7 +206,13 @@ public partial class MainWindow : Window
             var info = PlayerRegistry.Get(e.ObjectId);
             string name = PlayerRegistry.NameOf(e.ObjectId);   // "Você", nome real, ou #id
             string? icon = null;
-            if (info != null && info.MainHand >= 0)
+            if (e.ObjectId == PlayerRegistry.SelfObjectId)
+            {
+                // Você nunca tem PlayerInfo (o jogo não manda NewCharacter de você
+                // mesmo) — a arma vem de uma consulta separada à API pública do Albion.
+                icon = PlayerRegistry.OwnWeaponIconUrl;
+            }
+            else if (info != null && info.MainHand >= 0)
             {
                 var uniq = ItemCatalog.GetUniqueName(info.MainHand);
                 if (!string.IsNullOrEmpty(uniq))
@@ -171,6 +224,7 @@ public partial class MainWindow : Window
                 Player = name,
                 Damage = e.Damage,
                 DamagePct = pct.ToString("0.0") + "%",
+                DamagePctValue = pct,
                 Healing = e.Healing,
                 WeaponIcon = icon,
             });
@@ -504,10 +558,27 @@ public partial class MainWindow : Window
     {
         if (obj is not LootFeedRow r) return true;
         if (r.IsMob && ChkHideMob.IsChecked == true) return false;       // esconde mob se marcado
+        // "Só minha guild": opcional — mostra só pickups feitos por gente da sua guild
+        // (resolvida em background via PlayerRegistry.OwnGuild). Padrão é desmarcado
+        // (mostra todo mundo por perto, igual sempre foi).
+        if (ChkGuildOnlyLoot.IsChecked == true && r.Looter != PlayerRegistry.SelfName
+            && (PlayerRegistry.OwnGuild.Length == 0 || PlayerRegistry.GuildOfName(r.Looter) != PlayerRegistry.OwnGuild))
+            return false;
+        // "Só meu grupo": idem, mas usando o rastreamento de grupo (229/240/182).
+        if (ChkPartyOnlyLoot.IsChecked == true && !PlayerRegistry.IsInParty(r.Looter)) return false;
         return true;
     }
 
     private void LootFilter_Changed(object sender, RoutedEventArgs e) => _lootFeedView?.Refresh();
+
+    // Limpa o feed limpo e o modo avançado (eventos crus + marcados) — não para a
+    // captura, só esvazia o que já foi mostrado, igual o "Reiniciar sessão" do Medidor.
+    private void BtnLootReset_Click(object sender, RoutedEventArgs e)
+    {
+        _lootFeed.Clear();
+        _lootRows.Clear();
+        _markedRows.Clear();
+    }
 
     private void BtnExportCsv_Click(object sender, RoutedEventArgs e)
     {
@@ -686,8 +757,8 @@ public partial class MainWindow : Window
         // Já respondeu antes: se aceitou, manda o que foi coletado na sessão passada
         // (seguro aqui — a captura ainda não começou, é manual).
         DiagReporter.ReportDiagFiles();
-        SetActiveNav(NavLoot);
-        ShowPanel("loot");
+        SetActiveNav(NavFame);
+        ShowPanel("fame");
     }
 
     // Pergunta de consentimento pro diagnóstico (ver PanelConsent no XAML) — uma vez só,
@@ -697,16 +768,16 @@ public partial class MainWindow : Window
         ConsentStore.SetConsent(true);
         DiagReporter.ReportDiagFiles();   // manda o que já tiver de sessões anteriores
         PanelConsent.Visibility = Visibility.Collapsed;
-        SetActiveNav(NavLoot);
-        ShowPanel("loot");
+        SetActiveNav(NavFame);
+        ShowPanel("fame");
     }
 
     private void BtnConsentNo_Click(object sender, RoutedEventArgs e)
     {
         ConsentStore.SetConsent(false);
         PanelConsent.Visibility = Visibility.Collapsed;
-        SetActiveNav(NavLoot);
-        ShowPanel("loot");
+        SetActiveNav(NavFame);
+        ShowPanel("fame");
     }
 
     // Desloga: limpa a sessão do site (cookie) e volta pra tela de login, sem

@@ -5,3 +5,5 @@ obj/
 .vs/
 publish_test/
 release_test/
+publish/
+Releases/

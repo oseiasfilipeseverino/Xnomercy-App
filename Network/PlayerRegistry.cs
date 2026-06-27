@@ -1,5 +1,8 @@
 using System.Collections.Concurrent;
 using System.Linq;
+using System.Net.Http;
+using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace XnomercyApp.Network;
 
@@ -20,11 +23,72 @@ public static class PlayerRegistry
 {
     private static readonly ConcurrentDictionary<long, PlayerInfo> _byId = new();
     private static readonly ConcurrentDictionary<long, byte> _mobs = new();
+    // Nome -> guild, alimentado junto com _byId no NewCharacter. Loot Log só tem o nome
+    // (o evento 277 já manda texto, não ObjectId), então precisa desse caminho separado
+    // pro filtro "só guild" do Loot Log.
+    private static readonly ConcurrentDictionary<string, string> _nameToGuild = new();
+
+    // Lock só pra esses 3 campos escalares: são escritos pela thread de captura
+    // (HandleOpResponse/ResolveOwnGuildAsync) e lidos pela UI ao mesmo tempo. O resto
+    // da classe já usa ConcurrentDictionary, que cobre a si mesmo — esses três campos
+    // simples não tinham proteção nenhuma antes.
+    private static readonly object _selfLock = new();
+    private static long? _selfObjectId;
+    private static string? _selfName;
+    private static string _ownGuild = "";
 
     // Seu próprio ObjectId — descoberto pelos eventos de fama/prata (que são do SEU
     // personagem). O jogo não manda NewCharacter de você mesmo, então é assim que a
     // gente sabe quem é "você" no medidor de dano.
-    public static long? SelfObjectId { get; private set; }
+    public static long? SelfObjectId
+    {
+        get { lock (_selfLock) return _selfObjectId; }
+        private set { lock (_selfLock) _selfObjectId = value; }
+    }
+
+    // Nome e guild do PRÓPRIO jogador. O Move/NewCharacter nunca trazem isso de você
+    // mesmo (o jogo não manda esses eventos do seu próprio personagem), então a guild
+    // do usuário é resolvida à parte: nome vem da operação Join (igual o ObjectId acima),
+    // e a guild é então consultada na API pública do Albion (a mesma que o site já usa
+    // pra buscar membros da guild) — assim o filtro "só minha guild" funciona pra
+    // qualquer jogador que abrir o app, não só pra quem está na XnoMercy.
+    public static string? SelfName
+    {
+        get { lock (_selfLock) return _selfName; }
+        private set { lock (_selfLock) _selfName = value; }
+    }
+
+    public static string OwnGuild
+    {
+        get { lock (_selfLock) return _ownGuild; }
+        private set { lock (_selfLock) _ownGuild = value; }
+    }
+
+    // URL do render oficial da SUA arma equipada — resolvida junto com a guild (mesma
+    // consulta de nome), mas precisa de uma 2ª chamada à API (a busca por nome não traz
+    // equipamento, só o perfil completo do jogador traz). Fica null até resolver, ou se
+    // o personagem estiver desarmado.
+    private static string? _ownWeaponIconUrl;
+    public static string? OwnWeaponIconUrl
+    {
+        get { lock (_selfLock) return _ownWeaponIconUrl; }
+        private set { lock (_selfLock) _ownWeaponIconUrl = value; }
+    }
+
+    // Timeout curto: o default do HttpClient é 100s — se a API pública ficar lenta
+    // (sem cair, só sem responder), a resolução de guild/arma ficava presa até esse
+    // tempo todo antes do catch entrar em ação. 10s já é generoso pra uma API pública.
+    private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(10) };
+    private static int _resolvingOwnGuildFlag;   // 0=livre, 1=ocupado (ver ResolveOwnGuildAsync)
+
+    // Nome -> hora em que vimos o último sinal de que esse jogador está no SEU grupo.
+    // Alimentado por PartyInviteAccepted (240, quando alguém aceita seu convite) e
+    // PartyMemberStatus (229, broadcast periódico enquanto estiverem juntos — funciona
+    // nos dois sentidos, não importa quem convidou). Removido por PartyMemberLeft (182).
+    // Também expira sozinho (ver IsInParty) pra cobrir o caso de você ser expulso, que
+    // não tem confirmação na calibração: só vimos o 182 disparar de quem expulsa.
+    private static readonly ConcurrentDictionary<string, DateTime> _partyMembers = new();
+    private static readonly TimeSpan PartyMemberTimeout = TimeSpan.FromSeconds(60);
 
     public static void HandleEvent(PhotonEvent evt)
     {
@@ -45,9 +109,31 @@ public static class PlayerRegistry
         }
         if (evt.EventCode == GameEventCodes.MobSpeak)
         {
-            // 2ª fonte, mais confiável: o mob "falou" (provocação/agro), então o [4] é
-            // garantidamente um ObjectId de mob, independente do NewMob ter disparado certo.
-            if (evt.Parameters.TryGetValue(4, out var mid) && ToLong(mid) is long m) RegisterMob(m);
+            // Código 74 é "chat" genérico — dispara pra QUALQUER personagem que fala por
+            // perto, mob ou jogador (confirmado: um jogador colou texto comum no chat e
+            // disparou esse mesmo código). Só é sinal confiável de mob quando [0] é a tag
+            // interna do mob (ex: "@MOB_UNDEAD_PULLER_VETERAN"), não um nome de jogador —
+            // sem esse filtro, qualquer jogador que falasse no chat virava "mob" e o dano
+            // dele desaparecia do Medidor de Dano.
+            if (evt.Parameters.TryGetValue(0, out var who) && who is string tag && tag.StartsWith('@')
+                && evt.Parameters.TryGetValue(4, out var mid) && ToLong(mid) is long m)
+            {
+                RegisterMob(m);
+            }
+            return;
+        }
+        if (evt.EventCode == GameEventCodes.MobKilled)
+        {
+            // Código 166 também é genérico — "alguém morreu", mob OU jogador (confirmado:
+            // disparou pra um jogador real morrendo, com [3]=nome dele, não tag de mob).
+            // Só é sinal confiável de mob quando [3] é a tag interna (ex: "@MOB_..."),
+            // senão um jogador que morresse virava "mob" e o dano dele desaparecia do
+            // Medidor de Dano — mesmo problema que já corrigimos no código 74 (chat).
+            if (evt.Parameters.TryGetValue(3, out var tagObj) && tagObj is string mobTag && mobTag.StartsWith('@')
+                && evt.Parameters.TryGetValue(0, out var mid) && ToLong(mid) is long m)
+            {
+                RegisterMob(m);
+            }
             return;
         }
         if (evt.EventCode == GameEventCodes.Move)
@@ -56,6 +142,34 @@ public static class PlayerRegistry
             // [0]=ObjectId e [5]=Nome. Resolve o nome de quem já estava na cena antes do
             // app abrir (NewCharacter só dispara na entrada), eliminando os "#12345".
             HandleMoveName(evt);
+            return;
+        }
+        if (evt.EventCode == GameEventCodes.PartyInviteAccepted)
+        {
+            if (evt.Parameters.TryGetValue(0, out var p1) && p1 is string acceptedName && acceptedName.Length > 0
+                && evt.Parameters.TryGetValue(1, out var acc) && acc is bool ok && ok)
+            {
+                _partyMembers[acceptedName] = DateTime.UtcNow;
+                // Mesmo teto de segurança que _byId/_mobs/_nameToGuild: sem o 182 (saída),
+                // nomes antigos só expiram na leitura (IsInParty), nunca são removidos do
+                // dicionário — numa sessão muito longa isso cresceria sem limite.
+                if (_partyMembers.Count > 20000) _partyMembers.Clear();
+            }
+            return;
+        }
+        if (evt.EventCode == GameEventCodes.PartyMemberStatus)
+        {
+            if (evt.Parameters.TryGetValue(1, out var p2) && p2 is string statusName && statusName.Length > 0)
+            {
+                _partyMembers[statusName] = DateTime.UtcNow;
+                if (_partyMembers.Count > 20000) _partyMembers.Clear();
+            }
+            return;
+        }
+        if (evt.EventCode == GameEventCodes.PartyMemberLeft)
+        {
+            if (evt.Parameters.TryGetValue(2, out var p3) && p3 is string leftName && leftName.Length > 0)
+                _partyMembers.TryRemove(leftName, out _);
             return;
         }
         if (evt.EventCode != GameEventCodes.NewCharacter) return;
@@ -70,6 +184,11 @@ public static class PlayerRegistry
         {
             _byId[id] = info;
             if (_byId.Count > 20000) _byId.Clear();   // mesmo teto de segurança que os mobs
+            if (info.Guild.Length > 0)
+            {
+                _nameToGuild[info.Name] = info.Guild;
+                if (_nameToGuild.Count > 20000) _nameToGuild.Clear();
+            }
         }
     }
 
@@ -138,10 +257,76 @@ public static class PlayerRegistry
             && op.Parameters.TryGetValue(0, out var sid) && ToLong(sid) is long self && self > 0)
         {
             SelfObjectId = self;
+            if (op.Parameters.TryGetValue(2, out var n) && n is string name && name.Length > 0
+                && name != SelfName)
+            {
+                SelfName = name;
+                _ = ResolveOwnGuildAsync(name);   // dispara em background, não bloqueia a captura
+            }
         }
     }
 
+    // Consulta a API pública do Albion (gameinfo.albiononline.com — sem chave, mesma
+    // usada pelo site pra buscar membros de guild) pra descobrir a guild E a arma
+    // equipada do PRÓPRIO personagem pelo nome. Roda uma vez por nome (troca de
+    // personagem/zona repete o mesmo nome, então não refaz a consulta).
+    private static async Task ResolveOwnGuildAsync(string name)
+    {
+        // CompareExchange em vez de "if (flag) return; flag = true": com volatile bool
+        // havia uma janela teórica onde duas chamadas quase simultâneas liam flag=false
+        // antes de qualquer uma escrever true, disparando 2 resoluções em paralelo.
+        if (System.Threading.Interlocked.CompareExchange(ref _resolvingOwnGuildFlag, 1, 0) != 0) return;
+        try
+        {
+            var url = $"https://gameinfo.albiononline.com/api/gameinfo/search?q={Uri.EscapeDataString(name)}";
+            using var resp = await _http.GetAsync(url).ConfigureAwait(false);
+            if (!resp.IsSuccessStatusCode) return;
+            using var stream = await resp.Content.ReadAsStreamAsync().ConfigureAwait(false);
+            using var doc = await JsonDocument.ParseAsync(stream).ConfigureAwait(false);
+            if (!doc.RootElement.TryGetProperty("players", out var players)) return;
+            foreach (var p in players.EnumerateArray())
+            {
+                if (!p.TryGetProperty("Name", out var pn) || pn.GetString() != name) continue;
+                if (p.TryGetProperty("GuildName", out var gn)) OwnGuild = gn.GetString() ?? "";
+                if (p.TryGetProperty("Id", out var idProp) && idProp.GetString() is string playerId)
+                    await ResolveOwnWeaponAsync(playerId).ConfigureAwait(false);
+                break;
+            }
+        }
+        catch { /* sem internet ou API fora do ar — filtro "só minha guild" fica sem efeito até resolver */ }
+        finally { System.Threading.Interlocked.Exchange(ref _resolvingOwnGuildFlag, 0); }
+    }
+
+    // 2ª chamada: a busca por nome não traz equipamento, só o perfil completo do
+    // jogador traz (Equipment.MainHand.Type = unique_name do item, ex: "T6_2H_AXE").
+    // Usa o mesmo render oficial que o resto do app já usa pros ícones.
+    private static async Task ResolveOwnWeaponAsync(string playerId)
+    {
+        try
+        {
+            var url = $"https://gameinfo.albiononline.com/api/gameinfo/players/{Uri.EscapeDataString(playerId)}";
+            using var resp = await _http.GetAsync(url).ConfigureAwait(false);
+            if (!resp.IsSuccessStatusCode) return;
+            using var stream = await resp.Content.ReadAsStreamAsync().ConfigureAwait(false);
+            using var doc = await JsonDocument.ParseAsync(stream).ConfigureAwait(false);
+            if (doc.RootElement.TryGetProperty("Equipment", out var eq)
+                && eq.TryGetProperty("MainHand", out var mainHand)
+                && mainHand.ValueKind == JsonValueKind.Object
+                && mainHand.TryGetProperty("Type", out var typeProp)
+                && typeProp.GetString() is string uniq && uniq.Length > 0)
+            {
+                OwnWeaponIconUrl = $"https://render.albiononline.com/v1/item/{uniq}.png?size=64";
+            }
+        }
+        catch { /* desarmado, API fora do ar, etc. — fica sem ícone, não trava nada */ }
+    }
+
     public static PlayerInfo? Get(long objectId) => _byId.TryGetValue(objectId, out var v) ? v : null;
+
+    public static string GuildOf(long objectId) => Get(objectId)?.Guild ?? "";
+
+    // Usado pelo Loot Log, que só tem o nome de texto do evento 277 (sem ObjectId).
+    public static string GuildOfName(string name) => _nameToGuild.TryGetValue(name, out var g) ? g : "";
 
     public static string NameOf(long objectId)
     {
@@ -150,6 +335,15 @@ public static class PlayerRegistry
     }
 
     public static bool IsMob(long objectId) => _mobs.ContainsKey(objectId);
+
+    // "Você" sempre conta como estando no seu próprio grupo. Pra qualquer outro nome,
+    // só vale enquanto o último sinal (229/240) não passou do timeout — assim, se você
+    // for expulso sem o app ver o 182 (só vimos disparar do lado de quem expulsa), o
+    // filtro se autocorrige em até 60s em vez de prender alguém pra sempre na lista.
+    public static bool IsInParty(string name) =>
+        name == SelfName || (_partyMembers.TryGetValue(name, out var last) && DateTime.UtcNow - last < PartyMemberTimeout);
+
+    public static bool IsInPartyById(long objectId) => objectId == SelfObjectId || IsInParty(NameOf(objectId));
 
     private static void RegisterMob(long id)
     {
