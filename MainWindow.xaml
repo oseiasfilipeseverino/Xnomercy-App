@@ -294,41 +294,71 @@
                                   Foreground="#cbd5e1" VerticalAlignment="Center" Margin="16,0,0,0"/>
                     </StackPanel>
                 </StackPanel>
-                <ListView x:Name="ListDamage" Grid.Row="1" Margin="16,0,16,16" Background="#0f0f0f" Foreground="White" BorderThickness="0">
-                    <ListView.View>
-                        <GridView>
-                            <GridViewColumn Header="" Width="40">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <Image Source="{Binding WeaponIcon}" Width="30" Height="30"/>
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="Jogador" Width="230" DisplayMemberBinding="{Binding Player}"/>
-                            <GridViewColumn Header="Dano" Width="110" DisplayMemberBinding="{Binding Damage}"/>
-                            <GridViewColumn Header="% Dano" Width="220">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="140"/>
-                                                <ColumnDefinition Width="60"/>
-                                            </Grid.ColumnDefinitions>
-                                            <!-- Barra: estilo simples sem chrome do Windows (fundo escuro,
-                                                 preenchimento dourado proporcional a DamagePctValue). -->
-                                            <Border Grid.Column="0" Background="#1a1a1a" CornerRadius="3" Height="14" VerticalAlignment="Center">
-                                                <Border HorizontalAlignment="Left" Background="#c9a227" CornerRadius="3"
-                                                        Width="{Binding DamagePctValue, Converter={StaticResource PctToWidth}}"/>
-                                            </Border>
-                                            <TextBlock Grid.Column="1" Text="{Binding DamagePct}" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="White"/>
-                                        </Grid>
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="Cura" Width="110" DisplayMemberBinding="{Binding Healing}"/>
-                        </GridView>
-                    </ListView.View>
-                </ListView>
+                <Grid Grid.Row="1" Margin="16,0,16,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="360"/>
+                    </Grid.ColumnDefinitions>
+                    <ListView x:Name="ListDamage" Grid.Column="0" Margin="0,0,8,0" Background="#0f0f0f" Foreground="White" BorderThickness="0"
+                              SelectionChanged="ListDamage_SelectionChanged">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="" Width="40">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Image Source="{Binding WeaponIcon}" Width="30" Height="30"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="Jogador" Width="200" DisplayMemberBinding="{Binding Player}"/>
+                                <GridViewColumn Header="Dano" Width="100" DisplayMemberBinding="{Binding Damage}"/>
+                                <GridViewColumn Header="% Dano" Width="200">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="130"/>
+                                                    <ColumnDefinition Width="60"/>
+                                                </Grid.ColumnDefinitions>
+                                                <!-- Barra: estilo simples sem chrome do Windows (fundo escuro,
+                                                     preenchimento dourado proporcional a DamagePctValue). -->
+                                                <Border Grid.Column="0" Background="#1a1a1a" CornerRadius="3" Height="14" VerticalAlignment="Center">
+                                                    <Border HorizontalAlignment="Left" Background="#c9a227" CornerRadius="3"
+                                                            Width="{Binding DamagePctValue, Converter={StaticResource PctToWidth}}"/>
+                                                </Border>
+                                                <TextBlock Grid.Column="1" Text="{Binding DamagePct}" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="Cura" Width="100" DisplayMemberBinding="{Binding Healing}"/>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+
+                    <!-- Quebra de dano por habilidade (estilo Albion Battle Analytics) do
+                         jogador selecionado na lista à esquerda — ver DamageMeterTracker.
+                         SnapshotBySpell e SpellCatalog (resolve o índice da skill pro nome). -->
+                    <Border Grid.Column="1" Background="#0f0f0f" CornerRadius="6" Padding="12">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock x:Name="TxtDamageBySkillTitle" Grid.Row="0" Text="Dano por habilidade — selecione um jogador na lista"
+                                       Foreground="#cbd5e1" FontWeight="SemiBold" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                            <ListView x:Name="ListDamageBySkill" Grid.Row="1" Background="Transparent" Foreground="White" BorderThickness="0">
+                                <ListView.View>
+                                    <GridView>
+                                        <GridViewColumn Header="Habilidade" Width="170" DisplayMemberBinding="{Binding Name}"/>
+                                        <GridViewColumn Header="Dano" Width="80" DisplayMemberBinding="{Binding Damage}"/>
+                                        <GridViewColumn Header="%" Width="60" DisplayMemberBinding="{Binding DamagePct}"/>
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                        </Grid>
+                    </Border>
+                </Grid>
             </Grid>
 
             <!-- Mostrado quando a conta de teste não tem permissão pra essa aba -->

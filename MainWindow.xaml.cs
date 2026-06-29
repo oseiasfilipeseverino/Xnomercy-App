@@ -53,12 +53,21 @@ public sealed class LootFeedRow
 
 public sealed class DamageRowDisplay
 {
+    public long ObjectId { get; init; }   // usado pra buscar a quebra por habilidade ao selecionar a linha
     public string Player { get; init; } = "";
     public long Damage { get; init; }
     public string DamagePct { get; init; } = "";
     public double DamagePctValue { get; init; }   // 0-100, pra desenhar a barra (DamagePct é só o texto formatado)
     public long Healing { get; init; }
     public string? WeaponIcon { get; init; }   // URL do render oficial do item
+}
+
+public sealed class DamageBySpellRowDisplay
+{
+    public string Name { get; init; } = "";
+    public long Damage { get; init; }
+    public string DamagePct { get; init; } = "";
+    public double DamagePctValue { get; init; }
 }
 
 public partial class MainWindow : Window
@@ -78,6 +87,7 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<LootFeedRow> _lootFeed = new();
     private System.ComponentModel.ICollectionView? _lootFeedView;
     private readonly ObservableCollection<DamageRowDisplay> _damageRows = new();
+    private readonly ObservableCollection<DamageBySpellRowDisplay> _damageBySkillRows = new();
     private readonly FameSilverTracker _fameTracker = new();
     private readonly DamageMeterTracker _damageTracker = new();
     private bool _capturing;
@@ -88,6 +98,23 @@ public partial class MainWindow : Window
     private bool _loggedIn;
     private bool _canTracker = true;   // Loot Log + Medidor de Dano + Fama & Prata (vêm juntos)
     private bool _canCraft = true;
+
+    // Janela de tempo (após o SEU cliente mandar a operação de pegar item) em que o
+    // Loot Log aceita um evento 277 (GrabbedLoot) mesmo sem o campo "de quem" — ver
+    // SelfLootDetector.cs. 3s cobre a latência normal de rede sem deixar a janela
+    // aberta tempo suficiente pra confundir com o próximo pickup de outra pessoa.
+    // Lock: escrito pela thread de captura (OnSelfLootDetected) e lido pela mesma
+    // thread em OnPhotonEvent — mas os dois vêm de eventos diferentes da captura, sem
+    // garantia de ordem/mesma thread entre versões futuras do SharpPcap, então protege
+    // igual ao padrão já usado pros campos escalares de PlayerRegistry.
+    private readonly object _selfLootLock = new();
+    private DateTime _selfLootWindowUntil = DateTime.MinValue;
+    private static readonly TimeSpan SelfLootWindow = TimeSpan.FromSeconds(3);
+
+    private void OnSelfLootDetected(int? itemIndex, long? quantity)
+    {
+        lock (_selfLootLock) _selfLootWindowUntil = DateTime.Now + SelfLootWindow;
+    }
     private static System.Windows.Media.Brush B(string hex) =>
         new System.Windows.Media.BrushConverter().ConvertFromString(hex) as System.Windows.Media.Brush ?? System.Windows.Media.Brushes.Gray;
     private static readonly System.Windows.Media.Brush NavActiveBrush = B("#dc2626");  // vermelho do site
@@ -116,6 +143,7 @@ public partial class MainWindow : Window
         };
         _ = InitWebViewAsync();
         _ = ItemCatalog.EnsureLoadedAsync(); // carrega em segundo plano, mesma base de nomes do site
+        _ = SpellCatalog.EnsureLoadedAsync(); // idem, pra resolver nome de habilidade na quebra por skill
         _ = CheckForUpdateAsync();
 
         ListLootEvents.ItemsSource = _lootRows;
@@ -124,6 +152,7 @@ public partial class MainWindow : Window
         _lootFeedView.Filter = LootRowVisible;
         ListCleanLoot.ItemsSource = _lootFeedView;
         ListDamage.ItemsSource = _damageRows;
+        ListDamageBySkill.ItemsSource = _damageBySkillRows;
 
         // Mesmo stream de pacote alimenta as 3 abas — não precisa de captura separada
         // por aba, é só "quem está interessado em qual Code" (ver GameEventCodes.cs).
@@ -137,6 +166,11 @@ public partial class MainWindow : Window
         // ganhado fama/prata (combate puro sem loot/fama não disparava nenhuma das
         // duas fontes antigas, deixando o próprio dano escondido como "#id").
         _capture.OpRequestReceived += PlayerRegistry.HandleOpRequest;
+        // Loot do PRÓPRIO jogador: detecta pela operação que o seu cliente manda ao
+        // pegar um item (request, não broadcast) — não depende do servidor confirmar
+        // de volta corretamente (ver SelfLootDetector.cs pro porquê disso ser preciso).
+        _capture.OpRequestReceived += SelfLootDetector.HandleOpRequest;
+        SelfLootDetector.SelfLootDetected += OnSelfLootDetected;
         _capture.StatusChanged += status => Dispatcher.BeginInvoke(() => TxtCaptureStatus.Text = status);
 
         // Em vez de atualizar a UI a cada evento (em combate são centenas/seg, o que
@@ -226,6 +260,7 @@ public partial class MainWindow : Window
             double pct = total > 0 ? e.Damage * 100.0 / total : 0;
             _damageRows.Add(new DamageRowDisplay
             {
+                ObjectId = e.ObjectId,
                 Player = name,
                 Damage = e.Damage,
                 DamagePct = pct.ToString("0.0") + "%",
@@ -234,9 +269,50 @@ public partial class MainWindow : Window
                 WeaponIcon = icon,
             });
         }
+
+        // Mantém a quebra por habilidade em sincronia com quem está selecionado — sem
+        // isso ela ficaria parada na última foto enquanto o resto da tela continua
+        // atualizando ao vivo durante o combate.
+        if (ListDamage.SelectedItem is DamageRowDisplay selected)
+            RefreshDamageBySkillPanel(selected.ObjectId);
     }
 
     private void BtnDamageReset_Click(object sender, RoutedEventArgs e) => _damageTracker.Reset();
+
+    // Quebra de dano por habilidade (estilo Albion Battle Analytics) do jogador
+    // selecionado na lista principal — ver DamageMeterTracker.SnapshotBySpell e
+    // SpellCatalog (resolve CausingSpellIndex pro nome real da skill).
+    private void ListDamage_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ListDamage.SelectedItem is DamageRowDisplay row)
+        {
+            TxtDamageBySkillTitle.Text = $"Dano por habilidade — {row.Player}";
+            RefreshDamageBySkillPanel(row.ObjectId);
+        }
+        else
+        {
+            TxtDamageBySkillTitle.Text = "Dano por habilidade — selecione um jogador na lista";
+            _damageBySkillRows.Clear();
+        }
+    }
+
+    private void RefreshDamageBySkillPanel(long objectId)
+    {
+        var bySpell = _damageTracker.SnapshotBySpell(objectId);
+        long total = bySpell.Sum(x => x.Damage);
+        _damageBySkillRows.Clear();
+        foreach (var s in bySpell)
+        {
+            double pct = total > 0 ? s.Damage * 100.0 / total : 0;
+            _damageBySkillRows.Add(new DamageBySpellRowDisplay
+            {
+                Name = s.Name,
+                Damage = s.Damage,
+                DamagePct = pct.ToString("0.0") + "%",
+                DamagePctValue = pct,
+            });
+        }
+    }
 
     // Liga/desliga "ocultar sem nome" — só redesenha (o filtro é aplicado no refresh).
     private void DamageFilter_Changed(object sender, RoutedEventArgs e) => RefreshDamagePanel();
@@ -368,12 +444,32 @@ public partial class MainWindow : Window
         bool isGrabbedLoot = evt.EventCode == GameEventCodes.GrabbedLoot;
         bool isLootCandidate = evt.EventCode == GameEventCodes.LootPickup || evt.EventCode == GameEventCodes.LootPickupEquipment;
 
+        // Alimenta o cache de itens recém-vistos (NewSimpleItem/32) SEMPRE, não só com
+        // o modo avançado visível — é o que permite ao SelfLootDetector resolver nome/
+        // quantidade quando o "pegar tudo" (InventoryMoveGivenItems) chega com os
+        // ObjectIds dos itens.
+        if (evt.EventCode == GameEventCodes.LootPickup
+            && evt.Parameters.TryGetValue(0, out var objIdObj) && evt.Parameters.TryGetValue(1, out var idxObj))
+        {
+            long objId = ToLong(objIdObj);
+            int idx = (int)ToLong(idxObj);
+            long qty = evt.Parameters.TryGetValue(2, out var qObj) ? ToLong(qObj) : 1;
+            if (objId > 0) SelfLootDetector.RegisterDiscoveredItem(objId, idx, qty);
+        }
+
         // Feed normal = SÓ loot com origem (de quem). O evento 277 (saque de corpo/mob)
         // sempre traz a origem; os pickups do seu inventário (login, troca de zona, baú
         // via code 32) NÃO têm origem, então não poluem o normal — ficam só no avançado.
-        // Regra do usuário: "se não preencher 'de quem', não aparece".
+        // Regra do usuário: "se não preencher 'de quem', não aparece" — EXCETO quando
+        // sabemos, pela própria operação que SEU cliente mandou (SelfLootDetector), que
+        // foi você quem pegou: nesse caso mostramos mesmo sem "de quem", porque é
+        // exatamente o cenário da regressão (servidor não confirma "de quem" de volta
+        // pro próprio looter, e o item pego de verdade desaparecia do Loot Log).
         LootFeedRow? feedRow = null;
-        if (isGrabbedLoot && TryParseGrabbedLoot(evt, now, out var fr) && !fr.IsSilver && fr.From.Length > 0)
+        bool withinSelfLootWindow;
+        lock (_selfLootLock) withinSelfLootWindow = now <= _selfLootWindowUntil;
+        if (isGrabbedLoot && TryParseGrabbedLoot(evt, now, out var fr) && !fr.IsSilver
+            && (fr.From.Length > 0 || withinSelfLootWindow))
             feedRow = fr;
 
         // PERFORMANCE: quando o modo avançado não está à vista, não montamos a lista crua
