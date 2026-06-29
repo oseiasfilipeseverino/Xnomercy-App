@@ -131,6 +131,17 @@
                         <Ellipse x:Name="CaptureDot" Width="9" Height="9" Fill="#666666" VerticalAlignment="Center"/>
                         <TextBlock x:Name="CaptureStateLabel" Text="Captura parada" Foreground="#888888" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center"/>
                     </StackPanel>
+
+                    <!-- Timer de fechamento de entrada de dungeon aleatória (90s) — visível
+                         de qualquer aba, igual o indicador de captura acima. Some quando
+                         você sai da dungeon. Ver DungeonTimerTracker.cs. -->
+                    <Border x:Name="PanelDungeonTimer" Visibility="Collapsed" Background="#1a1208" CornerRadius="6"
+                            Padding="10,8" Margin="0,10,0,0">
+                        <StackPanel>
+                            <TextBlock Text="ENTRADA DA DUNGEON FECHA EM" Foreground="#c9a227" FontSize="10" FontWeight="Bold"/>
+                            <TextBlock x:Name="TxtDungeonTimer" Text="01:30" Foreground="White" FontSize="20" FontWeight="Bold"/>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -392,11 +403,22 @@
                                 <TextBlock x:Name="TxtYellowFameTotal" Text="—" Foreground="#fde047" FontSize="26" FontWeight="Bold" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="#0f0f0f" CornerRadius="6" Padding="22,16">
+                        <Border Background="#0f0f0f" CornerRadius="6" Padding="22,16" Margin="0,0,12,0">
                             <StackPanel>
                                 <Image Source="Icons/silver.png" Width="26" Height="26" HorizontalAlignment="Center"/>
                                 <TextBlock Text="PRATA" Foreground="#888888" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
                                 <TextBlock x:Name="TxtSilverTotal" Text="0" Foreground="#e2e8f0" FontSize="26" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <!-- Mobs mortos em mundo aberto (Task #2) — ver OpenWorldKillTracker.cs.
+                             Conta pelo evento MobKilled (166), já calibrado, filtrando pelo
+                             nome de quem deu o último hit = você. -->
+                        <Border Background="#0f0f0f" CornerRadius="6" Padding="22,16">
+                            <StackPanel>
+                                <TextBlock Text="⚔️" FontSize="22" HorizontalAlignment="Center"/>
+                                <TextBlock Text="MOBS MORTOS" Foreground="#888888" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                                <TextBlock x:Name="TxtMobKillsTotal" Text="0" Foreground="#86efac" FontSize="26" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtMobKillsPerHour" Text="0/hora" Foreground="#6b7280" FontSize="11" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -404,6 +426,18 @@
                             Padding="14,6" Margin="0,20,0,0" Background="#262626" Foreground="White" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Center"/>
                     <TextBlock x:Name="TxtFameHint" Foreground="#6b7280" FontSize="11" Margin="0,16,0,0" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="440"
                                Text="Fama amarela (facção/standing) ainda em calibração — me diga de qual conteúdo ela vem pra eu achar o código."/>
+
+                    <!-- Quebra de mobs mortos por tipo — só aparece depois do 1º kill. -->
+                    <ListView x:Name="ListMobKills" Margin="0,20,0,0" MaxHeight="220" Width="440"
+                              Background="#0f0f0f" Foreground="White" BorderThickness="0">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Mob" Width="280" DisplayMemberBinding="{Binding Name}"/>
+                                <GridViewColumn Header="Mortes" Width="80" DisplayMemberBinding="{Binding Kills}"/>
+                                <GridViewColumn Header="/hora" Width="70" DisplayMemberBinding="{Binding KillsPerHour}"/>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
                 </StackPanel>
             </Grid>
         </Grid>

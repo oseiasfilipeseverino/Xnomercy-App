@@ -70,6 +70,13 @@ public sealed class DamageBySpellRowDisplay
     public double DamagePctValue { get; init; }
 }
 
+public sealed class MobKillRowDisplay
+{
+    public string Name { get; init; } = "";
+    public int Kills { get; init; }
+    public string KillsPerHour { get; init; } = "";
+}
+
 public partial class MainWindow : Window
 {
     private const string SiteUrl = "https://nome-xnomercy-site-production.up.railway.app";
@@ -89,6 +96,8 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<DamageRowDisplay> _damageRows = new();
     private readonly ObservableCollection<DamageBySpellRowDisplay> _damageBySkillRows = new();
     private readonly FameSilverTracker _fameTracker = new();
+    private readonly OpenWorldKillTracker _killTracker = new();
+    private readonly ObservableCollection<MobKillRowDisplay> _mobKillRows = new();
     private readonly DamageMeterTracker _damageTracker = new();
     private bool _capturing;
     private bool _paused;
@@ -114,6 +123,44 @@ public partial class MainWindow : Window
     private void OnSelfLootDetected(int? itemIndex, long? quantity)
     {
         lock (_selfLootLock) _selfLootWindowUntil = DateTime.Now + SelfLootWindow;
+    }
+
+    // ── Timer de fechamento de dungeon ──────────────────────────────────────
+    private DateTime _dungeonClosesAt;
+    private readonly System.Windows.Threading.DispatcherTimer _dungeonTimer =
+        new() { Interval = TimeSpan.FromSeconds(1) };
+
+    private void StartDungeonTimer()
+    {
+        _dungeonClosesAt = DateTime.UtcNow + DungeonTimerTracker.CloseDuration;
+        PanelDungeonTimer.Visibility = Visibility.Visible;
+        TickDungeonTimer();
+        if (!_dungeonTimer.IsEnabled)
+        {
+            _dungeonTimer.Tick -= OnDungeonTimerTick;
+            _dungeonTimer.Tick += OnDungeonTimerTick;
+            _dungeonTimer.Start();
+        }
+    }
+
+    private void StopDungeonTimer()
+    {
+        _dungeonTimer.Stop();
+        PanelDungeonTimer.Visibility = Visibility.Collapsed;
+    }
+
+    private void OnDungeonTimerTick(object? sender, EventArgs e) => TickDungeonTimer();
+
+    private void TickDungeonTimer()
+    {
+        var remaining = _dungeonClosesAt - DateTime.UtcNow;
+        if (remaining <= TimeSpan.Zero)
+        {
+            TxtDungeonTimer.Text = "FECHADA";
+            _dungeonTimer.Stop();
+            return;
+        }
+        TxtDungeonTimer.Text = remaining.ToString(@"mm\:ss");
     }
     private static System.Windows.Media.Brush B(string hex) =>
         new System.Windows.Media.BrushConverter().ConvertFromString(hex) as System.Windows.Media.Brush ?? System.Windows.Media.Brushes.Gray;
@@ -153,6 +200,7 @@ public partial class MainWindow : Window
         ListCleanLoot.ItemsSource = _lootFeedView;
         ListDamage.ItemsSource = _damageRows;
         ListDamageBySkill.ItemsSource = _damageBySkillRows;
+        ListMobKills.ItemsSource = _mobKillRows;
 
         // Mesmo stream de pacote alimenta as 3 abas — não precisa de captura separada
         // por aba, é só "quem está interessado em qual Code" (ver GameEventCodes.cs).
@@ -171,12 +219,17 @@ public partial class MainWindow : Window
         // de volta corretamente (ver SelfLootDetector.cs pro porquê disso ser preciso).
         _capture.OpRequestReceived += SelfLootDetector.HandleOpRequest;
         SelfLootDetector.SelfLootDetected += OnSelfLootDetected;
+        // Timer de fechamento de dungeon — ver DungeonTimerTracker.cs.
+        _capture.OpResponseReceived += DungeonTimerTracker.HandleOpResponse;
+        DungeonTimerTracker.EnteredDungeon += () => Dispatcher.BeginInvoke(StartDungeonTimer);
+        DungeonTimerTracker.LeftDungeon += () => Dispatcher.BeginInvoke(StopDungeonTimer);
         _capture.StatusChanged += status => Dispatcher.BeginInvoke(() => TxtCaptureStatus.Text = status);
 
         // Em vez de atualizar a UI a cada evento (em combate são centenas/seg, o que
         // travava a thread de captura e fazia perder pacotes), os trackers só marcam
         // "sujo" e um timer redesenha no máximo ~3x/seg, na thread da UI.
         _fameTracker.Updated += () => _fameDirty = true;
+        _killTracker.Updated += () => _fameDirty = true;
         _damageTracker.Updated += () => _damageDirty = true;
         RefreshFamePanel();
 
@@ -208,9 +261,19 @@ public partial class MainWindow : Window
         TxtYellowFameTotal.Text = _fameTracker.TotalYellowFame.ToString("N0");
         TxtSilverTotal.Text = _fameTracker.TotalSilver.ToString("N0");
         TxtFameSessionStart.Text = $"Sessão desde {_fameTracker.SessionStart:HH:mm:ss}";
+
+        TxtMobKillsTotal.Text = _killTracker.TotalKills.ToString("N0");
+        TxtMobKillsPerHour.Text = $"{_killTracker.KillsPerHour:0.0}/hora";
+        _mobKillRows.Clear();
+        foreach (var (name, kills, perHour) in _killTracker.Snapshot())
+            _mobKillRows.Add(new MobKillRowDisplay { Name = name, Kills = kills, KillsPerHour = perHour.ToString("0.0") });
     }
 
-    private void BtnFameReset_Click(object sender, RoutedEventArgs e) => _fameTracker.Reset();
+    private void BtnFameReset_Click(object sender, RoutedEventArgs e)
+    {
+        _fameTracker.Reset();
+        _killTracker.Reset();
+    }
 
     // ── Medidor de Dano (Fase 4) ────────────────────────────────────────────
     private void RefreshDamagePanel()
@@ -350,6 +413,7 @@ public partial class MainWindow : Window
         PlayerRegistry.HandleEvent(evt);
         _fameTracker.HandleEvent(evt);
         _damageTracker.HandleEvent(evt);
+        _killTracker.HandleEvent(evt);
     }
 
     private void BtnCaptureToggle_Click(object sender, RoutedEventArgs e)
