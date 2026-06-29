@@ -21,6 +21,7 @@ public sealed class PacketCaptureService : IDisposable
 
     public event Action<PhotonEvent>? EventReceived;
     public event Action<PhotonOperationResponse>? OpResponseReceived;
+    public event Action<PhotonOperationRequest>? OpRequestReceived;
     public event Action<string>? StatusChanged;
 
     private readonly List<ICaptureDevice> _devices = new();
@@ -123,7 +124,10 @@ public sealed class PacketCaptureService : IDisposable
                 // consumidas em runtime — só logadas em beta pra calibrar o evento de grupo
                 // (o roster da party vem como operação, não como evento broadcast).
                 else if (msg is PhotonOperationRequest req)
+                {
+                    OpRequestReceived?.Invoke(req);   // self-detection (movimento, op real 24)
                     DiagLogOperation("req", req.OperationCode, req.Parameters);
+                }
                 else if (msg is PhotonOperationResponse resp)
                 {
                     OpResponseReceived?.Invoke(resp);   // self-detection (Join) e futuro grupo

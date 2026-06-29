@@ -266,6 +266,25 @@ public static class PlayerRegistry
         }
     }
 
+    // Operação real 24 (movimento/ação do próprio personagem): dispara constantemente
+    // durante combate/movimento, sempre carregando SEU ObjectId em [5] quando presente
+    // — confirmado cruzando várias sessões reais (o valor bate exatamente com o
+    // SelfObjectId já conhecido por outras fontes, e muda certo quando você troca de
+    // zona). É a fonte MAIS CEDO de "Você": diferente do Join (só na entrada da zona,
+    // perdido se a captura começar depois) e da fama/prata (só após o 1º ganho), essa
+    // operação dispara assim que você se move ou ataca, independente de quando a
+    // captura começou. Sem isso, jogador que entra em combate antes de ganhar
+    // fama/prata aparecia inteiro como "#id" — escondido por padrão no Medidor de Dano
+    // (checkbox "Mostrar sem nome" desmarcado).
+    public static void HandleOpRequest(PhotonOperationRequest op)
+    {
+        if (op.Parameters.TryGetValue(253, out var rc) && ToLong(rc) == 24
+            && op.Parameters.TryGetValue(5, out var sid) && ToLong(sid) is long self && self > 0)
+        {
+            SelfObjectId = self;
+        }
+    }
+
     // Consulta a API pública do Albion (gameinfo.albiononline.com — sem chave, mesma
     // usada pelo site pra buscar membros de guild) pra descobrir a guild E a arma
     // equipada do PRÓPRIO personagem pelo nome. Roda uma vez por nome (troca de

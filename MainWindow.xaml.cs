@@ -132,6 +132,11 @@ public partial class MainWindow : Window
         _capture.EventReceived += OnCaptureEvent;
         // Operação de Join → descobre "Você" cedo (resolve seu próprio dano sem nome).
         _capture.OpResponseReceived += PlayerRegistry.HandleOpResponse;
+        // Operação de movimento/ação própria (op real 24) → descobre "Você" ainda mais
+        // cedo, sem depender de já ter entrado na zona com a captura ligada ou já ter
+        // ganhado fama/prata (combate puro sem loot/fama não disparava nenhuma das
+        // duas fontes antigas, deixando o próprio dano escondido como "#id").
+        _capture.OpRequestReceived += PlayerRegistry.HandleOpRequest;
         _capture.StatusChanged += status => Dispatcher.BeginInvoke(() => TxtCaptureStatus.Text = status);
 
         // Em vez de atualizar a UI a cada evento (em combate são centenas/seg, o que
