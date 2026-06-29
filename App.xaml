@@ -7,5 +7,85 @@
         <!-- Mesmas fontes do site: Teko (títulos) e Barlow (corpo) -->
         <FontFamily x:Key="FontHead">pack://application:,,,/Fonts/#Teko</FontFamily>
         <FontFamily x:Key="FontBody">pack://application:,,,/Fonts/#Barlow</FontFamily>
+
+        <!-- Cabeçalho de coluna do GridView (Loot Log, Medidor de Dano, Mobs mortos etc.) —
+             sem isso vem com o tema branco do Windows, destoando muito do resto do app
+             que é todo escuro. TargetType (sem x:Key) = aplica em TODO GridViewColumnHeader
+             automaticamente, sem precisar marcar cada ListView um por um. -->
+        <Style TargetType="GridViewColumnHeader">
+            <Setter Property="Background" Value="#1a1a1a"/>
+            <Setter Property="Foreground" Value="#c9a227"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="BorderBrush" Value="#262626"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="GridViewColumnHeader">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                               HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                               VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Linhas do ListView: fundo escuro por padrão, realce sutil dourado na seleção
+             (sem isso a seleção do Windows vinha azul, destoando da paleta vermelho/dourado
+             do resto do app) e hover sutil pra dar feedback sem poluir. -->
+        <Style TargetType="ListViewItem">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="4,3"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#1c1c1c"/>
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#3a2c0d"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Checkbox dos filtros (Loot Log, Medidor de Dano) — o controle padrão do Windows
+             é um quadradinho claro, que ficava praticamente invisível/feio no fundo escuro.
+             Retemplate simples: caixa escura com borda dourada, marca dourada quando ativo. -->
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="#cbd5e1"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal">
+                            <Border x:Name="Box" Width="16" Height="16" CornerRadius="3"
+                                    Background="#181818" BorderBrush="#555555" BorderThickness="1"
+                                    VerticalAlignment="Center">
+                                <Path x:Name="Check" Data="M2,7 L6,11 L13,3" Stroke="#c9a227" StrokeThickness="2"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                      Visibility="Collapsed"/>
+                            </Border>
+                            <ContentPresenter Margin="8,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Check" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="Box" Property="BorderBrush" Value="#c9a227"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Box" Property="BorderBrush" Value="#c9a227"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Application.Resources>
 </Application>
