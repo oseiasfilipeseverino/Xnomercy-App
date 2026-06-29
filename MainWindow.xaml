@@ -308,10 +308,18 @@
                 <Grid Grid.Row="1" Margin="16,0,16,16">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="360"/>
+                        <ColumnDefinition x:Name="ColDamageBySkill" Width="0"/>
                     </Grid.ColumnDefinitions>
+                    <!-- Painel de habilidade só aparece ao clicar num jogador (ver
+                         ListDamage_SelectionChanged) — clicar de novo na mesma linha fecha
+                         (ListDamageItem_PreviewMouseDown). Começa oculto (Width="0" acima). -->
                     <ListView x:Name="ListDamage" Grid.Column="0" Margin="0,0,8,0" Background="#0f0f0f" Foreground="White" BorderThickness="0"
                               SelectionChanged="ListDamage_SelectionChanged">
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
+                                <EventSetter Event="PreviewMouseLeftButtonDown" Handler="ListDamageItem_PreviewMouseDown"/>
+                            </Style>
+                        </ListView.ItemContainerStyle>
                         <ListView.View>
                             <GridView>
                                 <GridViewColumn Header="" Width="40">
@@ -350,7 +358,7 @@
                     <!-- Quebra de dano por habilidade (estilo Albion Battle Analytics) do
                          jogador selecionado na lista à esquerda — ver DamageMeterTracker.
                          SnapshotBySpell e SpellCatalog (resolve o índice da skill pro nome). -->
-                    <Border Grid.Column="1" Background="#0f0f0f" CornerRadius="6" Padding="12">
+                    <Border x:Name="PanelDamageBySkill" Grid.Column="1" Background="#0f0f0f" CornerRadius="6" Padding="12" Visibility="Collapsed">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>

@@ -351,11 +351,26 @@ public partial class MainWindow : Window
         {
             TxtDamageBySkillTitle.Text = $"Dano por habilidade — {row.Player}";
             RefreshDamageBySkillPanel(row.ObjectId);
+            PanelDamageBySkill.Visibility = Visibility.Visible;
+            ColDamageBySkill.Width = new GridLength(360);
         }
         else
         {
-            TxtDamageBySkillTitle.Text = "Dano por habilidade — selecione um jogador na lista";
             _damageBySkillRows.Clear();
+            PanelDamageBySkill.Visibility = Visibility.Collapsed;
+            ColDamageBySkill.Width = new GridLength(0);
+        }
+    }
+
+    // Clicar de novo na linha já selecionada fecha o painel (em vez de continuar
+    // selecionada sem disparar SelectionChanged, que é o comportamento padrão do
+    // ListView e deixaria o painel aberto pra sempre depois do 1º clique).
+    private void ListDamageItem_PreviewMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender is ListViewItem { IsSelected: true })
+        {
+            ListDamage.SelectedItem = null;
+            e.Handled = true;
         }
     }
 
