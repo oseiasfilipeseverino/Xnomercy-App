@@ -31,19 +31,31 @@
             </Style.Triggers>
         </Style>
         <Style TargetType="Button" x:Key="NavBtn">
-            <Setter Property="Foreground" Value="#cbd5e1"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="#484848"/>
+            <Setter Property="FontSize" Value="13"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd" Background="Transparent" Padding="22,13">
-                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
-                        </Border>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="3"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border x:Name="BgFill" Grid.ColumnSpan="2" Background="Transparent"/>
+                            <Border x:Name="Accent" Grid.Column="0" Background="Transparent"/>
+                            <ContentPresenter Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="17,11,17,11"/>
+                        </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#1a1a1a"/>
+                                <Setter TargetName="BgFill" Property="Background" Value="#141414"/>
                             </Trigger>
+                            <DataTrigger Binding="{Binding Background, RelativeSource={RelativeSource TemplatedParent}}" Value="#191306">
+                                <Setter TargetName="BgFill" Property="Background" Value="#191306"/>
+                                <Setter TargetName="Accent" Property="Background" Value="#c9a227"/>
+                                <Setter Property="Foreground" Value="#e8e8e8"/>
+                            </DataTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -108,12 +120,28 @@
                 <Button x:Name="BtnToggleSidebar" DockPanel.Dock="Top" Content="☰" Click="ToggleSidebar_Click"
                         Style="{StaticResource ToggleBtn}" HorizontalAlignment="Center" Margin="0,8,0,0"/>
                 <StackPanel x:Name="SidebarTop" DockPanel.Dock="Top">
-                    <TextBlock Text="XNOMERCY" Foreground="#c9a227" FontFamily="{StaticResource FontHead}" FontWeight="SemiBold" FontSize="26" Margin="22,4,22,14"/>
-                    <Border Height="1" Background="#2a1515" Margin="16,0,16,10"/>
-                    <Button x:Name="NavFame"   Content="Fama &amp; Prata" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="fame"/>
-                    <Button x:Name="NavLoot"   Content="Loot Log"        Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="loot"/>
-                    <Button x:Name="NavDamage" Content="Medidor de Dano"  Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="damage"/>
-                    <Button x:Name="NavCraft"  Content="Craft"           Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="craft"/>
+                    <TextBlock Text="XNOMERCY" Foreground="#c9a227" FontFamily="{StaticResource FontHead}" FontWeight="SemiBold" FontSize="28" Margin="20,6,20,12"/>
+                    <Border Height="1" Margin="0,0,0,10">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                <GradientStop Color="#c9a227" Offset="0"/>
+                                <GradientStop Color="#3a2c0d" Offset="0.55"/>
+                                <GradientStop Color="Transparent" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
+                    </Border>
+                    <Button x:Name="NavFame" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="fame">
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="★" FontSize="11" Margin="0,0,10,0" VerticalAlignment="Center" Opacity=".45"/><TextBlock Text="Fama &amp; Prata" VerticalAlignment="Center"/></StackPanel>
+                    </Button>
+                    <Button x:Name="NavLoot" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="loot">
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="▦" FontSize="11" Margin="0,0,10,0" VerticalAlignment="Center" Opacity=".45"/><TextBlock Text="Loot Log" VerticalAlignment="Center"/></StackPanel>
+                    </Button>
+                    <Button x:Name="NavDamage" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="damage">
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="⚔" FontSize="11" Margin="0,0,10,0" VerticalAlignment="Center" Opacity=".45"/><TextBlock Text="Medidor de Dano" VerticalAlignment="Center"/></StackPanel>
+                    </Button>
+                    <Button x:Name="NavCraft" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="craft">
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="⚒" FontSize="11" Margin="0,0,10,0" VerticalAlignment="Center" Opacity=".45"/><TextBlock Text="Craft" VerticalAlignment="Center"/></StackPanel>
+                    </Button>
                 </StackPanel>
                 <StackPanel x:Name="SidebarBottom" DockPanel.Dock="Bottom" Margin="22,0,22,18">
                     <!-- Captura acessível de qualquer aba, não só do Loot Log — pra não
@@ -124,7 +152,14 @@
                     <Button x:Name="BtnPauseToggle" Content="Pausar" Click="BtnPauseToggle_Click"
                             Padding="0,7" Background="#262626" Foreground="White" BorderThickness="0" Cursor="Hand"
                             HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,0,12"/>
-                    <Border Height="1" Background="#2a1515" Margin="-6,0,-6,12"/>
+                    <Border Height="1" Margin="-6,0,-6,12">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                <GradientStop Color="#2a1515" Offset="0"/>
+                                <GradientStop Color="Transparent" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
+                    </Border>
                     <Button x:Name="BtnLogout" Content="Sair" Click="BtnLogout_Click" HorizontalAlignment="Left"
                             Padding="0" Margin="0,0,0,10" Background="Transparent" Foreground="#dc2626" FontSize="13" Cursor="Hand" BorderThickness="0"/>
                     <StackPanel Orientation="Horizontal">
@@ -139,7 +174,7 @@
                             Padding="10,8" Margin="0,10,0,0">
                         <StackPanel>
                             <TextBlock Text="ENTRADA DA DUNGEON FECHA EM" Foreground="#c9a227" FontSize="10" FontWeight="Bold"/>
-                            <TextBlock x:Name="TxtDungeonTimer" Text="01:30" Foreground="White" FontSize="20" FontWeight="Bold"/>
+                            <TextBlock x:Name="TxtDungeonTimer" Text="01:30" Foreground="White" FontFamily="{StaticResource FontHead}" FontSize="24" FontWeight="Bold"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -204,23 +239,37 @@
                     </StackPanel>
                 </StackPanel>
 
-                <!-- Visão limpa (padrão): feed social de loot (evento 277) -->
-                <ListView x:Name="ListCleanLoot" Grid.Row="1" Margin="16,0,16,16" Background="#0f0f0f" Foreground="White" BorderThickness="0" FontSize="14">
-                    <ListView.View>
-                        <GridView>
-                            <GridViewColumn Header="Hora" Width="90" DisplayMemberBinding="{Binding Time}"/>
-                            <GridViewColumn Header="Quem pegou" Width="150" DisplayMemberBinding="{Binding Looter}"/>
-                            <GridViewColumn Header="" Width="40">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <Image Source="{Binding ItemIcon}" Width="32" Height="32"/>
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="Item" Width="300" DisplayMemberBinding="{Binding Item}"/>
-                            <GridViewColumn Header="De quem" Width="150" DisplayMemberBinding="{Binding From}"/>
-                        </GridView>
-                    </ListView.View>
+                <!-- Visão limpa (padrão): feed estilo chat "Fulano pegou X de Y" -->
+                <ListView x:Name="ListCleanLoot" Grid.Row="1" Margin="16,0,16,16" Background="#0f0f0f" Foreground="White" BorderThickness="0" FontSize="13">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="Padding" Value="0"/>
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Height="30">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="66"/>
+                                    <ColumnDefinition Width="26"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{Binding Time}" Foreground="#383838" FontSize="10"
+                                           VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                <Image Grid.Column="1" Source="{Binding ItemIcon}" Width="22" Height="22"
+                                       VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="8,0,10,0"
+                                           FontSize="12" TextTrimming="CharacterEllipsis">
+                                    <Run Text="{Binding Looter, Mode=OneWay}" FontWeight="SemiBold" Foreground="#e2e2e2"/>
+                                    <Run Text=" pegou " Foreground="#555555"/>
+                                    <Run Text="{Binding Item, Mode=OneWay}" Foreground="#c9a227"/>
+                                    <Run Text=" de " Foreground="#555555"/>
+                                    <Run Text="{Binding From, Mode=OneWay}" Foreground="#555555"/>
+                                </TextBlock>
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
                 </ListView>
 
                 <!-- Modo avançado (oculto por padrão): dados brutos pra depuração -->
@@ -289,7 +338,7 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 <StackPanel Grid.Row="0" Margin="16,12,16,8">
-                    <TextBlock Text="Medidor de Dano — sessão atual" Foreground="#c9a227" FontFamily="{StaticResource FontHead}" FontSize="26" FontWeight="SemiBold"/>
+                    <TextBlock Text="Medidor de Dano — sessão atual" Foreground="#c9a227" FontFamily="{StaticResource FontHead}" FontSize="28" FontWeight="SemiBold"/>
                     <TextBlock Foreground="#888888" FontSize="12" Margin="0,4,0,8" TextWrapping="Wrap"
                                Text="Ranking de dano e cura por jogador, do que mais deu dano para o que menos deu. O nome é resolvido pra todo jogador por perto (até quem já estava na cena); o que sobrar como #número costuma ser mob ou invocação."/>
                     <StackPanel Orientation="Horizontal">
@@ -306,14 +355,8 @@
                     </StackPanel>
                 </StackPanel>
                 <Grid Grid.Row="1" Margin="16,0,16,16">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition x:Name="ColDamageBySkill" Width="0"/>
-                    </Grid.ColumnDefinitions>
-                    <!-- Painel de habilidade só aparece ao clicar num jogador (ver
-                         ListDamage_SelectionChanged) — clicar de novo na mesma linha fecha
-                         (ListDamageItem_PreviewMouseDown). Começa oculto (Width="0" acima). -->
-                    <ListView x:Name="ListDamage" Grid.Column="0" Margin="0,0,8,0" Background="#0f0f0f" Foreground="White" BorderThickness="0"
+                    <!-- Skill panel agora é overlay flutuante (Panel.ZIndex="10") -->
+                    <ListView x:Name="ListDamage" Background="#0f0f0f" Foreground="White" BorderThickness="0"
                               SelectionChanged="ListDamage_SelectionChanged">
                         <ListView.ItemContainerStyle>
                             <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
@@ -330,7 +373,13 @@
                                     </GridViewColumn.CellTemplate>
                                 </GridViewColumn>
                                 <GridViewColumn Header="Jogador" Width="200" DisplayMemberBinding="{Binding Player}"/>
-                                <GridViewColumn Header="Dano" Width="100" DisplayMemberBinding="{Binding Damage}"/>
+                                <GridViewColumn Header="Dano" Width="110">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Damage, StringFormat=N0}" FontFamily="{StaticResource FontHead}" FontSize="15" Foreground="White" VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
                                 <GridViewColumn Header="% Dano" Width="200">
                                     <GridViewColumn.CellTemplate>
                                         <DataTemplate>
@@ -341,7 +390,7 @@
                                                 </Grid.ColumnDefinitions>
                                                 <!-- Barra: estilo simples sem chrome do Windows (fundo escuro,
                                                      preenchimento dourado proporcional a DamagePctValue). -->
-                                                <Border Grid.Column="0" Background="#1a1a1a" CornerRadius="3" Height="14" VerticalAlignment="Center">
+                                                <Border Grid.Column="0" Background="#1a1a1a" CornerRadius="3" Height="16" VerticalAlignment="Center">
                                                     <Border HorizontalAlignment="Left" Background="#c9a227" CornerRadius="3"
                                                             Width="{Binding DamagePctValue, Converter={StaticResource PctToWidth}}"/>
                                                 </Border>
@@ -355,10 +404,12 @@
                         </ListView.View>
                     </ListView>
 
-                    <!-- Quebra de dano por habilidade (estilo Albion Battle Analytics) do
-                         jogador selecionado na lista à esquerda — ver DamageMeterTracker.
-                         SnapshotBySpell e SpellCatalog (resolve o índice da skill pro nome). -->
-                    <Border x:Name="PanelDamageBySkill" Grid.Column="1" Background="#0f0f0f" CornerRadius="6" Padding="12" Visibility="Collapsed">
+                    <!-- Skill panel: overlay flutuante no canto direito -->
+                    <Border x:Name="PanelDamageBySkill"
+                            HorizontalAlignment="Right" VerticalAlignment="Top"
+                            Width="282" Panel.ZIndex="10"
+                            Background="#0d0d0d" BorderBrush="#2a1a06" BorderThickness="1"
+                            CornerRadius="4" Padding="12" Visibility="Collapsed">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>

@@ -164,6 +164,7 @@ public partial class MainWindow : Window
     }
     private static System.Windows.Media.Brush B(string hex) =>
         new System.Windows.Media.BrushConverter().ConvertFromString(hex) as System.Windows.Media.Brush ?? System.Windows.Media.Brushes.Gray;
+    private static readonly System.Windows.Media.Brush NavActiveBg = B("#191306");
     private static readonly System.Windows.Media.Brush NavActiveBrush = B("#dc2626");  // vermelho do site
     private static readonly System.Windows.Media.Brush NavIdleBrush   = B("#888888");
 
@@ -352,13 +353,11 @@ public partial class MainWindow : Window
             TxtDamageBySkillTitle.Text = $"Dano por habilidade — {row.Player}";
             RefreshDamageBySkillPanel(row.ObjectId);
             PanelDamageBySkill.Visibility = Visibility.Visible;
-            ColDamageBySkill.Width = new GridLength(360);
         }
         else
         {
             _damageBySkillRows.Clear();
             PanelDamageBySkill.Visibility = Visibility.Collapsed;
-            ColDamageBySkill.Width = new GridLength(0);
         }
     }
 
@@ -1028,7 +1027,11 @@ public partial class MainWindow : Window
     private void SetActiveNav(Button active)
     {
         foreach (var btn in new[] { NavLoot, NavDamage, NavFame, NavCraft })
-            btn.Foreground = btn == active ? NavActiveBrush : NavIdleBrush;
+        {
+            bool isActive = btn == active;
+            btn.Foreground = isActive ? NavActiveBrush : NavIdleBrush;
+            btn.Background  = isActive ? NavActiveBg    : System.Windows.Media.Brushes.Transparent;
+        }
     }
 
     // ── Bandeja do sistema: só o "X" esconde a janela, minimizar é normal ──
