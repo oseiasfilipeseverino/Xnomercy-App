@@ -104,7 +104,12 @@ public static class PlayerRegistry
         }
         if (evt.EventCode == GameEventCodes.NewMob)
         {
-            if (evt.Parameters.TryGetValue(0, out var mid) && ToLong(mid) is long m) RegisterMob(m);
+            // Desligado: sem tag de confirmação (só "[0]=ObjectId"), e o próprio dump de
+            // calibração mostra esse código repetindo tipo sync de posição/vida — bem
+            // provável que dispare pra QUALQUER entidade próxima, jogador incluso. Isso
+            // marcava jogadores como mob por engano e cortava o dano deles do medidor no
+            // meio da luta (bug relatado: "o dano aparece e depois some"). MobSpeak (74)
+            // e MobKilled (166) já cobrem mob com tag verificada (`@MOB_...`) — mantidos.
             return;
         }
         if (evt.EventCode == GameEventCodes.MobSpeak)

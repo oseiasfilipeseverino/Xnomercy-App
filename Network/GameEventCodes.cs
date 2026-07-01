@@ -50,12 +50,11 @@ public static class GameEventCodes
     // Usado pra resolver ObjectId -> nome no medidor de dano e filtrar loot por guild.
     public static int NewCharacter { get; set; } = 29;
 
-    // NewMob: [0]=ObjectId. Usado pra marcar quais ObjectIds são mobs e excluir o dano
-    // deles do medidor (só dano de/para jogadores conta).
-    // SUSPEITA: os dados reais de calibração mostram esse código repetindo várias vezes
-    // por segundo com números tipo posição/vida — não parece "mob apareceu" (que devia
-    // disparar uma vez só). Mantido por ora porque ainda funciona como sinal de mob (não
-    // testamos remover), mas o código 74 abaixo é uma fonte mais confiável.
+    // NewMob: [0]=ObjectId. DESLIGADO em PlayerRegistry.HandleEvent (código 53-59):
+    // sem tag de confirmação, repete tipo sync de posição/vida várias vezes por segundo —
+    // provavelmente dispara pra QUALQUER entidade próxima, jogador incluso, o que marcava
+    // gente como mob por engano e sumia com o dano dela no meio da luta. Mantido mapeado
+    // aqui só de referência; MobSpeak (74) e MobKilled (166) cobrem mob com tag verificada.
     public static int NewMob { get; set; } = 123;
 
     // MobSpeak (mob solta uma fala/provocação, ex: ao puxar agro): [0]=tipo do mob em
