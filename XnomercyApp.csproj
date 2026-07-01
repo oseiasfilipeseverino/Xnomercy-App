@@ -14,9 +14,9 @@
   </PropertyGroup>
 
   <!-- Build de teste (beta): liga os diagnósticos de calibração com a performance do
-       Release. Ativar com `dotnet publish ... -p:EnableBeta=true`. Sem isso, Release
-       final fica limpo (sem nenhum log de diagnóstico). -->
-  <PropertyGroup Condition="'$(EnableBeta)'=='true'">
+       Release. LIGADO POR PADRÃO enquanto testamos com a guild — pra desligar num
+       release final limpo, publicar com `-p:EnableBeta=false`. -->
+  <PropertyGroup Condition="'$(EnableBeta)'!='false'">
     <DefineConstants>$(DefineConstants);BETA</DefineConstants>
   </PropertyGroup>
 
