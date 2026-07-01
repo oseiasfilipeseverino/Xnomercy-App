@@ -120,9 +120,61 @@ public partial class MainWindow : Window
     private DateTime _selfLootWindowUntil = DateTime.MinValue;
     private static readonly TimeSpan SelfLootWindow = TimeSpan.FromSeconds(3);
 
+    // Baú/vault (ao contrário de corpo de mob) provavelmente NUNCA gera o evento social
+    // GrabbedLoot (279) pro próprio looter — esse evento parece existir só pro feed de
+    // "quem pegou o quê de quem" em loot de corpo. Sem isso, abrir só a janela de
+    // tolerância acima não bastava: não havia NENHUM evento 279 esperando por ela, então
+    // a linha nunca aparecia (bug relatado: "fiz um baú inteiro e não apareceu nada").
+    // Por isso, quando o SelfLootDetector já resolve item+quantidade (via cache do
+    // NewSimpleItem cruzado com o "pegar tudo"), inserimos a linha direto — não dependemos
+    // mais só do 279 chegar. Guarda os últimos itens inseridos assim pra não duplicar a
+    // linha nos casos (loot de mob) em que o 279 TAMBÉM chega pro mesmo pickup.
+    private readonly List<(int ItemIndex, long Qty, DateTime At)> _recentSelfLootDirect = new();
+    private static readonly TimeSpan SelfLootDedupWindow = TimeSpan.FromSeconds(2);
+
     private void OnSelfLootDetected(int? itemIndex, long? quantity)
     {
         lock (_selfLootLock) _selfLootWindowUntil = DateTime.Now + SelfLootWindow;
+        if (itemIndex is not int idx || quantity is not long qty) return;
+
+        Dispatcher.BeginInvoke(() =>
+        {
+            var now = DateTime.Now;
+            lock (_recentSelfLootDirect)
+            {
+                _recentSelfLootDirect.RemoveAll(x => now - x.At > SelfLootDedupWindow);
+                _recentSelfLootDirect.Add((idx, qty, now));
+            }
+            var name = ItemCatalog.GetName(idx) ?? $"item {idx}";
+            var row = new LootFeedRow
+            {
+                Time = now.ToString("HH:mm:ss"),
+                Timestamp = now,
+                Looter = "Você",
+                Item = $"{qty}x {name}",
+                From = "",
+                ItemIcon = IconUrl(idx),
+                IsSilver = false,
+                IsMob = false,
+            };
+            _lootFeed.Insert(0, row);
+            while (_lootFeed.Count > MaxLootRows) _lootFeed.RemoveAt(_lootFeed.Count - 1);
+        });
+    }
+
+    // Evita duplicar a linha quando o 279 oficial TAMBÉM chega pro mesmo pickup que já
+    // inserimos direto acima (comum em loot de mob/corpo, onde o servidor confirma).
+    private bool WasRecentSelfLootDirect(int itemIndex, long qty)
+    {
+        var now = DateTime.Now;
+        lock (_recentSelfLootDirect)
+        {
+            var match = _recentSelfLootDirect.FindIndex(x =>
+                x.ItemIndex == itemIndex && x.Qty == qty && now - x.At <= SelfLootDedupWindow);
+            if (match < 0) return false;
+            _recentSelfLootDirect.RemoveAt(match);
+            return true;
+        }
     }
 
     // ── Timer de fechamento de dungeon ──────────────────────────────────────
@@ -535,7 +587,7 @@ public partial class MainWindow : Window
             if (objId > 0) SelfLootDetector.RegisterDiscoveredItem(objId, idx, qty);
         }
 
-        // Feed normal = SÓ loot com origem (de quem). O evento 277 (saque de corpo/mob)
+        // Feed normal = SÓ loot com origem (de quem). O evento 279 (saque de corpo/mob)
         // sempre traz a origem; os pickups do seu inventário (login, troca de zona, baú
         // via code 32) NÃO têm origem, então não poluem o normal — ficam só no avançado.
         // Regra do usuário: "se não preencher 'de quem', não aparece" — EXCETO quando
@@ -546,9 +598,14 @@ public partial class MainWindow : Window
         LootFeedRow? feedRow = null;
         bool withinSelfLootWindow;
         lock (_selfLootLock) withinSelfLootWindow = now <= _selfLootWindowUntil;
-        if (isGrabbedLoot && TryParseGrabbedLoot(evt, now, out var fr) && !fr.IsSilver
-            && (fr.From.Length > 0 || withinSelfLootWindow))
-            feedRow = fr;
+        if (isGrabbedLoot && TryParseGrabbedLoot(evt, now, out var fr, out var grabbedItemIdx, out var grabbedQty)
+            && !fr.IsSilver && (fr.From.Length > 0 || withinSelfLootWindow))
+        {
+            // Já mostramos esse mesmo pickup direto via SelfLootDetector (ver
+            // OnSelfLootDetected) — não duplica quando o servidor confirma depois.
+            if (!WasRecentSelfLootDirect(grabbedItemIdx, grabbedQty))
+                feedRow = fr;
+        }
 
         // PERFORMANCE: quando o modo avançado não está à vista, não montamos a lista crua
         // (são milhares de eventos/seg — movimento, sync). Só o feed limpo importa. E usamos
@@ -678,15 +735,18 @@ public partial class MainWindow : Window
 
     // OtherGrabbedLoot (279): [1]=de quem (corpo) [2]=quem pegou [3]=é prata? (bool)
     // [4]=índice do item [5]=quantidade. Os nomes já vêm como texto no evento.
-    private static bool TryParseGrabbedLoot(PhotonEvent evt, DateTime now, out LootFeedRow row)
+    // itemIdx/qty saem pro chamador conseguir checar duplicata contra o que já foi
+    // inserido direto pelo SelfLootDetector (ver WasRecentSelfLootDirect).
+    private static bool TryParseGrabbedLoot(PhotonEvent evt, DateTime now, out LootFeedRow row, out int itemIdx, out long amount)
     {
         row = null!;
+        itemIdx = -1;
         string from   = evt.Parameters.TryGetValue(1, out var f) ? (f?.ToString() ?? "") : "";
         string looter = evt.Parameters.TryGetValue(2, out var l) ? (l?.ToString() ?? "") : "";
-        if (looter.Length == 0 && from.Length == 0) return false;
+        if (looter.Length == 0 && from.Length == 0) { amount = 0; return false; }
 
         bool isSilver = evt.Parameters.TryGetValue(3, out var s) && s is bool sb && sb;
-        long amount   = evt.Parameters.TryGetValue(5, out var q) ? ToLong(q) : 1;
+        amount = evt.Parameters.TryGetValue(5, out var q) ? ToLong(q) : 1;
 
         string item;
         string? icon = null;
@@ -695,7 +755,7 @@ public partial class MainWindow : Window
             item = $"{amount / 10000:N0} prata";
         else
         {
-            int itemIdx = evt.Parameters.TryGetValue(4, out var ii) ? (int)ToLong(ii) : -1;
+            itemIdx = evt.Parameters.TryGetValue(4, out var ii) ? (int)ToLong(ii) : -1;
             string name = ItemCatalog.GetName(itemIdx) ?? $"item {itemIdx}";
             item = $"{amount}x {name}";
             icon = IconUrl(itemIdx);
