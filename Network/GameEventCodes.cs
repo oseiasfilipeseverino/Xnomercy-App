@@ -21,7 +21,11 @@ public static class GameEventCodes
     // de quem. É a fonte certa pro Loot Log (NewSimpleItem só vê o próprio inventário).
     // [1]=de quem (corpo, "MOB" se monstro) [2]=quem pegou [3]=é prata? (bool)
     // [4]=índice do item [5]=quantidade.
-    public static int GrabbedLoot { get; set; } = 277;      // OtherGrabbedLoot
+    // ERA 277 — o jogo mudou o índice numa atualização e isso silenciou o Loot Log
+    // por completo (nem loot de terceiros aparecia mais). Recalibrado com captura real
+    // (named_events_diag.txt): toda ocorrência com essa assinatura exata veio como 279,
+    // nunca 277 (zero ocorrências de 277 em várias sessões de captura).
+    public static int GrabbedLoot { get; set; } = 279;      // OtherGrabbedLoot
 
     // NewSimpleItem: [0]=ObjectId [1]=índice do item (tipo) [2]=quantidade
     // [4]=valor estimado [7]=durabilidade. (Mantido só pro modo avançado/diagnóstico.)

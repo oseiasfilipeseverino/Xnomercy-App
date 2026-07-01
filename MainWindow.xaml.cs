@@ -109,7 +109,7 @@ public partial class MainWindow : Window
     private bool _canCraft = true;
 
     // Janela de tempo (após o SEU cliente mandar a operação de pegar item) em que o
-    // Loot Log aceita um evento 277 (GrabbedLoot) mesmo sem o campo "de quem" — ver
+    // Loot Log aceita um evento GrabbedLoot (279) mesmo sem o campo "de quem" — ver
     // SelfLootDetector.cs. 3s cobre a latência normal de rede sem deixar a janela
     // aberta tempo suficiente pra confundir com o próximo pickup de outra pessoa.
     // Lock: escrito pela thread de captura (OnSelfLootDetected) e lido pela mesma
@@ -676,7 +676,7 @@ public partial class MainWindow : Window
         }
     }
 
-    // OtherGrabbedLoot (277): [1]=de quem (corpo) [2]=quem pegou [3]=é prata? (bool)
+    // OtherGrabbedLoot (279): [1]=de quem (corpo) [2]=quem pegou [3]=é prata? (bool)
     // [4]=índice do item [5]=quantidade. Os nomes já vêm como texto no evento.
     private static bool TryParseGrabbedLoot(PhotonEvent evt, DateTime now, out LootFeedRow row)
     {

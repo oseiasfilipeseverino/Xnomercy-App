@@ -70,6 +70,11 @@ public static class ItemCatalog
             }
             _loaded = true;
         }
+        catch
+        {
+            // Cache local indisponível (ex: outra instância do app com o arquivo aberto)
+            // e sem internet: fica sem nomes de item, resolve só pelo Index numérico.
+        }
         finally
         {
             _lock.Release();

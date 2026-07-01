@@ -4,7 +4,7 @@ namespace XnomercyApp.Network;
 
 /// <summary>
 /// Detecta quando O PRÓPRIO jogador pega um item de um corpo/baú — sem depender do
-/// evento de broadcast OtherGrabbedLoot (277), que é a única fonte hoje do Loot Log e
+/// evento de broadcast OtherGrabbedLoot (279), que é a única fonte hoje do Loot Log e
 /// que pode falhar pro próprio looter (o servidor às vezes não confirma de volta pra
 /// quem pegou, ou manda sem o campo "de quem" preenchido — daí o item simplesmente
 /// não aparecia, mesmo o jogador tendo pego de verdade).
@@ -73,7 +73,12 @@ public static class SelfLootDetector
         }
         else if (real == OpInventoryMoveGivenItems)
         {
-            if (op.Parameters.TryGetValue(4, out var idsObj) && idsObj is object?[] ids)
+            // O deserializador do Photon manda esse parâmetro como array já tipado
+            // (Int16[]/Int32[]/Int64[] conforme o maior ObjectId da lista), nunca como
+            // object?[] — confirmado em captura real (ver diagnóstico de calibração).
+            // Precisa tratar Array genericamente, senão o cast falhava sempre e o app
+            // nunca resolvia nome/quantidade do "pegar tudo" (só abria a janela vazia).
+            if (op.Parameters.TryGetValue(4, out var idsObj) && idsObj is Array ids)
             {
                 foreach (var idObj in ids)
                 {

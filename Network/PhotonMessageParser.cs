@@ -5,7 +5,7 @@ namespace XnomercyApp.Network;
 public sealed record PhotonEvent(byte Code, Dictionary<byte, object?> Parameters)
 {
     // O código REAL do evento Albion vem no parâmetro 252 (lido como short, então
-    // passa de 255 — ex: OtherGrabbedLoot = 277). O byte Code do header do Photon é
+    // passa de 255 — ex: OtherGrabbedLoot = 279). O byte Code do header do Photon é
     // ignorado pra roteamento, exatamente como o AlbionParser do SAP faz. Retorna -1
     // quando não há param 252 (eventos internos/transporte que não são do jogo).
     public int EventCode
