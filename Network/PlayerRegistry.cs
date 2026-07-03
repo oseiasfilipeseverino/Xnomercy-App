@@ -28,6 +28,32 @@ public static class PlayerRegistry
     // pro filtro "só guild" do Loot Log.
     private static readonly ConcurrentDictionary<string, string> _nameToGuild = new();
 
+    // Ordem de inserção de _byId/_nameToGuild — usada só pra podar os mais antigos
+    // (ver TrimOldest) em vez de zerar tudo de uma vez ao bater o teto. _mobs e
+    // _partyMembers continuam com Clear() total: seus próprios comentários já
+    // justificam isso (mob muda de ObjectId a cada zona mesmo; party expira sozinho).
+    private static readonly ConcurrentQueue<long> _byIdOrder = new();
+    private static readonly ConcurrentQueue<string> _nameToGuildOrder = new();
+
+    // Remove só os mais antigos até sobrar ~75% do teto — zerar tudo de uma vez
+    // (comportamento antigo) podia apagar bem no meio de um combate o nome de um
+    // jogador que está ativo AGORA, fazendo ele voltar a aparecer como "#12345"
+    // no Medidor de Dano no pior momento possível (sessão longa, zona cheia).
+    private static void TrimOldest<TValue>(ConcurrentDictionary<long, TValue> dict, ConcurrentQueue<long> order, int cap)
+    {
+        if (dict.Count <= cap) return;
+        int target = cap * 3 / 4;
+        while (dict.Count > target && order.TryDequeue(out var key))
+            dict.TryRemove(key, out _);
+    }
+    private static void TrimOldest(ConcurrentDictionary<string, string> dict, ConcurrentQueue<string> order, int cap)
+    {
+        if (dict.Count <= cap) return;
+        int target = cap * 3 / 4;
+        while (dict.Count > target && order.TryDequeue(out var key))
+            dict.TryRemove(key, out _);
+    }
+
     // Lock só pra esses 3 campos escalares: são escritos pela thread de captura
     // (HandleOpResponse/ResolveOwnGuildAsync) e lidos pela UI ao mesmo tempo. O resto
     // da classe já usa ConcurrentDictionary, que cobre a si mesmo — esses três campos
@@ -187,12 +213,16 @@ public static class PlayerRegistry
         DiagLogNewCharacter(evt, id, info);   // calibração: ver se [1]/[8]/[40] batem com o jogo real
         if (info.Name.Length > 0)
         {
+            bool isNewId = !_byId.ContainsKey(id);
             _byId[id] = info;
-            if (_byId.Count > 20000) _byId.Clear();   // mesmo teto de segurança que os mobs
+            if (isNewId) _byIdOrder.Enqueue(id);
+            TrimOldest(_byId, _byIdOrder, 20000);
             if (info.Guild.Length > 0)
             {
+                bool isNewName = !_nameToGuild.ContainsKey(info.Name);
                 _nameToGuild[info.Name] = info.Guild;
-                if (_nameToGuild.Count > 20000) _nameToGuild.Clear();
+                if (isNewName) _nameToGuildOrder.Enqueue(info.Name);
+                TrimOldest(_nameToGuild, _nameToGuildOrder, 20000);
             }
         }
     }
@@ -248,7 +278,8 @@ public static class PlayerRegistry
         else
         {
             _byId[id] = new PlayerInfo { Name = name };
-            if (_byId.Count > 20000) _byId.Clear();
+            _byIdOrder.Enqueue(id);
+            TrimOldest(_byId, _byIdOrder, 20000);
         }
     }
 

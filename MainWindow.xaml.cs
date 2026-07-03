@@ -339,6 +339,15 @@ public partial class MainWindow : Window
             // "Mostrar sem nome": por padrão (desmarcado) já filtra os #número (mob não
             // detectado, invocação, etc.), deixando só jogadores resolvidos. Marcando,
             // revela os #número de volta — é o oposto do que era antes ("ocultar").
+            //
+            // Esse filtro também é a rede de segurança pro caso de um mob NUNCA disparar
+            // MobSpeak(74)/MobKilled(166) durante a sessão observada (ex: você chega numa
+            // luta que já estava rolando e o mob morre por outro grupo antes de falar ou
+            // morrer perto de você) — PlayerRegistry.IsMob só sabe filtrar mob confirmado
+            // por uma dessas duas fontes. Mobs nunca aparecem em NewCharacter(29)/Move(30)
+            // (só jogadores), então o nome nunca resolve e o ObjectId fica com "#id" — que
+            // já cai fora da lista por padrão aqui, mesmo sem confirmação de mob. Equivalente
+            // ao "from.Contains('_')" do Loot Log, só que via ausência de nome em vez de tag.
             .Where(x => showUnnamed || !PlayerRegistry.NameOf(x.ObjectId).StartsWith('#'))
             // "Só minha guild": opcional, pra quando quiser ver só o desempenho da sua
             // guild — o padrão continua mostrando todo mundo por perto. A guild do
@@ -522,18 +531,25 @@ public partial class MainWindow : Window
     // Indicador global de captura na sidebar (visível de qualquer aba)
     private void UpdateCaptureIndicator()
     {
+        string trayState;
         if (_paused)
         {
             CaptureDot.Fill = B("#facc15");
             CaptureStateLabel.Text = "Pausado";
             CaptureStateLabel.Foreground = B("#facc15");
+            trayState = "Pausado";
         }
         else
         {
             CaptureDot.Fill = _capturing ? B("#22c55e") : B("#666666");
             CaptureStateLabel.Text = _capturing ? "Capturando" : "Captura parada";
             CaptureStateLabel.Foreground = _capturing ? B("#22c55e") : B("#888888");
+            trayState = _capturing ? "Capturando" : "Captura parada";
         }
+        // Único jeito de saber o estado com a janela escondida (fechar pelo "X" só
+        // esconde, não para a captura) era abrir a janela de novo — agora aparece
+        // passando o mouse no ícone da bandeja, sem precisar reabrir nada.
+        TrayIcon.ToolTipText = $"XnoMercy — {trayState}";
     }
 
     // Marcação manual de momento: usuário clica bem na hora que pega um item.
