@@ -23,6 +23,12 @@ public static class DungeonTimerTracker
     private const int OpChangeCluster = 36;
     private const int DungeonClosesAfterSeconds = 90;
 
+    // _inDungeon era um bool estático sem proteção — único tracker do app nesse estado
+    // (os outros, ex: PlayerRegistry/DamageMeterTracker, já usam lock ou
+    // ConcurrentDictionary). Trocas de zona rápidas (portal com lag) podiam disparar
+    // 2 callbacks de captura quase juntos e ler/escrever _inDungeon fora de ordem,
+    // fazendo o timer aparecer/sumir errado.
+    private static readonly object _lock = new();
     private static bool _inDungeon;
 
     /// <summary>Dispara ao entrar numa dungeon aleatória vinda de fora (não a cada sala).</summary>
@@ -42,15 +48,18 @@ public static class DungeonTimerTracker
 
         bool isDungeon = clusterStr.Contains("RANDOMDUNGEON", StringComparison.OrdinalIgnoreCase);
 
-        if (isDungeon && !_inDungeon)
+        lock (_lock)
         {
-            _inDungeon = true;
-            EnteredDungeon?.Invoke();
-        }
-        else if (!isDungeon && _inDungeon)
-        {
-            _inDungeon = false;
-            LeftDungeon?.Invoke();
+            if (isDungeon && !_inDungeon)
+            {
+                _inDungeon = true;
+                EnteredDungeon?.Invoke();
+            }
+            else if (!isDungeon && _inDungeon)
+            {
+                _inDungeon = false;
+                LeftDungeon?.Invoke();
+            }
         }
     }
 

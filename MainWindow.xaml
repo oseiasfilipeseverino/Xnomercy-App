@@ -187,9 +187,9 @@
 
             <!-- Marca enquanto a tela de login do site carrega (some no 1º carregamento) -->
             <Grid x:Name="LoginLoading" Background="#080808">
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="420">
                     <TextBlock Text="XNOMERCY" FontFamily="{StaticResource FontHead}" FontSize="46" Foreground="#c9a227" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Carregando..." Foreground="#888888" FontSize="14" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                    <TextBlock x:Name="TxtLoginLoadingStatus" Text="Carregando..." Foreground="#888888" FontSize="14" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" Margin="0,6,0,0"/>
                 </StackPanel>
             </Grid>
 

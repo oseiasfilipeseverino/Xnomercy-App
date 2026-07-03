@@ -197,6 +197,11 @@ public sealed class PacketCaptureService : IDisposable
         {
             try
             {
+                // Desregistra ANTES de fechar — sem isso o delegate ficava pendurado no
+                // objeto nativo do adaptador, atrasando a liberação do handle em algumas
+                // implementações do SharpPcap (relevante pra quem liga/desliga a captura
+                // várias vezes na mesma sessão via "Pausar/Iniciar captura").
+                device.OnPacketArrival -= OnPacketArrival;
                 device.StopCapture();
                 device.Close();
             }

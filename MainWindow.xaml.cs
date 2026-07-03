@@ -447,7 +447,7 @@ public partial class MainWindow : Window
     private void DamageFilter_Changed(object sender, RoutedEventArgs e) => RefreshDamagePanel();
 
     // Copia o ranking de dano pro clipboard, em texto — pra colar no Discord da guild.
-    private void BtnDamageCopy_Click(object sender, RoutedEventArgs e)
+    private async void BtnDamageCopy_Click(object sender, RoutedEventArgs e)
     {
         if (_damageRows.Count == 0) return;
         var sb = new System.Text.StringBuilder();
@@ -456,8 +456,13 @@ public partial class MainWindow : Window
         foreach (var r in _damageRows)
             sb.AppendLine($"{pos++}. {r.Player} — {r.Damage:N0} ({r.DamagePct})" +
                           (r.Healing > 0 ? $" | cura {r.Healing:N0}" : ""));
+        // Antes, falha (clipboard ocupado por outro app) era engolida em silêncio — o
+        // usuário clicava e nada visível acontecia, parecia que o botão não funcionou.
+        var original = BtnDamageCopy.Content;
         try { Clipboard.SetText(sb.ToString()); BtnDamageCopy.Content = "Copiado!"; }
-        catch { /* clipboard ocupado por outro app — ignora */ }
+        catch { BtnDamageCopy.Content = "Falha ao copiar — tente de novo"; }
+        await Task.Delay(2000);
+        BtnDamageCopy.Content = original;
     }
 
     // ── Loot Log (Fase 2) ────────────────────────────────────────────────────
@@ -832,8 +837,17 @@ public partial class MainWindow : Window
         sb.AppendLine("Hora;Quem pegou;Item;De quem");
         foreach (var r in _lootFeed)
             sb.AppendLine($"{r.Time};{Csv(r.Looter)};{Csv(r.Item)};{Csv(r.From)}");
-        System.IO.File.WriteAllText(dlg.FileName, sb.ToString(), System.Text.Encoding.UTF8);
-        TxtCaptureStatus.Text = $"Exportado: {System.IO.Path.GetFileName(dlg.FileName)}";
+        try
+        {
+            System.IO.File.WriteAllText(dlg.FileName, sb.ToString(), System.Text.Encoding.UTF8);
+            TxtCaptureStatus.Text = $"Exportado: {System.IO.Path.GetFileName(dlg.FileName)}";
+        }
+        catch (Exception ex)
+        {
+            // Antes, falha aqui (arquivo aberto no Excel, sem permissão de escrita)
+            // não dava nenhum feedback — parecia que o botão "Exportar CSV" não fazia nada.
+            TxtCaptureStatus.Text = $"Falha ao exportar: {ex.Message}";
+        }
     }
 
     private static string Csv(string s) =>
@@ -902,8 +916,20 @@ public partial class MainWindow : Window
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "XnomercyApp", "WebView2");
 
-        var env = await CoreWebView2Environment.CreateAsync(userDataFolder: userDataFolder);
-        await WebView.EnsureCoreWebView2Async(env);
+        try
+        {
+            var env = await CoreWebView2Environment.CreateAsync(userDataFolder: userDataFolder);
+            await WebView.EnsureCoreWebView2Async(env);
+        }
+        catch (Exception ex)
+        {
+            // Sem isso, a falta do WebView2 Runtime (não vem em todo Windows 10) deixava
+            // a tela de login travada em "Carregando..." pra sempre, sem explicar o motivo.
+            TxtLoginLoadingStatus.Text =
+                "Não foi possível carregar o login — instale o \"Microsoft Edge WebView2 Runtime\" " +
+                "(Windows 10 mais antigos não vêm com ele) e reabra o app.\n\nDetalhe: " + ex.Message;
+            return;
+        }
 
         // Esconde a navbar do site dentro do app — assim o Craft mostra só o conteúdo
         // do mercado (sem Início/Dashboard/Gestão/etc), e o login fica limpo. Roda antes
@@ -945,9 +971,20 @@ public partial class MainWindow : Window
             bool canTracker = true;
             try
             {
-                var raw = await WebView.CoreWebView2.ExecuteScriptAsync(
-                    "(function(){try{var x=new XMLHttpRequest();x.open('GET','/api/me',false);x.send();" +
-                    "if(x.status!==200)return '';return x.responseText;}catch(e){return '';}})()");
+                // Era XHR SÍNCRONO (3º argumento 'false' do .open) sem timeout algum — se
+                // o site demorasse a responder (ex: cold start no Railway), travava a
+                // navegação do WebView por tempo indefinido. Troca por fetch assíncrono
+                // com AbortController (8s) + timeout de novo no lado do C# (10s) como
+                // backstop, igual o padrão de timeout já usado no resto do app.
+                var scriptTask = WebView.CoreWebView2.ExecuteScriptAsync(
+                    "(function(){return (async function(){try{" +
+                    "var ac=new AbortController();var tm=setTimeout(function(){ac.abort();},8000);" +
+                    "var r=await fetch('/api/me',{signal:ac.signal});clearTimeout(tm);" +
+                    "if(r.status!==200)return '';return await r.text();" +
+                    "}catch(e){return '';}})();})()");
+                var raw = await Task.WhenAny(scriptTask, Task.Delay(10000)) == scriptTask
+                    ? await scriptTask
+                    : "\"\"";
                 var inner = System.Text.Json.JsonSerializer.Deserialize<string>(raw) ?? "";
                 if (!string.IsNullOrEmpty(inner))
                 {
@@ -1156,9 +1193,23 @@ public partial class MainWindow : Window
                 UpdateBanner.Visibility = Visibility.Visible;
             });
         }
-        catch
+        catch (Exception ex)
         {
-            // Sem internet, rate-limit do GitHub, etc. — o app funciona normal sem o aviso.
+            // Sem internet, rate-limit do GitHub, etc. — o app funciona normal sem o aviso
+            // (não é erro grave o bastante pra mandar pro Discord como "crash", isso
+            // aconteceria toda vez que alguém abrisse o app sem internet). Mas registra
+            // localmente — antes, se o update quebrasse de forma PERSISTENTE (token/URL
+            // do GitHub mudou, repo virou privado), não havia como diagnosticar nem
+            // localmente nem remotamente por que ninguém recebia atualização.
+            try
+            {
+                var dir = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp");
+                System.IO.Directory.CreateDirectory(dir);
+                System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "update_check.log"),
+                    $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {ex.GetType().Name}: {ex.Message}\n");
+            }
+            catch { /* não há o que fazer se nem o log grava */ }
         }
     }
 
