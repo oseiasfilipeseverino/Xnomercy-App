@@ -77,6 +77,17 @@ public sealed class MobKillRowDisplay
     public string KillsPerHour { get; init; } = "";
 }
 
+public sealed class SessionHistoryRowDisplay
+{
+    public string Period { get; init; } = "";
+    public string Duration { get; init; } = "";
+    public string Fame { get; init; } = "";
+    public string YellowFame { get; init; } = "";
+    public string Silver { get; init; } = "";
+    public string Damage { get; init; } = "";
+    public string LootItems { get; init; } = "";
+}
+
 public partial class MainWindow : Window
 {
     private const string SiteUrl = "https://nome-xnomercy-site-production.up.railway.app";
@@ -98,6 +109,7 @@ public partial class MainWindow : Window
     private readonly FameSilverTracker _fameTracker = new();
     private readonly OpenWorldKillTracker _killTracker = new();
     private readonly ObservableCollection<MobKillRowDisplay> _mobKillRows = new();
+    private readonly ObservableCollection<SessionHistoryRowDisplay> _sessionRows = new();
     private readonly DamageMeterTracker _damageTracker = new();
     private bool _capturing;
     private bool _paused;
@@ -256,6 +268,8 @@ public partial class MainWindow : Window
         ListDamage.ItemsSource = _damageRows;
         ListDamageBySkill.ItemsSource = _damageBySkillRows;
         ListMobKills.ItemsSource = _mobKillRows;
+        ListSessionHistory.ItemsSource = _sessionRows;
+        RefreshSessionHistory();
 
         // Mesmo stream de pacote alimenta as 3 abas — não precisa de captura separada
         // por aba, é só "quem está interessado em qual Code" (ver GameEventCodes.cs).
@@ -530,12 +544,69 @@ public partial class MainWindow : Window
             BtnCaptureToggle.Content = "Iniciar captura";
             BtnPauseToggle.Content = "Pausar";
             TxtCaptureStatus.Text = "Parado";
+            SaveSessionToHistory();
             // Com a captura parada, os arquivos de diagnóstico não estão mais sendo
             // escritos — momento seguro pra enviar pro Discord (com consentimento).
             // Assim o tester não precisa fechar e reabrir o app pra mandar os dados.
             DiagReporter.ReportDiagFiles();
         }
         UpdateCaptureIndicator();
+    }
+
+    // Resumo da sessão (fama/prata/dano/itens) salvo localmente ao parar a captura —
+    // "sessão" aqui é o mesmo período do FameSilverTracker (desde o último "Reiniciar
+    // sessão" em Fama & Prata, não desde este start/stop específico), pra bater com o
+    // que a aba Fama & Prata já mostra como "Sessão desde HH:mm:ss".
+    private void SaveSessionToHistory()
+    {
+        long selfDamage = _damageTracker.Snapshot()
+            .FirstOrDefault(d => d.ObjectId == PlayerRegistry.SelfObjectId)?.Damage ?? 0;
+        int lootItems = _lootFeed.Count(x => !x.IsSilver);
+
+        // Sem isso, qualquer toque acidental em "Iniciar/Parar captura" gerava uma
+        // linha vazia no histórico.
+        if (_fameTracker.TotalFame == 0 && _fameTracker.TotalYellowFame == 0 &&
+            _fameTracker.TotalSilver == 0 && selfDamage == 0 && lootItems == 0)
+            return;
+
+        SessionHistoryStore.Append(new SessionHistoryEntry
+        {
+            StartTime = _fameTracker.SessionStart,
+            EndTime = DateTime.Now,
+            Fame = _fameTracker.TotalFame,
+            YellowFame = _fameTracker.TotalYellowFame,
+            Silver = _fameTracker.TotalSilver,
+            Damage = selfDamage,
+            LootItems = lootItems,
+        });
+        RefreshSessionHistory();
+    }
+
+    private void RefreshSessionHistory()
+    {
+        _sessionRows.Clear();
+        foreach (var s in SessionHistoryStore.Load())
+        {
+            var duration = s.EndTime - s.StartTime;
+            _sessionRows.Add(new SessionHistoryRowDisplay
+            {
+                Period = $"{s.StartTime:dd/MM HH:mm} — {s.EndTime:HH:mm}",
+                Duration = duration.TotalHours >= 1
+                    ? $"{(int)duration.TotalHours}h{duration.Minutes:D2}m"
+                    : $"{duration.Minutes}m{duration.Seconds:D2}s",
+                Fame = s.Fame.ToString("N0"),
+                YellowFame = s.YellowFame.ToString("N0"),
+                Silver = s.Silver.ToString("N0"),
+                Damage = s.Damage.ToString("N0"),
+                LootItems = s.LootItems.ToString("N0"),
+            });
+        }
+    }
+
+    private void BtnClearSessionHistory_Click(object sender, RoutedEventArgs e)
+    {
+        SessionHistoryStore.Clear();
+        RefreshSessionHistory();
     }
 
     // Pausa só a contagem (loot/dano/fama) — a captura de pacote continua rodando,
@@ -1131,10 +1202,11 @@ public partial class MainWindow : Window
         PanelLoot.Visibility = Visibility.Collapsed;
         PanelDamage.Visibility = Visibility.Collapsed;
         PanelFame.Visibility = Visibility.Collapsed;
+        PanelSessions.Visibility = Visibility.Collapsed;
         PanelBlocked.Visibility = Visibility.Collapsed;
         _advancedVisible = false;
 
-        bool isTrackerTab = tag is "loot" or "damage" or "fame";
+        bool isTrackerTab = tag is "loot" or "damage" or "fame" or "sessions";
         if ((isTrackerTab && !_canTracker) || (tag == "craft" && !_canCraft))
         {
             PanelBlocked.Visibility = Visibility.Visible;
@@ -1143,9 +1215,10 @@ public partial class MainWindow : Window
 
         switch (tag)
         {
-            case "loot":   PanelLoot.Visibility = Visibility.Visible; break;
-            case "damage": PanelDamage.Visibility = Visibility.Visible; break;
-            case "fame":   PanelFame.Visibility = Visibility.Visible; break;
+            case "loot":     PanelLoot.Visibility = Visibility.Visible; break;
+            case "damage":   PanelDamage.Visibility = Visibility.Visible; break;
+            case "fame":     PanelFame.Visibility = Visibility.Visible; break;
+            case "sessions": PanelSessions.Visibility = Visibility.Visible; break;
             case "craft":
                 // Craft = página de mercado do site embutida (reaproveita a calculadora pronta).
                 if (WebView.CoreWebView2 != null && !(WebView.Source?.ToString().Contains("/mercado") ?? false))
@@ -1158,7 +1231,7 @@ public partial class MainWindow : Window
 
     private void SetActiveNav(Button active)
     {
-        foreach (var btn in new[] { NavLoot, NavDamage, NavFame, NavCraft })
+        foreach (var btn in new[] { NavLoot, NavDamage, NavFame, NavCraft, NavSessions })
         {
             bool isActive = btn == active;
             btn.Foreground = isActive ? NavActiveBrush : NavIdleBrush;

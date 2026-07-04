@@ -142,6 +142,9 @@
                     <Button x:Name="NavCraft" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="craft">
                         <StackPanel Orientation="Horizontal"><TextBlock Text="⚒" FontSize="11" Margin="0,0,10,0" VerticalAlignment="Center" Opacity=".45"/><TextBlock Text="Craft" VerticalAlignment="Center"/></StackPanel>
                     </Button>
+                    <Button x:Name="NavSessions" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="sessions">
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="🕘" FontSize="11" Margin="0,0,10,0" VerticalAlignment="Center" Opacity=".45"/><TextBlock Text="Sessões" VerticalAlignment="Center"/></StackPanel>
+                    </Button>
                 </StackPanel>
                 <StackPanel x:Name="SidebarBottom" DockPanel.Dock="Bottom" Margin="22,0,22,18">
                     <!-- Captura acessível de qualquer aba, não só do Loot Log — pra não
@@ -501,6 +504,36 @@
                         </ListView.View>
                     </ListView>
                 </StackPanel>
+            </Grid>
+
+            <!-- Histórico local de sessões (Task #8) — um resumo é gravado toda vez que
+                 a captura é parada (ver SaveSessionToHistory em MainWindow.xaml.cs).
+                 Só local (SessionHistoryStore.cs), nada é enviado pro servidor. -->
+            <Grid x:Name="PanelSessions" Visibility="Collapsed" Background="#131313">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <StackPanel Grid.Row="0" Margin="16,12,16,8">
+                    <TextBlock Text="Histórico de Sessões" Foreground="#c9a227" FontFamily="{StaticResource FontHead}" FontSize="26" FontWeight="SemiBold"/>
+                    <TextBlock Foreground="#8CFFFFFF" FontSize="12" Margin="0,4,0,0"
+                               Text="Um resumo é salvo automaticamente sempre que você para a captura. Só fica salvo neste computador."/>
+                    <Button x:Name="BtnClearSessionHistory" Content="Limpar histórico" Click="BtnClearSessionHistory_Click"
+                            Padding="14,6" Margin="0,10,0,0" Background="#2e2e2e" Foreground="White" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Left"/>
+                </StackPanel>
+                <ListView x:Name="ListSessionHistory" Grid.Row="1" Margin="16,0,16,16" Background="#1b1b1b" Foreground="White" BorderThickness="0" FontSize="13">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="Período" Width="200" DisplayMemberBinding="{Binding Period}"/>
+                            <GridViewColumn Header="Duração" Width="90" DisplayMemberBinding="{Binding Duration}"/>
+                            <GridViewColumn Header="Fama" Width="100" DisplayMemberBinding="{Binding Fame}"/>
+                            <GridViewColumn Header="Fama Amarela" Width="110" DisplayMemberBinding="{Binding YellowFame}"/>
+                            <GridViewColumn Header="Prata" Width="110" DisplayMemberBinding="{Binding Silver}"/>
+                            <GridViewColumn Header="Dano" Width="100" DisplayMemberBinding="{Binding Damage}"/>
+                            <GridViewColumn Header="Itens de Loot" Width="100" DisplayMemberBinding="{Binding LootItems}"/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
             </Grid>
         </Grid>
         </Grid>
