@@ -216,9 +216,11 @@ public partial class MainWindow : Window
     }
     private static System.Windows.Media.Brush B(string hex) =>
         new System.Windows.Media.BrushConverter().ConvertFromString(hex) as System.Windows.Media.Brush ?? System.Windows.Media.Brushes.Gray;
-    private static readonly System.Windows.Media.Brush NavActiveBg = B("#191306");
-    private static readonly System.Windows.Media.Brush NavActiveBrush = B("#dc2626");  // vermelho do site
-    private static readonly System.Windows.Media.Brush NavIdleBrush   = B("#888888");
+    // Mesmo modelo do site redesenhado: dourado = ação/navegação ativa, vermelho
+    // reservado pra semântica (perigo/perdas). Tokens iguais aos do pg_base.html.
+    private static readonly System.Windows.Media.Brush NavActiveBg = B("#292213");
+    private static readonly System.Windows.Media.Brush NavActiveBrush = B("#c9a227");
+    private static readonly System.Windows.Media.Brush NavIdleBrush   = B("#8CFFFFFF");
 
     // Pinta a barra de título nativa (a faixa branca do Windows lá em cima) escura,
     // pra combinar com o resto do app — sem isso ela vinha sempre clara/padrão do
@@ -541,9 +543,9 @@ public partial class MainWindow : Window
         }
         else
         {
-            CaptureDot.Fill = _capturing ? B("#22c55e") : B("#666666");
+            CaptureDot.Fill = _capturing ? B("#22c55e") : B("#57FFFFFF");
             CaptureStateLabel.Text = _capturing ? "Capturando" : "Captura parada";
-            CaptureStateLabel.Foreground = _capturing ? B("#22c55e") : B("#888888");
+            CaptureStateLabel.Foreground = _capturing ? B("#22c55e") : B("#8CFFFFFF");
             trayState = _capturing ? "Capturando" : "Captura parada";
         }
         // Único jeito de saber o estado com a janela escondida (fechar pelo "X" só

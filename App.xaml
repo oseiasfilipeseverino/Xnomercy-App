@@ -13,12 +13,12 @@
              que é todo escuro. TargetType (sem x:Key) = aplica em TODO GridViewColumnHeader
              automaticamente, sem precisar marcar cada ListView um por um. -->
         <Style TargetType="GridViewColumnHeader">
-            <Setter Property="Background" Value="#1a1a1a"/>
+            <Setter Property="Background" Value="#242424"/>
             <Setter Property="Foreground" Value="#c9a227"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Padding" Value="10,8"/>
-            <Setter Property="BorderBrush" Value="#262626"/>
+            <Setter Property="BorderBrush" Value="#2e2e2e"/>
             <Setter Property="BorderThickness" Value="0,0,1,1"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
             <Setter Property="Template">
@@ -46,7 +46,7 @@
             <Setter Property="BorderThickness" Value="0"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#1c1c1c"/>
+                    <Setter Property="Background" Value="#242424"/>
                 </Trigger>
                 <Trigger Property="IsSelected" Value="True">
                     <Setter Property="Background" Value="#3a2c0d"/>
@@ -58,7 +58,7 @@
              é um quadradinho claro, que ficava praticamente invisível/feio no fundo escuro.
              Retemplate simples: caixa escura com borda dourada, marca dourada quando ativo. -->
         <Style TargetType="CheckBox">
-            <Setter Property="Foreground" Value="#cbd5e1"/>
+            <Setter Property="Foreground" Value="#DEFFFFFF"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
@@ -66,7 +66,7 @@
                     <ControlTemplate TargetType="CheckBox">
                         <StackPanel Orientation="Horizontal">
                             <Border x:Name="Box" Width="16" Height="16" CornerRadius="3"
-                                    Background="#181818" BorderBrush="#555555" BorderThickness="1"
+                                    Background="#242424" BorderBrush="#57FFFFFF" BorderThickness="1"
                                     VerticalAlignment="Center">
                                 <Path x:Name="Check" Data="M2,7 L6,11 L13,3" Stroke="#c9a227" StrokeThickness="2"
                                       StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
