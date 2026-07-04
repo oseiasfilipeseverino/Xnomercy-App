@@ -453,6 +453,7 @@
                                 <Image Source="Icons/fame.png" Width="26" Height="26" HorizontalAlignment="Center"/>
                                 <TextBlock Text="FAMA VERMELHA" Foreground="#8CFFFFFF" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
                                 <TextBlock x:Name="TxtFameTotal" Text="0" Foreground="#f87171" FontSize="26" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtFamePerHour" Text="0/hora" Foreground="#8CFFFFFF" FontSize="11" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
                         <Border Background="#1b1b1b" CornerRadius="6" Padding="22,16" Margin="0,0,12,0">
@@ -460,6 +461,7 @@
                                 <Image Source="Icons/yellow_fame.png" Width="26" Height="26" HorizontalAlignment="Center"/>
                                 <TextBlock Text="FAMA AMARELA" Foreground="#8CFFFFFF" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
                                 <TextBlock x:Name="TxtYellowFameTotal" Text="—" Foreground="#fde047" FontSize="26" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtYellowFamePerHour" Text="0/hora" Foreground="#8CFFFFFF" FontSize="11" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
                         <Border Background="#1b1b1b" CornerRadius="6" Padding="22,16" Margin="0,0,12,0">
@@ -467,6 +469,7 @@
                                 <Image Source="Icons/silver.png" Width="26" Height="26" HorizontalAlignment="Center"/>
                                 <TextBlock Text="PRATA" Foreground="#8CFFFFFF" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
                                 <TextBlock x:Name="TxtSilverTotal" Text="0" Foreground="#e2e8f0" FontSize="26" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtSilverPerHour" Text="0/hora" Foreground="#8CFFFFFF" FontSize="11" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
                         <!-- Mobs mortos em mundo aberto (Task #2) — ver OpenWorldKillTracker.cs.

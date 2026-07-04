@@ -307,6 +307,17 @@ public partial class MainWindow : Window
                 $"Pacotes brutos: {_capture.DiagRawPackets} | Payloads extraídos: {_capture.DiagAppPayloadsExtracted} | Eventos decodificados: {_capture.DiagEventsDecoded}";
         };
         diagTimer.Start();
+
+        // Duração da sessão e taxa/hora mudam mesmo sem nenhum evento novo chegar
+        // (ex: parado sem farmar) — sem um tick próprio, o painel só atualizava
+        // quando um ganho de fama/prata disparava _fameDirty, deixando o relógio
+        // e a taxa parados na tela até o próximo evento.
+        var famePanelTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        famePanelTimer.Tick += (_, _) =>
+        {
+            if (PanelFame.Visibility == Visibility.Visible) RefreshFamePanel();
+        };
+        famePanelTimer.Start();
     }
 
     // ── Fama & Prata (Fase 3) ───────────────────────────────────────────────
@@ -315,7 +326,13 @@ public partial class MainWindow : Window
         TxtFameTotal.Text = _fameTracker.TotalFame.ToString("N0");
         TxtYellowFameTotal.Text = _fameTracker.TotalYellowFame.ToString("N0");
         TxtSilverTotal.Text = _fameTracker.TotalSilver.ToString("N0");
-        TxtFameSessionStart.Text = $"Sessão desde {_fameTracker.SessionStart:HH:mm:ss}";
+        // Taxa por hora — transforma o painel num medidor de eficiência de farm de
+        // verdade ("esse spot vale a pena?"), não só um contador de total acumulado.
+        TxtFamePerHour.Text = $"{_fameTracker.FamePerHour:N0}/hora";
+        TxtYellowFamePerHour.Text = $"{_fameTracker.YellowFamePerHour:N0}/hora";
+        TxtSilverPerHour.Text = $"{_fameTracker.SilverPerHour:N0}/hora";
+        var elapsed = DateTime.Now - _fameTracker.SessionStart;
+        TxtFameSessionStart.Text = $"Sessão desde {_fameTracker.SessionStart:HH:mm:ss} · {elapsed:hh\\:mm\\:ss}";
 
         TxtMobKillsTotal.Text = _killTracker.TotalKills.ToString("N0");
         TxtMobKillsPerHour.Text = $"{_killTracker.KillsPerHour:0.0}/hora";

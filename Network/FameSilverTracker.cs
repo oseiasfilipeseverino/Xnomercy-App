@@ -19,6 +19,14 @@ public sealed class FameSilverTracker
     public long TotalSilver { get; private set; }
     public DateTime SessionStart { get; private set; } = DateTime.Now;
 
+    // Taxa por hora — mesmo padrão do OpenWorldKillTracker.KillsPerHour (mínimo de
+    // 1 minuto de sessão, senão o primeiro ganho já mostraria um número absurdo
+    // projetado, tipo "50 milhões de fama/hora" com 10 segundos de sessão).
+    private double SessionHours => Math.Max((DateTime.Now - SessionStart).TotalHours, 1.0 / 60);
+    public double FamePerHour => TotalFame / SessionHours;
+    public double YellowFamePerHour => TotalYellowFame / SessionHours;
+    public double SilverPerHour => TotalSilver / SessionHours;
+
     private long _fameRaw;         // soma da fama vermelha (já com premium/bolsa) ×10000
     private long _yellowRaw;       // soma da fama amarela ×10000
     private long _silverRaw;       // soma dos ganhos de prata ×10000
