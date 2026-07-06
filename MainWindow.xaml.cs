@@ -561,7 +561,12 @@ public partial class MainWindow : Window
     {
         long selfDamage = _damageTracker.Snapshot()
             .FirstOrDefault(d => d.ObjectId == PlayerRegistry.SelfObjectId)?.Damage ?? 0;
-        int lootItems = _lootFeed.Count(x => !x.IsSilver);
+        // Só o SEU loot — o feed mostra pickups de todo mundo por perto, e contar
+        // tudo inflava o número da sessão com itens que outros jogadores pegaram.
+        // "Você" = linha inserida direto pelo SelfLootDetector; SelfName = seu nome
+        // real quando o evento 279 do servidor confirma o pickup.
+        int lootItems = _lootFeed.Count(x => !x.IsSilver &&
+            (x.Looter == "Você" || (PlayerRegistry.SelfName is string sn && x.Looter == sn)));
 
         // Sem isso, qualquer toque acidental em "Iniciar/Parar captura" gerava uma
         // linha vazia no histórico.
@@ -647,6 +652,11 @@ public partial class MainWindow : Window
     // de ±1.5s do clique — assim dá pra achar o evento certo sem precisar de
     // filtro por código (que exigia adivinhar quais códigos são "ruído").
     private static readonly TimeSpan MarkWindow = TimeSpan.FromSeconds(4);
+    // Lock: a UI adiciona/limpa (BtnMarkMoment/BtnClearMarked) enquanto a thread de
+    // captura enumera em OnPhotonEvent — sem proteção, um "Collection was modified"
+    // estourava na captura e o catch do OnPacketArrival descartava o pacote INTEIRO
+    // em silêncio (perdendo fama/loot daquele pacote).
+    private readonly object _markersLock = new();
     private readonly List<DateTime> _markers = new();
 
     // Confirmado pela própria estrutura repetitiva (mesmo formato em todo pacote,
@@ -658,7 +668,7 @@ public partial class MainWindow : Window
     private void BtnMarkMoment_Click(object sender, RoutedEventArgs e)
     {
         var now = DateTime.Now;
-        _markers.Add(now);
+        lock (_markersLock) _markers.Add(now);
         foreach (var row in _lootRows)
         {
             if (Math.Abs((row.Timestamp - now).TotalSeconds) <= MarkWindow.TotalSeconds && !row.IsNearMark)
@@ -673,7 +683,7 @@ public partial class MainWindow : Window
     private void BtnClearMarked_Click(object sender, RoutedEventArgs e)
     {
         _markedRows.Clear();
-        _markers.Clear();
+        lock (_markersLock) _markers.Clear();
     }
 
     private void OnPhotonEvent(PhotonEvent evt)
@@ -728,7 +738,8 @@ public partial class MainWindow : Window
         bool nearMark = false;
         if (_advancedVisible)
         {
-            nearMark = _markers.Any(m => Math.Abs((now - m).TotalSeconds) <= MarkWindow.TotalSeconds);
+            lock (_markersLock)
+                nearMark = _markers.Any(m => Math.Abs((now - m).TotalSeconds) <= MarkWindow.TotalSeconds);
             if (isLootCandidate && TryDescribeLoot(evt, out var lootSummary)) summary = lootSummary;
             else
             {
@@ -1295,7 +1306,7 @@ public partial class MainWindow : Window
 
             await _updateMgr.DownloadUpdatesAsync(info);
             _pendingUpdate = info;
-            Dispatcher.BeginInvoke(() =>
+            _ = Dispatcher.BeginInvoke(() =>
             {
                 UpdateBannerText.Text = $"Nova versão baixada: v{info.TargetFullRelease.Version} — reinicie pra aplicar";
                 UpdateBanner.Visibility = Visibility.Visible;
