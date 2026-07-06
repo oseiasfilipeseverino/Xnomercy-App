@@ -330,8 +330,23 @@ public partial class MainWindow : Window
         famePanelTimer.Tick += (_, _) =>
         {
             if (PanelFame.Visibility == Visibility.Visible) RefreshFamePanel();
+            if (_overlay?.IsVisible == true)
+                _overlay.UpdateStats(_fameTracker.TotalFame, _fameTracker.FamePerHour,
+                                     _fameTracker.TotalSilver, _fameTracker.SilverPerHour,
+                                     _killTracker.TotalKills, _killTracker.KillsPerHour,
+                                     DateTime.Now - _fameTracker.SessionStart);
         };
         famePanelTimer.Start();
+    }
+
+    // ── Mini-overlay flutuante (sempre no topo) ─────────────────────────────
+    private OverlayWindow? _overlay;
+
+    private void BtnOverlayToggle_Click(object sender, RoutedEventArgs e)
+    {
+        _overlay ??= new OverlayWindow { Owner = this };
+        if (_overlay.IsVisible) _overlay.Hide();
+        else _overlay.Show();
     }
 
     // ── Fama & Prata (Fase 3) ───────────────────────────────────────────────

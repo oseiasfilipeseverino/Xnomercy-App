@@ -1,0 +1,38 @@
+<Window x:Class="XnomercyApp.OverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="XnoMercy Overlay"
+        Width="230" SizeToContent="Height"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ShowInTaskbar="False" ResizeMode="NoResize"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
+    <!-- Mini painel flutuante: fama/h e prata/h sem precisar de alt-tab.
+         Sempre no topo, arrastável em qualquer ponto, X pra fechar. -->
+    <Border Background="#E6131313" CornerRadius="8" BorderBrush="#3a2c0d" BorderThickness="1" Padding="12,9">
+        <StackPanel>
+            <Grid Margin="0,0,0,6">
+                <TextBlock Text="XNOMERCY" Foreground="#c9a227" FontWeight="Bold" FontSize="11" VerticalAlignment="Center"/>
+                <Button x:Name="BtnClose" Content="✕" Click="BtnClose_Click" HorizontalAlignment="Right"
+                        Background="Transparent" Foreground="#8CFFFFFF" BorderThickness="0" Cursor="Hand"
+                        Padding="4,0" FontSize="11"/>
+            </Grid>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Fama" Foreground="#8CFFFFFF" FontSize="11" Margin="0,1"/>
+                <TextBlock Grid.Row="0" Grid.Column="1" x:Name="TxtOvFame" Text="0 · 0/h" Foreground="#f87171" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,1"/>
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Prata" Foreground="#8CFFFFFF" FontSize="11" Margin="0,1"/>
+                <TextBlock Grid.Row="1" Grid.Column="1" x:Name="TxtOvSilver" Text="0 · 0/h" Foreground="#e2e8f0" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,1"/>
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Mobs" Foreground="#8CFFFFFF" FontSize="11" Margin="0,1"/>
+                <TextBlock Grid.Row="2" Grid.Column="1" x:Name="TxtOvMobs" Text="0 · 0/h" Foreground="#86efac" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,1"/>
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="Sessão" Foreground="#8CFFFFFF" FontSize="11" Margin="0,1"/>
+                <TextBlock Grid.Row="3" Grid.Column="1" x:Name="TxtOvTime" Text="00:00:00" Foreground="#c9a227" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,1"/>
+            </Grid>
+        </StackPanel>
+    </Border>
+</Window>
