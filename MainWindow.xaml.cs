@@ -329,6 +329,7 @@ public partial class MainWindow : Window
         var famePanelTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         famePanelTimer.Tick += (_, _) =>
         {
+            SampleSessionChart();
             if (PanelFame.Visibility == Visibility.Visible) RefreshFamePanel();
             if (_overlay?.IsVisible == true)
                 _overlay.UpdateStats(_fameTracker.TotalFame, _fameTracker.FamePerHour,
@@ -347,6 +348,63 @@ public partial class MainWindow : Window
         _overlay ??= new OverlayWindow { Owner = this };
         if (_overlay.IsVisible) _overlay.Hide();
         else _overlay.Show();
+    }
+
+    // ── Gráfico da sessão (Fama & Prata) ─────────────────────────────────────
+    // Amostra 1x/min os totais acumulados (só com captura ligada e não pausada —
+    // parado/pausado não gera ponto, senão o gráfico virava um platô gigante).
+    // Cap de 720 pontos = 12h de sessão, mais que qualquer farm real.
+    private readonly List<(DateTime At, long Fame, long Silver)> _sessionSamples = new();
+    private DateTime _lastSampleAt = DateTime.MinValue;
+    private const int MaxSessionSamples = 720;
+
+    private void SampleSessionChart()
+    {
+        if (!_capturing || _paused) return;
+        var now = DateTime.Now;
+        if ((now - _lastSampleAt).TotalSeconds < 60) return;
+        _lastSampleAt = now;
+        _sessionSamples.Add((now, _fameTracker.TotalFame, _fameTracker.TotalSilver));
+        if (_sessionSamples.Count > MaxSessionSamples) _sessionSamples.RemoveAt(0);
+        if (PanelFame.Visibility == Visibility.Visible) RedrawSessionChart();
+    }
+
+    private void RedrawSessionChart()
+    {
+        if (_sessionSamples.Count < 2)
+        {
+            PanelSessionChart.Visibility = Visibility.Collapsed;
+            return;
+        }
+        PanelSessionChart.Visibility = Visibility.Visible;
+        var canvas = SessionChartCanvas;
+        canvas.Children.Clear();
+        double W = canvas.Width, H = canvas.Height;
+        long maxFame = Math.Max(_sessionSamples.Max(s => s.Fame), 1);
+        long maxSilver = Math.Max(_sessionSamples.Max(s => s.Silver), 1);
+        int n = _sessionSamples.Count;
+
+        System.Windows.Shapes.Polyline MakeLine(Func<(DateTime At, long Fame, long Silver), long> sel, long max, string hex)
+        {
+            var pl = new System.Windows.Shapes.Polyline
+            {
+                Stroke = B(hex),
+                StrokeThickness = 1.6,
+                StrokeLineJoin = System.Windows.Media.PenLineJoin.Round,
+            };
+            for (int i = 0; i < n; i++)
+            {
+                double x = W * i / (n - 1);
+                double y = H - 3 - (H - 6) * sel(_sessionSamples[i]) / (double)max;
+                pl.Points.Add(new System.Windows.Point(x, y));
+            }
+            return pl;
+        }
+        canvas.Children.Add(MakeLine(s => s.Fame, maxFame, "#f87171"));
+        canvas.Children.Add(MakeLine(s => s.Silver, maxSilver, "#e2e8f0"));
+        var span = _sessionSamples[^1].At - _sessionSamples[0].At;
+        TxtSessionChartHint.Text =
+            $"{n} amostras · {span.TotalMinutes:0}min · pico fama {maxFame:N0} · pico prata {maxSilver:N0}";
     }
 
     // ── Fama & Prata (Fase 3) ───────────────────────────────────────────────
@@ -374,6 +432,10 @@ public partial class MainWindow : Window
     {
         _fameTracker.Reset();
         _killTracker.Reset();
+        // Gráfico acompanha a mesma "sessão" do tracker — reiniciar limpa os dois.
+        _sessionSamples.Clear();
+        _lastSampleAt = DateTime.MinValue;
+        RedrawSessionChart();
     }
 
     // ── Medidor de Dano (Fase 4) ────────────────────────────────────────────
@@ -1277,7 +1339,7 @@ public partial class MainWindow : Window
         {
             case "loot":     PanelLoot.Visibility = Visibility.Visible; break;
             case "damage":   PanelDamage.Visibility = Visibility.Visible; break;
-            case "fame":     PanelFame.Visibility = Visibility.Visible; break;
+            case "fame":     PanelFame.Visibility = Visibility.Visible; RedrawSessionChart(); break;
             case "sessions": PanelSessions.Visibility = Visibility.Visible; break;
             case "craft":
                 // Craft = página de mercado do site embutida (reaproveita a calculadora pronta).

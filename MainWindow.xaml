@@ -496,6 +496,27 @@
                     <TextBlock x:Name="TxtFameHint" Foreground="#8CFFFFFF" FontSize="11" Margin="0,16,0,0" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="440"
                                Text="Fama amarela (facção/standing) ainda em calibração — me diga de qual conteúdo ela vem pra eu achar o código."/>
 
+                    <!-- Gráfico da sessão: evolução acumulada de fama e prata, amostrada
+                         a cada minuto (ver _sessionSamples). Cada série é normalizada ao
+                         próprio máximo — o formato mostra ONDE o farm rendeu, não compara
+                         valor absoluto de fama contra prata. -->
+                    <Border x:Name="PanelSessionChart" Background="#1b1b1b" CornerRadius="6" Width="440"
+                            Margin="0,20,0,0" Padding="12,10" Visibility="Collapsed">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,6">
+                                <TextBlock Text="EVOLUÇÃO DA SESSÃO" Foreground="#8CFFFFFF" FontSize="10" FontWeight="Bold"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Rectangle Width="10" Height="3" Fill="#f87171" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Fama" Foreground="#8CFFFFFF" FontSize="10" Margin="4,0,10,0"/>
+                                    <Rectangle Width="10" Height="3" Fill="#e2e8f0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Prata" Foreground="#8CFFFFFF" FontSize="10" Margin="4,0,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                            <Canvas x:Name="SessionChartCanvas" Height="90" Width="416" ClipToBounds="True"/>
+                            <TextBlock x:Name="TxtSessionChartHint" Text="" Foreground="#57FFFFFF" FontSize="10" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Border>
+
                     <!-- Quebra de mobs mortos por tipo — só aparece depois do 1º kill. -->
                     <ListView x:Name="ListMobKills" Margin="0,20,0,0" MaxHeight="220" Width="440"
                               Background="#1b1b1b" Foreground="White" BorderThickness="0">
