@@ -614,6 +614,40 @@ public partial class MainWindow : Window
         RefreshSessionHistory();
     }
 
+    // Mesmo padrão do Exportar CSV do Loot Log: ; como separador (Excel PT-BR) e
+    // feedback visível de sucesso/falha (arquivo aberto no Excel, sem permissão...).
+    private void BtnExportSessionsCsv_Click(object sender, RoutedEventArgs e)
+    {
+        var sessions = SessionHistoryStore.Load();
+        if (sessions.Count == 0)
+        {
+            TxtSessionsStatus.Text = "Nada pra exportar ainda.";
+            return;
+        }
+        var dlg = new Microsoft.Win32.SaveFileDialog
+        {
+            FileName = $"sessoes_{DateTime.Now:yyyyMMdd_HHmmss}.csv",
+            Filter = "CSV (*.csv)|*.csv",
+            DefaultExt = ".csv",
+        };
+        if (dlg.ShowDialog() != true) return;
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("Início;Fim;Duração (min);Fama;Fama Amarela;Prata;Dano;Itens de Loot");
+        foreach (var s in sessions)
+            sb.AppendLine($"{s.StartTime:dd/MM/yyyy HH:mm};{s.EndTime:dd/MM/yyyy HH:mm};" +
+                          $"{(int)(s.EndTime - s.StartTime).TotalMinutes};" +
+                          $"{s.Fame};{s.YellowFame};{s.Silver};{s.Damage};{s.LootItems}");
+        try
+        {
+            System.IO.File.WriteAllText(dlg.FileName, sb.ToString(), System.Text.Encoding.UTF8);
+            TxtSessionsStatus.Text = $"Exportado: {System.IO.Path.GetFileName(dlg.FileName)}";
+        }
+        catch (Exception ex)
+        {
+            TxtSessionsStatus.Text = $"Falha ao exportar: {ex.Message}";
+        }
+    }
+
     // Pausa só a contagem (loot/dano/fama) — a captura de pacote continua rodando,
     // então despausar não perde nada que tenha chegado nesse meio tempo, só ignora.
     private void BtnPauseToggle_Click(object sender, RoutedEventArgs e)
