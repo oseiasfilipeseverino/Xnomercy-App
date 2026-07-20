@@ -47,18 +47,19 @@ public sealed class PacketCaptureService : IDisposable
 
         string filter = string.Join(" or ", AlbionPorts.Select(p => $"udp port {p}"));
         int opened = 0;
-        int skipped = 0;
 
         foreach (var device in devices)
         {
-            // Loopback não carrega tráfego do jogo (isso vai pra rede física/wifi) —
-            // pular evita abrir adaptador inútil e economiza memória.
-            if (device.Description?.Contains("Loopback", StringComparison.OrdinalIgnoreCase) == true)
-            {
-                skipped++;
-                continue;
-            }
-
+            // ANTES pulava adaptador de loopback ("nunca carrega tráfego do jogo") —
+            // verdade só em conexão direta. Aceleradores de rota tipo ExitLag (e
+            // Hamachi/Radmin) rodam um serviço local que intercepta o tráfego do
+            // jogo via 127.0.0.1 antes de mandar pela rota otimizada — nesse caso o
+            // pacote de verdade (porta 5055-5058, sem criptografia) passa pelo
+            // LOOPBACK, não pela placa física. Pular esse adaptador fazia a captura
+            // "ligar" (achava a placa física) mas nunca ver nenhum pacote, porque o
+            // jogo nem manda tráfego por ela quando o acelerador está ativo.
+            // Custo de incluir loopback é baixo: o filtro de porta already reduz
+            // o volume entregue ao app, então não há overhead real de desempenho.
             try
             {
                 device.Open(DeviceModes.None, 1000);
@@ -77,7 +78,7 @@ public sealed class PacketCaptureService : IDisposable
 
         _running = opened > 0;
         StatusChanged?.Invoke(_running
-            ? $"Capturando em {opened} adaptador(es) ({skipped} loopback ignorado(s))"
+            ? $"Capturando em {opened} adaptador(es)"
             : "Não foi possível abrir nenhum adaptador de rede");
         return _running;
     }
