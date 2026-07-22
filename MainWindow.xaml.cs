@@ -53,9 +53,6 @@ public sealed class LootFeedRow
 
 public sealed class DamageRowDisplay
 {
-    // Uma linha (um Player) pode corresponder a mais de um ObjectId — o Albion troca
-    // o ObjectId do jogador a cada zona nova, e essa linha já vem agrupada por nome.
-    public IReadOnlyList<long> ObjectIds { get; init; } = Array.Empty<long>();
     public string Player { get; init; } = "";
     public long Damage { get; init; }
     public string DamagePct { get; init; } = "";
@@ -447,6 +444,9 @@ public partial class MainWindow : Window
         bool showUnnamed = ChkShowUnnamed.IsChecked == true;
         bool guildOnly = ChkGuildOnlyDamage.IsChecked == true;
         bool partyOnly = ChkPartyOnlyDamage.IsChecked == true;
+        // DamageMeterTracker já agrupa por nome resolvido no momento do hit (ver
+        // comentário na classe) — cada entrada aqui já é um jogador único e estável,
+        // sem precisar re-agrupar por ObjectId (que o Albion recicla por zona/sala).
         var entries = _damageTracker.Snapshot()
             // "Mostrar sem nome": por padrão (desmarcado) já filtra os #número (mob não
             // detectado, invocação, etc.), deixando só jogadores resolvidos. Marcando,
@@ -457,50 +457,31 @@ public partial class MainWindow : Window
             // luta que já estava rolando e o mob morre por outro grupo antes de falar ou
             // morrer perto de você) — PlayerRegistry.IsMob só sabe filtrar mob confirmado
             // por uma dessas duas fontes. Mobs nunca aparecem em NewCharacter(29)/Move(30)
-            // (só jogadores), então o nome nunca resolve e o ObjectId fica com "#id" — que
-            // já cai fora da lista por padrão aqui, mesmo sem confirmação de mob. Equivalente
+            // (só jogadores), então o nome nunca resolve e fica com "#id" — que já cai
+            // fora da lista por padrão aqui, mesmo sem confirmação de mob. Equivalente
             // ao "from.Contains('_')" do Loot Log, só que via ausência de nome em vez de tag.
-            .Where(x => showUnnamed || !PlayerRegistry.NameOf(x.ObjectId).StartsWith('#'))
+            .Where(x => showUnnamed || !x.Name.StartsWith('#'))
             // "Só minha guild": opcional, pra quando quiser ver só o desempenho da sua
             // guild — o padrão continua mostrando todo mundo por perto. A guild do
             // próprio usuário é resolvida em background (PlayerRegistry.OwnGuild); se
             // ainda não resolveu, só você mesmo passa (evita falso positivo comparando
             // "" com guild vazia de quem não tem guild).
-            .Where(x => !guildOnly || PlayerRegistry.IsSelf(x.ObjectId)
+            .Where(x => !guildOnly || x.Name == "Você"
                         || (PlayerRegistry.OwnGuild.Length > 0
-                            && PlayerRegistry.GuildOf(x.ObjectId) == PlayerRegistry.OwnGuild))
+                            && PlayerRegistry.GuildOfName(x.Name) == PlayerRegistry.OwnGuild))
             // "Só meu grupo": rastreado via eventos de grupo calibrados (entrada por
             // 229/240, saída por 182, com expiração de 60s como rede de segurança).
-            .Where(x => !partyOnly || PlayerRegistry.IsInPartyById(x.ObjectId))
-            .ToList();
-
-        // O Albion troca o ObjectId de cada jogador ao entrar numa zona nova (dungeon,
-        // ilha etc.) — sem agrupar por nome aqui, o mesmo jogador virava várias linhas
-        // duplicadas no ranking a cada troca de instância dentro da mesma sessão
-        // ("quando troquei de dg duplicou"). O nome resolvido (PlayerRegistry.NameOf) é
-        // o identificador estável entre zonas; ObjectId não é.
-        var grouped = entries
-            .GroupBy(x => PlayerRegistry.NameOf(x.ObjectId))
-            .Select(g => new
-            {
-                Name = g.Key,
-                ObjectIds = (IReadOnlyList<long>)g.Select(x => x.ObjectId).ToList(),
-                Damage = g.Sum(x => x.Damage),
-                Healing = g.Sum(x => x.Healing),
-                // Pro ícone/arma, usa o ObjectId com mais dano — mais provável de já
-                // ter um NewCharacter processado (loadout capturado ao entrar na cena).
-                PrimaryId = g.OrderByDescending(x => x.Damage).First().ObjectId,
-            })
+            .Where(x => !partyOnly || PlayerRegistry.IsInParty(x.Name))
             .OrderByDescending(x => x.Damage)
             .ToList();
 
         // Com o filtro ligado, a % passa a ser entre os jogadores mostrados (faz mais
         // sentido pra comparar a galera do grupo do que diluir no dano do que foi escondido).
-        long total = grouped.Sum(x => x.Damage);
-        foreach (var e in grouped)
+        long total = entries.Sum(x => x.Damage);
+        foreach (var e in entries)
         {
             string? icon = null;
-            if (PlayerRegistry.IsSelf(e.PrimaryId))
+            if (e.Name == "Você")
             {
                 // Você nunca tem PlayerInfo (o jogo não manda NewCharacter de você
                 // mesmo) — a arma vem de uma consulta separada à API pública do Albion.
@@ -508,7 +489,7 @@ public partial class MainWindow : Window
             }
             else
             {
-                var info = PlayerRegistry.Get(e.PrimaryId);
+                var info = PlayerRegistry.Get(e.LastObjectId);
                 if (info != null && info.MainHand >= 0)
                 {
                     var uniq = ItemCatalog.GetUniqueName(info.MainHand);
@@ -519,7 +500,6 @@ public partial class MainWindow : Window
             double pct = total > 0 ? e.Damage * 100.0 / total : 0;
             _damageRows.Add(new DamageRowDisplay
             {
-                ObjectIds = e.ObjectIds,
                 Player = e.Name,
                 Damage = e.Damage,
                 DamagePct = pct.ToString("0.0") + "%",
@@ -533,7 +513,7 @@ public partial class MainWindow : Window
         // isso ela ficaria parada na última foto enquanto o resto da tela continua
         // atualizando ao vivo durante o combate.
         if (ListDamage.SelectedItem is DamageRowDisplay selected)
-            RefreshDamageBySkillPanel(selected.ObjectIds);
+            RefreshDamageBySkillPanel(selected.Player);
     }
 
     private void BtnDamageReset_Click(object sender, RoutedEventArgs e) => _damageTracker.Reset();
@@ -546,7 +526,7 @@ public partial class MainWindow : Window
         if (ListDamage.SelectedItem is DamageRowDisplay row)
         {
             TxtDamageBySkillTitle.Text = $"Dano por habilidade — {row.Player}";
-            RefreshDamageBySkillPanel(row.ObjectIds);
+            RefreshDamageBySkillPanel(row.Player);
             PanelDamageBySkill.Visibility = Visibility.Visible;
         }
         else
@@ -568,9 +548,9 @@ public partial class MainWindow : Window
         }
     }
 
-    private void RefreshDamageBySkillPanel(IReadOnlyList<long> objectIds)
+    private void RefreshDamageBySkillPanel(string playerName)
     {
-        var bySpell = _damageTracker.SnapshotBySpell(objectIds);
+        var bySpell = _damageTracker.SnapshotBySpell(playerName);
         long total = bySpell.Sum(x => x.Damage);
         _damageBySkillRows.Clear();
         foreach (var s in bySpell)
@@ -660,11 +640,10 @@ public partial class MainWindow : Window
     // que a aba Fama & Prata já mostra como "Sessão desde HH:mm:ss".
     private void SaveSessionToHistory()
     {
-        // Soma TODOS os ObjectIds que já foram "você" na sessão (IsSelf), não só o
-        // atual — trocar de zona no meio da sessão muda seu ObjectId, e comparar só
-        // com o SelfObjectId de agora perdia o dano feito antes da troca.
+        // DamageMeterTracker já resolve e agrupa por nome no momento do hit — a
+        // entrada "Você" soma tudo que já foi atribuído a você durante a sessão.
         long selfDamage = _damageTracker.Snapshot()
-            .Where(d => PlayerRegistry.IsSelf(d.ObjectId)).Sum(d => d.Damage);
+            .FirstOrDefault(d => d.Name == "Você")?.Damage ?? 0;
         // Só o SEU loot — o feed mostra pickups de todo mundo por perto, e contar
         // tudo inflava o número da sessão com itens que outros jogadores pegaram.
         // "Você" = linha inserida direto pelo SelfLootDetector; SelfName = seu nome
