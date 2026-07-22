@@ -146,7 +146,11 @@ public static class PlayerRegistry
             // interna do mob (ex: "@MOB_UNDEAD_PULLER_VETERAN"), não um nome de jogador —
             // sem esse filtro, qualquer jogador que falasse no chat virava "mob" e o dano
             // dele desaparecia do Medidor de Dano.
-            if (evt.Parameters.TryGetValue(0, out var who) && who is string tag && tag.StartsWith('@')
+            // "Começa com @" sozinho não basta — um jogador mencionando alguém no chat
+            // (ex: "@fulano confere isso") também começa com @ e cairia aqui por engano.
+            // Exigir o prefixo real da tag interna do mob evita esse falso positivo.
+            if (evt.Parameters.TryGetValue(0, out var who) && who is string tag
+                && tag.StartsWith("@MOB_", StringComparison.OrdinalIgnoreCase)
                 && evt.Parameters.TryGetValue(4, out var mid) && ToLong(mid) is long m)
             {
                 RegisterMob(m);
@@ -160,7 +164,8 @@ public static class PlayerRegistry
             // Só é sinal confiável de mob quando [3] é a tag interna (ex: "@MOB_..."),
             // senão um jogador que morresse virava "mob" e o dano dele desaparecia do
             // Medidor de Dano — mesmo problema que já corrigimos no código 74 (chat).
-            if (evt.Parameters.TryGetValue(3, out var tagObj) && tagObj is string mobTag && mobTag.StartsWith('@')
+            if (evt.Parameters.TryGetValue(3, out var tagObj) && tagObj is string mobTag
+                && mobTag.StartsWith("@MOB_", StringComparison.OrdinalIgnoreCase)
                 && evt.Parameters.TryGetValue(0, out var mid) && ToLong(mid) is long m)
             {
                 RegisterMob(m);

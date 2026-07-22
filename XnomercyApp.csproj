@@ -13,9 +13,14 @@
     <StartupObject>XnomercyApp.Program</StartupObject>
   </PropertyGroup>
 
-  <!-- Build de teste (beta): liga os diagnósticos de calibração com a performance do
-       Release. LIGADO POR PADRÃO enquanto testamos com a guild — pra desligar num
-       release final limpo, publicar com `-p:EnableBeta=false`. -->
+  <!-- Liga os diagnósticos de calibração com a performance do Release. LIGADO POR
+       PADRÃO e deve continuar assim em TODO build distribuído pra guild, mesmo em
+       uso constante/produção — é a única forma de recalibrar códigos de evento se o
+       jogo mudar de novo (ver GameEventCodes.cs). NÃO publicar com
+       `-p:EnableBeta=false` como parte de um "release final" — isso desliga
+       silenciosamente e permanentemente a telemetria de calibração desse build,
+       sem nenhum aviso em runtime de que isso aconteceu. A flag existe só pra um
+       teste local pontual, não pra decisão de release. -->
   <PropertyGroup Condition="'$(EnableBeta)'!='false'">
     <DefineConstants>$(DefineConstants);BETA</DefineConstants>
   </PropertyGroup>

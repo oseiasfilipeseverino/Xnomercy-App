@@ -81,8 +81,14 @@ public sealed class DamageMeterTracker
         if (!evt.Parameters.TryGetValue(2, out var changeObj)) return;
         if (!evt.Parameters.TryGetValue(6, out var causerObj)) return;
 
+        // Photon pode codificar o valor no tipo compacto que couber (byte/short/int),
+        // não só int/long/float/double — faltando byte/short aqui, um hit/heal pequeno
+        // (comum, ObjectIds e deltas baixos aparecem cedo na sessão/zona) caía no `_`
+        // e era silenciosamente descartado, sem log nem erro.
         double change = changeObj switch
         {
+            byte b => b,
+            short s => s,
             int i => i,
             long l => l,
             float f => f,
@@ -91,14 +97,14 @@ public sealed class DamageMeterTracker
         };
         if (change == 0) return;
 
-        long? causerId = causerObj switch { int i => i, long l => l, short s => s, _ => null };
+        long? causerId = causerObj switch { byte b => b, short s => s, int i => i, long l => l, _ => null };
         if (causerId is null) return;
         if (PlayerRegistry.IsMob(causerId.Value)) return;   // desconsidera dano de mob
 
         // CausingSpellIndex: índice (no spells.xml) da habilidade que causou esse hit —
         // ver SpellCatalog.cs. -1 = sem efeito de spell (ataque básico de arma).
         int spellIndex = evt.Parameters.TryGetValue(7, out var spellObj)
-            ? spellObj switch { int i => i, short s => s, long l => (int)l, _ => -1 }
+            ? spellObj switch { byte b => b, short s => s, int i => i, long l => (int)l, _ => -1 }
             : -1;
 
         lock (_lock)

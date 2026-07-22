@@ -63,16 +63,28 @@ public sealed class PacketCaptureService : IDisposable
             try
             {
                 device.Open(DeviceModes.None, 1000);
-                device.Filter = filter;
-                device.OnPacketArrival += OnPacketArrival;
-                device.StartCapture();
-                _devices.Add(device);
-                opened++;
+                try
+                {
+                    device.Filter = filter;
+                    device.OnPacketArrival += OnPacketArrival;
+                    device.StartCapture();
+                    _devices.Add(device);
+                    opened++;
+                }
+                catch
+                {
+                    // Abriu mas falhou no filtro/start (ex: driver não suporta o BPF
+                    // usado) — sem fechar aqui, o handle nativo do pcap ficava aberto
+                    // pro resto do processo (Stop() só itera _devices, e o device nunca
+                    // entrou nela). Fecha explicitamente pra não vazar em quem alterna
+                    // Iniciar/Parar captura várias vezes na mesma sessão.
+                    try { device.Close(); } catch { /* já era */ }
+                }
             }
             catch
             {
                 // Adaptador pode estar indisponível (ex: VPN desconectada) ou não
-                // suportar o filtro — ignora e segue tentando os outros.
+                // suportar o Open — ignora e segue tentando os outros.
             }
         }
 
