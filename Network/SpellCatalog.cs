@@ -38,14 +38,36 @@ public static class SpellCatalog
             var cachePath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "XnomercyApp", "spells_cache.xml");
+            var etagPath = cachePath + ".etag";
 
             string? xml = null;
             try
             {
                 using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-                xml = await http.GetStringAsync(SpellsUrl);
-                Directory.CreateDirectory(Path.GetDirectoryName(cachePath)!);
-                await File.WriteAllTextAsync(cachePath, xml);
+                var request = new HttpRequestMessage(HttpMethod.Get, SpellsUrl);
+                // Mesma lógica de cache condicional do ItemCatalog — evita rebaixar o
+                // spells.xml inteiro toda vez que o app abre se ele não mudou.
+                if (File.Exists(etagPath))
+                {
+                    var cachedEtag = (await File.ReadAllTextAsync(etagPath)).Trim();
+                    if (cachedEtag.Length > 0)
+                        request.Headers.TryAddWithoutValidation("If-None-Match", cachedEtag);
+                }
+
+                using var response = await http.SendAsync(request);
+                if (response.StatusCode == System.Net.HttpStatusCode.NotModified && File.Exists(cachePath))
+                {
+                    xml = await File.ReadAllTextAsync(cachePath);
+                }
+                else
+                {
+                    response.EnsureSuccessStatusCode();
+                    xml = await response.Content.ReadAsStringAsync();
+                    Directory.CreateDirectory(Path.GetDirectoryName(cachePath)!);
+                    await File.WriteAllTextAsync(cachePath, xml);
+                    if (response.Headers.ETag is not null)
+                        await File.WriteAllTextAsync(etagPath, response.Headers.ETag.ToString());
+                }
             }
             catch
             {

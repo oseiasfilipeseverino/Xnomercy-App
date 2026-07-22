@@ -426,8 +426,5 @@ public static class PlayerRegistry
         _ => -1
     };
 
-    private static long? ToLong(object? v) => v switch
-    {
-        int i => i, long l => l, short s => s, byte b => b, _ => null
-    };
+    private static long? ToLong(object? v) => PhotonParam.ToLong(v);
 }

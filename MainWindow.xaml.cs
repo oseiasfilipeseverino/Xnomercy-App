@@ -1011,10 +1011,7 @@ public partial class MainWindow : Window
         return true;
     }
 
-    private static long ToLong(object? v) => v switch
-    {
-        int i => i, long l => l, short s => s, byte b => b, float fl => (long)fl, double d => (long)d, _ => 0
-    };
+    private static long ToLong(object? v) => (long)(PhotonParam.ToDouble(v) ?? 0);
 
     // Monta a URL do render oficial pra mostrar a miniatura do item. O unique_name
     // já inclui tier e encantamento (ex: T5_2H_AXE@2), então o ícone vem correto.
@@ -1093,7 +1090,7 @@ public partial class MainWindow : Window
         qty = "";
         if (!evt.Parameters.TryGetValue(1, out var idxObj)) return false;
 
-        int? itemIndex = idxObj switch { int i => i, short s => s, long l => (int)l, _ => null };
+        int? itemIndex = PhotonParam.ToLong(idxObj) is long il ? (int)il : null;
         if (itemIndex is null) return false;
 
         itemName = ItemCatalog.GetName(itemIndex.Value) ?? $"item desconhecido (índice {itemIndex})";
@@ -1120,13 +1117,8 @@ public partial class MainWindow : Window
 
         if (tryResolveItemName)
         {
-            int? maybeIndex = value switch
-            {
-                int i => i,
-                short s => s,
-                long l when l >= int.MinValue && l <= int.MaxValue => (int)l,
-                _ => null,
-            };
+            int? maybeIndex = PhotonParam.ToLong(value) is long ml && ml >= int.MinValue && ml <= int.MaxValue
+                ? (int)ml : null;
             if (maybeIndex is int idx)
             {
                 var name = ItemCatalog.GetName(idx);

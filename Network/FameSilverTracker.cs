@@ -97,17 +97,10 @@ public sealed class FameSilverTracker
 
     private static bool TryGetParam(PhotonEvent evt, byte key, out long value)
     {
-        if (evt.Parameters.TryGetValue(key, out var v))
+        if (evt.Parameters.TryGetValue(key, out var v) && PhotonParam.ToDouble(v) is double d)
         {
-            switch (v)
-            {
-                case int i: value = i; return true;
-                case long l: value = l; return true;
-                case short s: value = s; return true;
-                case byte b: value = b; return true;
-                case float f: value = (long)f; return true;
-                case double d: value = (long)d; return true;
-            }
+            value = (long)d;
+            return true;
         }
         value = 0;
         return false;
