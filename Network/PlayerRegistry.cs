@@ -62,6 +62,11 @@ public static class PlayerRegistry
     private static long? _selfObjectId;
     private static string? _selfName;
     private static string _ownGuild = "";
+    // Todo ObjectId que já foi "você" nesta sessão — o Albion troca o ObjectId do seu
+    // personagem a cada zona nova (dungeon, ilha, etc.), então só comparar com o
+    // SelfObjectId ATUAL fazia dano seu de antes da troca de zona virar uma linha
+    // "#id" separada no medidor em vez de continuar contando como "Você".
+    private static readonly HashSet<long> _selfObjectIds = new();
 
     // Seu próprio ObjectId — descoberto pelos eventos de fama/prata (que são do SEU
     // personagem). O jogo não manda NewCharacter de você mesmo, então é assim que a
@@ -69,7 +74,22 @@ public static class PlayerRegistry
     public static long? SelfObjectId
     {
         get { lock (_selfLock) return _selfObjectId; }
-        private set { lock (_selfLock) _selfObjectId = value; }
+        private set
+        {
+            lock (_selfLock)
+            {
+                _selfObjectId = value;
+                if (value is long v) _selfObjectIds.Add(v);
+            }
+        }
+    }
+
+    /// <summary>True se objectId já foi "você" em algum momento desta sessão (não só
+    /// o ObjectId atual) — usado pra não duplicar "Você" no medidor após trocar de
+    /// zona.</summary>
+    public static bool IsSelf(long objectId)
+    {
+        lock (_selfLock) return _selfObjectIds.Contains(objectId);
     }
 
     // Nome e guild do PRÓPRIO jogador. O Move/NewCharacter nunca trazem isso de você
@@ -390,7 +410,7 @@ public static class PlayerRegistry
 
     public static string NameOf(long objectId)
     {
-        if (objectId == SelfObjectId) return "Você";
+        if (IsSelf(objectId)) return "Você";
         return _byId.TryGetValue(objectId, out var v) && v.Name.Length > 0 ? v.Name : $"#{objectId}";
     }
 
@@ -403,7 +423,7 @@ public static class PlayerRegistry
     public static bool IsInParty(string name) =>
         name == SelfName || (_partyMembers.TryGetValue(name, out var last) && DateTime.UtcNow - last < PartyMemberTimeout);
 
-    public static bool IsInPartyById(long objectId) => objectId == SelfObjectId || IsInParty(NameOf(objectId));
+    public static bool IsInPartyById(long objectId) => IsSelf(objectId) || IsInParty(NameOf(objectId));
 
     private static void RegisterMob(long id)
     {

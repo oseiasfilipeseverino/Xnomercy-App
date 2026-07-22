@@ -58,12 +58,23 @@ public sealed class DamageMeterTracker
     /// <summary>Quebra de dano por habilidade de UM jogador, ordenada do maior pro
     /// menor, com nome já resolvido via SpellCatalog (cai pro índice numérico se a
     /// habilidade ainda não foi carregada/identificada).</summary>
-    public IReadOnlyList<DamageBySpellEntry> SnapshotBySpell(long objectId)
+    public IReadOnlyList<DamageBySpellEntry> SnapshotBySpell(long objectId) => SnapshotBySpell(new[] { objectId });
+
+    /// <summary>Igual acima, mas somando vários ObjectIds do mesmo jogador — ele troca
+    /// de ObjectId a cada zona nova (dungeon/ilha), então uma linha do ranking (já
+    /// agrupada por nome) pode corresponder a mais de um ObjectId na sessão.</summary>
+    public IReadOnlyList<DamageBySpellEntry> SnapshotBySpell(IEnumerable<long> objectIds)
     {
         lock (_lock)
         {
-            if (!_entries.TryGetValue(objectId, out var entry)) return Array.Empty<DamageBySpellEntry>();
-            return entry.DamageBySpell
+            var totals = new Dictionary<int, long>();
+            foreach (var id in objectIds)
+            {
+                if (!_entries.TryGetValue(id, out var entry)) continue;
+                foreach (var kv in entry.DamageBySpell)
+                    totals[kv.Key] = totals.GetValueOrDefault(kv.Key) + kv.Value;
+            }
+            return totals
                 .Select(kv => new DamageBySpellEntry
                 {
                     SpellIndex = kv.Key,
