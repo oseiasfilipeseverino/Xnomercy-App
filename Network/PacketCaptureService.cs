@@ -34,6 +34,18 @@ public sealed class PacketCaptureService : IDisposable
     public readonly List<string> DiagSampleHex = new();
     private const int MaxSamples = 5;
 
+    // Dedup entre adaptadores: abrimos TODOS os dispositivos de rede simultaneamente
+    // (necessário pra ExitLag/Hamachi, que só mandam o tráfego real pelo loopback) —
+    // mas se mais de um adaptador enxergar o MESMO pacote de verdade (VPN, virtual
+    // switch, múltiplas NICs ativas), cada evento era processado uma vez por
+    // adaptador, duplicando loot/dano/fama no app inteiro. Confirmado com captura
+    // real: o mesmo GrabbedLoot aparecia 3x idêntico. Descarta payloads UDP
+    // repetidos vistos há poucos milissegundos, não importa qual adaptador entregou.
+    private readonly object _dedupLock = new();
+    private readonly Dictionary<ulong, long> _recentPayloadHashes = new();
+    private const int DedupWindowMs = 500;
+    private const int DedupPruneThreshold = 4096;
+
     public bool Start()
     {
         if (_running) return true;
@@ -104,6 +116,7 @@ public sealed class PacketCaptureService : IDisposable
             var packet = Packet.ParsePacket(raw.LinkLayerType, raw.Data);
             var udp = packet.Extract<UdpPacket>();
             if (udp?.PayloadData is null || udp.PayloadData.Length == 0) return;
+            if (IsDuplicatePayload(udp.PayloadData)) return;
 
             foreach (var appPayload in EnetPacketParser.ExtractApplicationPayloads(udp.PayloadData))
             {
@@ -153,6 +166,42 @@ public sealed class PacketCaptureService : IDisposable
             // Pacote fora do padrão esperado (fragmento, ruído de rede, etc.) —
             // descarta e segue capturando. Nunca deve derrubar o app.
         }
+    }
+
+    // True se este payload UDP (byte a byte) já foi visto há menos de DedupWindowMs —
+    // nesse caso é o mesmo pacote de rede chegando por outro adaptador, não um evento
+    // novo. Chamado de threads de captura diferentes (uma por adaptador), daí o lock.
+    private bool IsDuplicatePayload(byte[] payload)
+    {
+        ulong hash = Fnv1a64(payload);
+        long now = Environment.TickCount64;
+        lock (_dedupLock)
+        {
+            if (_recentPayloadHashes.TryGetValue(hash, out var seenAt) && now - seenAt < DedupWindowMs)
+                return true;
+
+            _recentPayloadHashes[hash] = now;
+            if (_recentPayloadHashes.Count > DedupPruneThreshold)
+            {
+                foreach (var key in _recentPayloadHashes
+                             .Where(kv => now - kv.Value >= DedupWindowMs)
+                             .Select(kv => kv.Key).ToList())
+                    _recentPayloadHashes.Remove(key);
+            }
+            return false;
+        }
+    }
+
+    private static ulong Fnv1a64(byte[] data)
+    {
+        const ulong prime = 1099511628211UL;
+        ulong hash = 14695981039346656037UL;
+        foreach (byte b in data)
+        {
+            hash ^= b;
+            hash *= prime;
+        }
+        return hash;
     }
 
     // Diagnóstico de operações (só beta): grava operações que carregam texto ou listas,
@@ -221,6 +270,7 @@ public sealed class PacketCaptureService : IDisposable
             catch { /* ignora erro ao fechar */ }
         }
         _devices.Clear();
+        lock (_dedupLock) _recentPayloadHashes.Clear();
         _running = false;
     }
 
