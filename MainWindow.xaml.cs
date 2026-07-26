@@ -51,14 +51,56 @@ public sealed class LootFeedRow
     public DateTime Timestamp { get; init; }
 }
 
-public sealed class DamageRowDisplay
+/// <summary>
+/// Linha do Medidor de Dano. Notifica mudanças (INotifyPropertyChanged) porque as
+/// linhas são ATUALIZADAS NO LUGAR, não recriadas: o painel antes fazia
+/// _damageRows.Clear() + re-Add a cada tick (350ms), e o Clear() dispara um Reset
+/// que faz o ListView perder a seleção — quem clicava num jogador pra ver a quebra
+/// por habilidade tinha o painel fechado na cara quase 3x por segundo durante a
+/// luta. Mantendo a MESMA instância por jogador, a seleção sobrevive.
+/// </summary>
+public sealed class DamageRowDisplay : System.ComponentModel.INotifyPropertyChanged
 {
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+    private void Notify(string n) =>
+        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(n));
+
     public string Player { get; init; } = "";
-    public long Damage { get; init; }
-    public string DamagePct { get; init; } = "";
-    public double DamagePctValue { get; init; }   // 0-100, pra desenhar a barra (DamagePct é só o texto formatado)
-    public long Healing { get; init; }
-    public string? WeaponIcon { get; init; }   // URL do render oficial do item
+
+    private long _damage;
+    public long Damage
+    {
+        get => _damage;
+        set { if (_damage != value) { _damage = value; Notify(nameof(Damage)); } }
+    }
+
+    private string _damagePct = "";
+    public string DamagePct
+    {
+        get => _damagePct;
+        set { if (_damagePct != value) { _damagePct = value; Notify(nameof(DamagePct)); } }
+    }
+
+    private double _damagePctValue;   // 0-100, pra desenhar a barra (DamagePct é só o texto formatado)
+    public double DamagePctValue
+    {
+        get => _damagePctValue;
+        set { if (_damagePctValue != value) { _damagePctValue = value; Notify(nameof(DamagePctValue)); } }
+    }
+
+    private long _healing;
+    public long Healing
+    {
+        get => _healing;
+        set { if (_healing != value) { _healing = value; Notify(nameof(Healing)); } }
+    }
+
+    private string? _weaponIcon;   // URL do render oficial do item
+    public string? WeaponIcon
+    {
+        get => _weaponIcon;
+        set { if (_weaponIcon != value) { _weaponIcon = value; Notify(nameof(WeaponIcon)); } }
+    }
 }
 
 public sealed class DamageBySpellRowDisplay
@@ -313,9 +355,25 @@ public partial class MainWindow : Window
         // chegaram, pra sabermos se o problema é filtro/porta (fica 0) ou decodificação
         // (sobe mas não vira evento).
         var diagTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        var captureStartedAt = DateTime.MinValue;
         diagTimer.Tick += (_, _) =>
         {
-            if (!_capturing) return;
+            if (!_capturing) { captureStartedAt = DateTime.MinValue; return; }
+            if (captureStartedAt == DateTime.MinValue) captureStartedAt = DateTime.Now;
+
+            // Zero pacote depois de um tempo capturando = o filtro não está pegando
+            // nada. As causas reais são: jogo fechado, adaptador errado, ou o Albion
+            // ter mudado de porta (o filtro é fixo em 5055-5058 — se a Sandbox mudar
+            // isso num update, a captura "liga" e nunca vê nada). Sem esta dica, o
+            // sintoma era só um contador em 0 que ninguém sabia interpretar.
+            if (_capture.DiagRawPackets == 0 && (DateTime.Now - captureStartedAt).TotalSeconds > 45)
+            {
+                TxtCaptureStatus.Text =
+                    "⚠️ Capturando, mas nenhum pacote do jogo chegou ainda. Confira se o Albion está aberto e em partida. " +
+                    "Se estiver e continuar em 0, avise a liderança (pode ser mudança de porta do jogo).";
+                return;
+            }
+
             TxtCaptureStatus.Text =
                 $"Pacotes brutos: {_capture.DiagRawPackets} | Payloads extraídos: {_capture.DiagAppPayloadsExtracted} | Eventos decodificados: {_capture.DiagEventsDecoded}";
         };
@@ -440,7 +498,6 @@ public partial class MainWindow : Window
     // ── Medidor de Dano (Fase 4) ────────────────────────────────────────────
     private void RefreshDamagePanel()
     {
-        _damageRows.Clear();
         bool showUnnamed = ChkShowUnnamed.IsChecked == true;
         bool guildOnly = ChkGuildOnlyDamage.IsChecked == true;
         bool partyOnly = ChkPartyOnlyDamage.IsChecked == true;
@@ -459,7 +516,7 @@ public partial class MainWindow : Window
             // por uma dessas duas fontes. Mobs nunca aparecem em NewCharacter(29)/Move(30)
             // (só jogadores), então o nome nunca resolve e fica com "#id" — que já cai
             // fora da lista por padrão aqui, mesmo sem confirmação de mob. Equivalente
-            // ao "from.Contains('_')" do Loot Log, só que via ausência de nome em vez de tag.
+            // ao filtro "@MOB_" do Loot Log, só que via ausência de nome em vez de tag.
             .Where(x => showUnnamed || !x.Name.StartsWith('#'))
             // "Só minha guild": opcional, pra quando quiser ver só o desempenho da sua
             // guild — o padrão continua mostrando todo mundo por perto. A guild do
@@ -478,8 +535,17 @@ public partial class MainWindow : Window
         // Com o filtro ligado, a % passa a ser entre os jogadores mostrados (faz mais
         // sentido pra comparar a galera do grupo do que diluir no dano do que foi escondido).
         long total = entries.Sum(x => x.Damage);
-        foreach (var e in entries)
+
+        // Atualiza NO LUGAR em vez de limpar e recriar: a coleção mantém a mesma
+        // instância de linha por jogador, então a seleção do ListView (e o painel
+        // "Dano por habilidade" que depende dela) sobrevive aos ~3 refreshes por
+        // segundo durante o combate. Ver comentário em DamageRowDisplay.
+        var existing = new Dictionary<string, DamageRowDisplay>(_damageRows.Count);
+        foreach (var r in _damageRows) existing[r.Player] = r;
+
+        for (int i = 0; i < entries.Count; i++)
         {
+            var e = entries[i];
             string? icon = null;
             if (e.Name == "Você")
             {
@@ -498,16 +564,28 @@ public partial class MainWindow : Window
                 }
             }
             double pct = total > 0 ? e.Damage * 100.0 / total : 0;
-            _damageRows.Add(new DamageRowDisplay
+
+            if (!existing.TryGetValue(e.Name, out var row))
             {
-                Player = e.Name,
-                Damage = e.Damage,
-                DamagePct = pct.ToString("0.0") + "%",
-                DamagePctValue = pct,
-                Healing = e.Healing,
-                WeaponIcon = icon,
-            });
+                row = new DamageRowDisplay { Player = e.Name };
+                _damageRows.Insert(Math.Min(i, _damageRows.Count), row);
+            }
+            row.Damage = e.Damage;
+            row.DamagePct = pct.ToString("0.0") + "%";
+            row.DamagePctValue = pct;
+            row.Healing = e.Healing;
+            row.WeaponIcon = icon;
+
+            // Reordena só quando a posição realmente mudou (Move preserva a seleção,
+            // diferente de remover+inserir).
+            int current = _damageRows.IndexOf(row);
+            if (current != i && i < _damageRows.Count) _damageRows.Move(current, i);
         }
+
+        // Tira quem saiu do filtro/ranking (do fim pro começo, pra não bagunçar índices).
+        var keep = new HashSet<string>(entries.Select(x => x.Name));
+        for (int i = _damageRows.Count - 1; i >= 0; i--)
+            if (!keep.Contains(_damageRows[i].Player)) _damageRows.RemoveAt(i);
 
         // Mantém a quebra por habilidade em sincronia com quem está selecionado — sem
         // isso ela ficaria parada na última foto enquanto o resto da tela continua
@@ -999,10 +1077,18 @@ public partial class MainWindow : Window
             item = $"{amount}x {name}";
             icon = IconUrl(itemIdx);
         }
-        // Heurística provisória de monstro: corpo vazio ou com "_" (ID interno do jogo).
-        // Vamos calibrar com dados reais (a estrutura exata de loot de mob a gente vê no
-        // modo avançado quando estiver jogando).
-        bool isMob = !isSilver && (from.Length == 0 || from.Contains('_'));
+        // CALIBRADO com dados reais (várias sessões de captura, arquivos named_events):
+        // o campo "de quem" traz SEMPRE a tag interna com prefixo "@MOB_" quando o loot
+        // vem de monstro (@MOB_MORGANA_..., @MOB_UNDEAD_..., @MOB_T4_MOB_TN_AVALON_...),
+        // e o nick puro quando vem de jogador (Tortuga780, CherryB00m, koynoy...).
+        //
+        // Antes checava `from.Contains('_')`, que era provisório e furado: pegava a tag
+        // de mob só por acidente (ela tem "_"), mas marcava como MOB qualquer JOGADOR
+        // com "_" no nick — escondendo o loot dele do feed limpo (filtro "Esconder saque
+        // de monstro"). Mesmo prefixo já usado no PlayerRegistry pros códigos 74/166.
+        // Corpo sem "de quem" continua tratado como mob (não há nada pra atribuir).
+        bool isMob = !isSilver && (from.Length == 0
+                                   || from.StartsWith("@MOB_", StringComparison.OrdinalIgnoreCase));
         row = new LootFeedRow
         {
             Time = now.ToString("HH:mm:ss"),
