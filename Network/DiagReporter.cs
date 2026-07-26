@@ -73,10 +73,51 @@ public static class DiagReporter
             {
                 var path = System.IO.Path.Combine(dir, file);
                 if (!System.IO.File.Exists(path)) continue;
-                var content = System.IO.File.ReadAllText(path);
-                if (string.IsNullOrWhiteSpace(content)) continue;
+
+                // Rotaciona ANTES de ler: renomeia pra .sending e deixa a captura
+                // seguir gravando num arquivo novo e vazio.
+                //
+                // Antes era ler -> enviar -> WriteAllText(path, "") pra esvaziar.
+                // O envio leva até 10s, e se a captura ainda estivesse rodando
+                // nesse meio-tempo (acontece ao sair do app com a captura ligada),
+                // tudo que fosse gravado nessa janela era APAGADO junto sem nunca
+                // ter sido enviado — perda silenciosa justamente dos dados de
+                // calibração que a gente quer receber.
+                var staging = path + ".sending";
+                try
+                {
+                    if (System.IO.File.Exists(staging))
+                    {
+                        // Sobrou de um envio anterior que não terminou (app fechado
+                        // no meio) — junta com o atual pra não perder nada.
+                        System.IO.File.AppendAllText(staging, System.IO.File.ReadAllText(path));
+                        System.IO.File.WriteAllText(path, "");
+                    }
+                    else
+                    {
+                        System.IO.File.Move(path, staging);
+                    }
+                }
+                catch (Exception e)
+                {
+                    LogLocal($"{file}: nao deu pra rotacionar ({e.Message}) — pulando desta vez");
+                    continue;
+                }
+
+                var content = System.IO.File.ReadAllText(staging);
+                if (string.IsNullOrWhiteSpace(content))
+                {
+                    try { System.IO.File.Delete(staging); } catch { }
+                    continue;
+                }
+
                 bool ok = await SendAsync(kind, content);
-                if (ok) System.IO.File.WriteAllText(path, "");   // só esvazia se enviou de verdade
+                if (ok)
+                {
+                    try { System.IO.File.Delete(staging); } catch { }
+                }
+                // Se falhou, o .sending fica no disco e é reenviado na próxima
+                // tentativa (ver o merge logo acima) — nada se perde.
             }
             catch (Exception e) { LogLocal($"erro ao processar {file}: {e.Message}"); }
         }

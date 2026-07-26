@@ -46,6 +46,12 @@ public sealed class DamageMeterTracker
     private readonly Dictionary<string, DamageMeterEntry> _entries = new();
     private readonly object _lock = new();
 
+    // Teto de segurança pra sessão longa: numa cidade cheia passam milhares de
+    // jogadores diferentes, e cada um vira uma entrada (com o dicionário de dano
+    // por habilidade junto). Sem limite, isso cresce a sessão inteira. Ao bater o
+    // teto, descarta quem tem menos dano — quem interessa no ranking fica.
+    private const int MaxEntries = 3000;
+
     public event Action? Updated;
 
     /// <summary>Cópia imutável das entradas atuais — segura pra ler na thread da UI.</summary>
@@ -114,6 +120,7 @@ public sealed class DamageMeterTracker
         {
             if (!_entries.TryGetValue(name, out var entry))
             {
+                if (_entries.Count >= MaxEntries) TrimLowest();
                 entry = new DamageMeterEntry { Name = name };
                 _entries[name] = entry;
             }
@@ -127,6 +134,19 @@ public sealed class DamageMeterTracker
             else entry.Healing += (long)Math.Round(change);
         }
         Updated?.Invoke();
+    }
+
+    /// <summary>Descarta o quarto inferior (menor dano+cura) quando bate o teto.
+    /// Tira de uma vez em vez de 1 por 1 pra não reordenar a cada novo jogador.
+    /// Chamar só com o _lock tomado.</summary>
+    private void TrimLowest()
+    {
+        foreach (var key in _entries.Values
+                     .OrderBy(e => e.Damage + e.Healing)
+                     .Take(Math.Max(1, MaxEntries / 4))
+                     .Select(e => e.Name)
+                     .ToList())
+            _entries.Remove(key);
     }
 
     public void Reset()

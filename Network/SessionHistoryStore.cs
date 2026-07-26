@@ -51,7 +51,19 @@ public static class SessionHistoryStore
             if (list.Count > MaxEntries) list.RemoveRange(MaxEntries, list.Count - MaxEntries);
             var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp");
             Directory.CreateDirectory(dir);
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(list));
+
+            // Grava num temporário e só então troca pelo definitivo. WriteAllText
+            // direto no arquivo real trunca antes de escrever: se o app fechasse
+            // (ou faltasse energia) no meio, o sessions.json ficava cortado e o
+            // Load() — que engole erro e devolve lista vazia — apagaria TODO o
+            // histórico de sessões silenciosamente. Com o troco atômico, o
+            // arquivo antigo continua íntegro até o novo estar completo.
+            var tmp = FilePath + ".tmp";
+            File.WriteAllText(tmp, JsonSerializer.Serialize(list));
+            if (File.Exists(FilePath))
+                File.Replace(tmp, FilePath, null);
+            else
+                File.Move(tmp, FilePath);
         }
         catch
         {
