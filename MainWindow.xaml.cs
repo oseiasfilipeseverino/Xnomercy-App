@@ -361,21 +361,26 @@ public partial class MainWindow : Window
             if (!_capturing) { captureStartedAt = DateTime.MinValue; return; }
             if (captureStartedAt == DateTime.MinValue) captureStartedAt = DateTime.Now;
 
-            // Zero pacote depois de um tempo capturando = o filtro não está pegando
-            // nada. As causas reais são: jogo fechado, adaptador errado, ou o Albion
-            // ter mudado de porta (o filtro é fixo em 5055-5058 — se a Sandbox mudar
-            // isso num update, a captura "liga" e nunca vê nada). Sem esta dica, o
-            // sintoma era só um contador em 0 que ninguém sabia interpretar.
-            if (_capture.DiagRawPackets == 0 && (DateTime.Now - captureStartedAt).TotalSeconds > 45)
+            // O sinal de "não está funcionando" é EVENTO DECODIFICADO em zero, não
+            // pacote bruto: o filtro agora é "udp" (a porta do jogo é descoberta pelo
+            // conteúdo, porque acelerador de rota sorteia porta), então sempre chega
+            // algum UDP da máquina e o contador bruto nunca fica em 0. O que importa
+            // é se algo virou evento do Albion de verdade.
+            if (_capture.DiagEventsDecoded == 0 && (DateTime.Now - captureStartedAt).TotalSeconds > 45)
             {
                 TxtCaptureStatus.Text =
-                    "⚠️ Capturando, mas nenhum pacote do jogo chegou ainda. Confira se o Albion está aberto e em partida. " +
-                    "Se estiver e continuar em 0, avise a liderança (pode ser mudança de porta do jogo).";
+                    $"⚠️ Capturando ({_capture.DiagRawPackets} pacotes vistos), mas nenhum evento do Albion foi " +
+                    "reconhecido ainda. Confira se o jogo está aberto e em partida. Se continuar assim, use " +
+                    "\"Diagnóstico de rede\" e mande o resultado pra liderança.";
                 return;
             }
 
+            var learned = _capture.LearnedPorts;
+            string extra = learned.Count > 0
+                ? $" | porta detectada: {string.Join(", ", learned)}"
+                : "";
             TxtCaptureStatus.Text =
-                $"Pacotes brutos: {_capture.DiagRawPackets} | Payloads extraídos: {_capture.DiagAppPayloadsExtracted} | Eventos decodificados: {_capture.DiagEventsDecoded}";
+                $"Pacotes brutos: {_capture.DiagRawPackets} | Payloads extraídos: {_capture.DiagAppPayloadsExtracted} | Eventos decodificados: {_capture.DiagEventsDecoded}{extra}";
         };
         diagTimer.Start();
 

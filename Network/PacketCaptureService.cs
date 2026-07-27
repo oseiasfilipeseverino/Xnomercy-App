@@ -46,6 +46,57 @@ public sealed class PacketCaptureService : IDisposable
     private const int DedupWindowMs = 500;
     private const int DedupPruneThreshold = 4096;
 
+    // ── Descoberta de porta pelo CONTEÚDO ─────────────────────────────────────
+    // Aceleradores de rota (ExitLag e afins) reencaminham o UDP do jogo trocando as
+    // portas por valores ALEATÓRIOS a cada sessão. Medido com o Diagnose(): zero
+    // pacote em 5055-5058 e o tráfego do jogo saindo como 53812->19324. Ou seja,
+    // filtrar por porta fixa nunca vai funcionar nesse cenário — e adicionar as
+    // portas "novas" na lista também não, porque elas mudam na próxima vez.
+    //
+    // Solução: escutar todo UDP e reconhecer o jogo pelo que o pacote É (Photon
+    // decodificável), não por onde ele passa. Assim que um par de portas entrega
+    // Photon de verdade algumas vezes, ele é "aprendido" e passa a ser rota rápida;
+    // enquanto isso, a tentativa de descoberta é limitada pra não gastar CPU
+    // tentando decodificar todo tráfego da máquina (Discord, torrent, etc).
+    private readonly HashSet<int> _learnedPorts = new();
+    private readonly Dictionary<int, int> _discoveryHits = new();
+    private readonly object _learnLock = new();
+    private int _discoveryAttempts;
+    private const int MaxDiscoveryAttempts = 60000;   // teto de tentativas por sessão
+    private const int HitsToLearn = 3;                // decodificações válidas p/ confiar na porta
+
+    /// <summary>Portas confirmadas por conteúdo nesta sessão (diagnóstico/UI).</summary>
+    public IReadOnlyCollection<int> LearnedPorts
+    {
+        get { lock (_learnLock) return _learnedPorts.ToList(); }
+    }
+
+    private bool IsKnownGamePort(int src, int dst)
+    {
+        if (Array.IndexOf(AlbionPorts, src) >= 0 || Array.IndexOf(AlbionPorts, dst) >= 0) return true;
+        lock (_learnLock) return _learnedPorts.Contains(src) || _learnedPorts.Contains(dst);
+    }
+
+    /// <summary>Registra que este par de portas entregou Photon válido. Ao bater
+    /// HitsToLearn, a porta entra na rota rápida.</summary>
+    private void NoteDiscovery(int src, int dst)
+    {
+        lock (_learnLock)
+        {
+            foreach (int p in new[] { src, dst })
+            {
+                if (_learnedPorts.Contains(p)) continue;
+                _discoveryHits[p] = _discoveryHits.GetValueOrDefault(p) + 1;
+                if (_discoveryHits[p] >= HitsToLearn)
+                {
+                    _learnedPorts.Add(p);
+                    StatusChanged?.Invoke($"Porta do jogo detectada automaticamente: {p} " +
+                                          "(acelerador de rota / porta fora do padrão)");
+                }
+            }
+        }
+    }
+
     /// <summary>
     /// Diagnóstico de rede: abre TODOS os adaptadores com filtro só de "udp" (sem
     /// travar nas portas 5055-5058) e conta, por adaptador e por porta, o que
@@ -185,7 +236,12 @@ public sealed class PacketCaptureService : IDisposable
             return false;
         }
 
-        string filter = string.Join(" or ", AlbionPorts.Select(p => $"udp port {p}"));
+        // Filtro "udp" puro em vez de travado em 5055-5058: com acelerador de rota
+        // (ExitLag) o jogo sai em porta ALEATÓRIA — medido: 53812->19324, zero em
+        // 5055-5058. O reconhecimento do que é jogo passou pro conteúdo do pacote
+        // (ver NoteDiscovery/IsKnownGamePort), então o filtro aqui só evita carregar
+        // TCP à toa. Também deixa o app sobreviver se a Sandbox trocar de porta.
+        const string filter = "udp";
         int opened = 0;
 
         foreach (var device in devices)
@@ -269,6 +325,19 @@ public sealed class PacketCaptureService : IDisposable
             var packet = Packet.ParsePacket(raw.LinkLayerType, raw.Data);
             var udp = packet.Extract<UdpPacket>();
             if (udp?.PayloadData is null || udp.PayloadData.Length == 0) return;
+
+            int srcPort = udp.SourcePort, dstPort = udp.DestinationPort;
+            bool known = IsKnownGamePort(srcPort, dstPort);
+            if (!known)
+            {
+                // Porta desconhecida: só vale tentar decodificar enquanto estamos
+                // "procurando" o jogo. Sem esse teto, todo tráfego UDP da máquina
+                // (Discord, navegador, torrent...) passaria pelo parser Photon pra
+                // sempre, queimando CPU à toa — o filtro agora é só "udp".
+                if (_discoveryAttempts >= MaxDiscoveryAttempts) return;
+                _discoveryAttempts++;
+            }
+
             if (IsDuplicatePayload(udp.PayloadData)) return;
 
             foreach (var appPayload in EnetPacketParser.ExtractApplicationPayloads(udp.PayloadData))
@@ -297,6 +366,13 @@ public sealed class PacketCaptureService : IDisposable
                 if (msg is PhotonEvent evt)
                 {
                     DiagEventsDecoded++;
+                    // Confirma a porta pelo CONTEÚDO. Exige EventCode >= 0 (ou seja,
+                    // o parâmetro 252 presente, que é o código real do evento Albion):
+                    // é o que separa um evento de jogo de verdade de um pacote UDP
+                    // qualquer que por azar passou pelo parser. Sem essa exigência, um
+                    // falso positivo poderia "aprender" a porta do Discord e injetar
+                    // lixo no medidor de dano.
+                    if (!known && evt.EventCode >= 0) NoteDiscovery(srcPort, dstPort);
                     EventReceived?.Invoke(evt);
                 }
                 // Operações (request/response) também são decodificadas, mas hoje não são
@@ -424,6 +500,14 @@ public sealed class PacketCaptureService : IDisposable
         }
         _devices.Clear();
         lock (_dedupLock) _recentPayloadHashes.Clear();
+        // Portas aprendidas valem só pra sessão: o acelerador sorteia outras na
+        // próxima vez, então guardar não ajuda e só arriscaria escutar porta errada.
+        lock (_learnLock)
+        {
+            _learnedPorts.Clear();
+            _discoveryHits.Clear();
+        }
+        _discoveryAttempts = 0;
         _running = false;
     }
 
