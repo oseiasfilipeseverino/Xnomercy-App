@@ -645,6 +645,9 @@ public sealed class PacketCaptureService : IDisposable
             _discoveryTries.Clear();
         }
         _payloadOffset = 0;
+        // Descarta fragmentos pela metade da sessão anterior — remontar com pedaço
+        // de outra conexão produziria mensagem corrompida.
+        EnetPacketParser.Reset();
         _running = false;
     }
 
