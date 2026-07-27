@@ -234,7 +234,11 @@
                              — acessível de qualquer aba, não só daqui. -->
                         <TextBlock x:Name="TxtCaptureStatus" Text="Parado" Foreground="#8CFFFFFF" VerticalAlignment="Center"/>
                         <Button x:Name="BtnExportCsv" Content="Exportar CSV" Click="BtnExportCsv_Click"
-                                Padding="14,6" Background="#242424" Foreground="White" BorderThickness="0" Cursor="Hand" Margin="20,0,0,0"/>
+                                Padding="14,6" Background="#242424" Foreground="White" BorderThickness="0" Cursor="Hand" Margin="20,0,0,0"
+                                ToolTip="Planilha simples pra abrir no Excel"/>
+                        <Button x:Name="BtnExportLootLogger" Content="Exportar p/ Loot Logger" Click="BtnExportLootLogger_Click"
+                                Padding="14,6" Background="#242424" Foreground="#c9a227" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"
+                                ToolTip="Formato aceito pelo AO Loot Logger Viewer (matheus.sampaio.us). Só inclui loot de JOGADOR — prata e saque de mob ficam fora, igual o logger original."/>
                         <Button x:Name="BtnLootReset" Content="Reiniciar sessão" Click="BtnLootReset_Click"
                                 Padding="14,6" Background="#2e2e2e" Foreground="White" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"/>
                         <ToggleButton x:Name="BtnAdvancedMode" Content="Modo avançado" Click="BtnAdvancedMode_Click"

@@ -49,6 +49,14 @@ public sealed class LootFeedRow
     public bool IsSilver { get; init; }
     public bool IsMob { get; init; }
     public DateTime Timestamp { get; init; }
+
+    // Campos crus, guardados separados do texto já formatado de `Item` — são o que o
+    // formato do AO Loot Logger (ao-loot-logger-viewer) exige em colunas próprias.
+    public string ItemUniqueName { get; init; } = "";   // ex: T4_MAIN_MACE_HELL@4
+    public string ItemPlainName { get; init; } = "";    // nome sem o "3x " na frente
+    public long Quantity { get; init; }
+    public string LooterGuild { get; init; } = "";
+    public string FromGuild { get; init; } = "";
 }
 
 /// <summary>
@@ -1150,15 +1158,21 @@ public partial class MainWindow : Window
 
         string item;
         string? icon = null;
+        string plainName, uniqueName = "";
         if (isSilver)
+        {
             // Prata/fama vêm ×10000 no protocolo (ponto fixo do Albion). 106.717.500 → 10.671.
             item = $"{amount / 10000:N0} prata";
+            plainName = "Silver";
+        }
         else
         {
             itemIdx = evt.Parameters.TryGetValue(4, out var ii) ? (int)ToLong(ii) : -1;
             string name = ItemCatalog.GetName(itemIdx) ?? $"item {itemIdx}";
             item = $"{amount}x {name}";
             icon = IconUrl(itemIdx);
+            plainName = name;
+            uniqueName = ItemCatalog.GetUniqueName(itemIdx) ?? "";
         }
         // CALIBRADO com dados reais (várias sessões de captura, arquivos named_events):
         // o campo "de quem" traz SEMPRE a tag interna com prefixo "@MOB_" quando o loot
@@ -1182,6 +1196,11 @@ public partial class MainWindow : Window
             ItemIcon = icon,
             IsSilver = isSilver,
             IsMob = isMob,
+            ItemUniqueName = uniqueName,
+            ItemPlainName = plainName,
+            Quantity = isSilver ? amount / 10000 : amount,
+            LooterGuild = PlayerRegistry.GuildOfName(looter),
+            FromGuild = isMob ? "" : PlayerRegistry.GuildOfName(from),
         };
         return true;
     }
@@ -1222,6 +1241,66 @@ public partial class MainWindow : Window
         _lootFeed.Clear();
         _lootRows.Clear();
         _markedRows.Clear();
+    }
+
+    // Exporta no formato do AO Loot Logger (matheussampaio/ao-loot-logger), pra abrir
+    // no Loot Logger Viewer. Cabeçalho e ordem das colunas copiados do loot-logger.js
+    // do projeto — o Viewer casa as colunas por nome, então o nosso formato próprio
+    // (cabeçalho em português, 4 colunas) era recusado com "No matches for <arquivo>".
+    //
+    // Diferenças assumidas e por quê:
+    //  - aliança fica vazia: o app não rastreia aliança, só guild. O Viewer trata
+    //    campo vazio normalmente (o próprio logger grava '' quando não sabe).
+    //  - prata é ignorada: o logger original também descarta (`if (isSilver) return`),
+    //    então incluir criaria linha que o Viewer não espera.
+    //  - loot de mob é ignorado: "looted_from" precisa ser um JOGADOR; a tag interna
+    //    (@MOB_...) não é nome de conta e poluiria o rateio no Viewer.
+    private void BtnExportLootLogger_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new Microsoft.Win32.SaveFileDialog
+        {
+            // O logger original nomeia assim; o Viewer aceita .txt e .csv.
+            FileName = $"loot-events-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.txt",
+            Filter = "Loot Logger (*.txt)|*.txt|CSV (*.csv)|*.csv",
+            DefaultExt = ".txt",
+        };
+        if (dlg.ShowDialog() != true) return;
+
+        var sb = new System.Text.StringBuilder();
+        sb.Append("timestamp_utc;looted_by__alliance;looted_by__guild;looted_by__name;")
+          .Append("item_id;item_name;quantity;")
+          .AppendLine("looted_from__alliance;looted_from__guild;looted_from__name");
+
+        int exportadas = 0;
+        foreach (var r in _lootFeed)
+        {
+            if (r.IsSilver || r.IsMob) continue;                  // ver comentário acima
+            if (r.ItemUniqueName.Length == 0) continue;            // sem item_id o Viewer não resolve
+            if (r.Looter.Length == 0 || r.From.Length == 0) continue;
+            sb.Append(r.Timestamp.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")).Append(';')
+              .Append(';')                                         // looted_by__alliance
+              .Append(Csv(r.LooterGuild)).Append(';')
+              .Append(Csv(r.Looter)).Append(';')
+              .Append(Csv(r.ItemUniqueName)).Append(';')
+              .Append(Csv(r.ItemPlainName)).Append(';')
+              .Append(r.Quantity).Append(';')
+              .Append(';')                                         // looted_from__alliance
+              .Append(Csv(r.FromGuild)).Append(';')
+              .AppendLine(Csv(r.From));
+            exportadas++;
+        }
+
+        try
+        {
+            System.IO.File.WriteAllText(dlg.FileName, sb.ToString(), new System.Text.UTF8Encoding(false));
+            TxtCaptureStatus.Text = exportadas > 0
+                ? $"Exportado pro Loot Logger: {exportadas} linha(s) — {System.IO.Path.GetFileName(dlg.FileName)}"
+                : "Nada pra exportar: o Loot Logger só aceita loot de JOGADOR (prata e saque de mob ficam fora).";
+        }
+        catch (Exception ex)
+        {
+            TxtCaptureStatus.Text = $"Falha ao exportar: {ex.Message}";
+        }
     }
 
     private void BtnExportCsv_Click(object sender, RoutedEventArgs e)
