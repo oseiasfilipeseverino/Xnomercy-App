@@ -82,7 +82,12 @@ public static class SelfLootDetector
             {
                 foreach (var idObj in ids)
                 {
-                    long? id = idObj switch { int i => i, long l => l, short s => s, _ => null };
+                    // PhotonParam em vez de switch inline: faltava o caso `byte` aqui,
+                    // e ObjectId pequeno (comum no início da sessão/zona) vem justamente
+                    // como byte — caía no `_ => null` e o item ficava sem nome/quantidade
+                    // no "pegar tudo". Mesma lacuna já corrigida no DamageMeterTracker;
+                    // este era o último switch inline que sobrou.
+                    long? id = PhotonParam.ToLong(idObj);
                     if (id is long itemObjId && _discoveredItems.TryGetValue(itemObjId, out var info))
                     {
                         SelfLootDetected?.Invoke(info.ItemIndex, info.Quantity);
