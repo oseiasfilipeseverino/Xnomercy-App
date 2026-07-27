@@ -157,8 +157,12 @@
                             HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,0,8"/>
                     <Button x:Name="BtnOverlayToggle" Content="Overlay" Click="BtnOverlayToggle_Click"
                             Padding="0,7" Background="#2e2e2e" Foreground="White" BorderThickness="0" Cursor="Hand"
-                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,0,12"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,0,8"
                             ToolTip="Mini painel flutuante com fama/prata por hora, sempre visível por cima do jogo"/>
+                    <Button x:Name="BtnNetDiag" Content="Diagnóstico de rede" Click="BtnNetDiag_Click"
+                            Padding="0,7" Background="#2e2e2e" Foreground="#c9a227" BorderThickness="0" Cursor="Hand"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,0,12"
+                            ToolTip="Escuta 20s sem filtro de porta e mostra onde o tráfego do jogo realmente está. Use quando a captura não pegar nada (ex: com acelerador de rota tipo ExitLag). Pare a captura antes."/>
                     <Border Height="1" Margin="-6,0,-6,12">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">

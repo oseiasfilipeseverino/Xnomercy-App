@@ -407,6 +407,77 @@ public partial class MainWindow : Window
         else _overlay.Show();
     }
 
+    // Diagnóstico de rede — escuta sem filtro de porta e diz onde o tráfego do jogo
+    // realmente está. Serve pra descobrir por que a captura não pega nada com
+    // acelerador de rota (ExitLag): ver PacketCaptureService.Diagnose.
+    private async void BtnNetDiag_Click(object sender, RoutedEventArgs e)
+    {
+        if (_capturing)
+        {
+            MessageBox.Show("Pare a captura antes de rodar o diagnóstico de rede.",
+                            "Diagnóstico", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        BtnNetDiag.IsEnabled = false;
+        BtnNetDiag.Content = "Escutando 20s...";
+        TxtCaptureStatus.Text = "Diagnóstico de rede rodando — deixe o Albion ABERTO e EM PARTIDA por 20s...";
+        try
+        {
+            // Em thread separada: Diagnose() dorme os 20s de escuta e travaria a UI.
+            string report = await Task.Run(() => _capture.Diagnose(20));
+
+            try
+            {
+                var dir = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp");
+                System.IO.Directory.CreateDirectory(dir);
+                System.IO.File.WriteAllText(System.IO.Path.Combine(dir, "net_diag.txt"), report);
+                // Vai junto com os outros diagnósticos pro Discord (se consentido),
+                // pra liderança conseguir ajudar sem pedir print de nada.
+                DiagReporter.Report("net_diag", report);
+            }
+            catch { /* salvar/enviar é best-effort */ }
+
+            TxtCaptureStatus.Text = "Diagnóstico concluído — salvo em net_diag.txt";
+            var win = new Window
+            {
+                Title = "Diagnóstico de rede",
+                Width = 760,
+                Height = 560,
+                Owner = this,
+                Background = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFrom("#1a1a1a")!,
+                Content = new ScrollViewer
+                {
+                    VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                    Content = new TextBox
+                    {
+                        Text = report,
+                        IsReadOnly = true,
+                        TextWrapping = TextWrapping.NoWrap,
+                        FontFamily = new System.Windows.Media.FontFamily("Consolas"),
+                        FontSize = 12,
+                        Background = System.Windows.Media.Brushes.Transparent,
+                        Foreground = System.Windows.Media.Brushes.White,
+                        BorderThickness = new Thickness(0),
+                        Padding = new Thickness(14),
+                    }
+                }
+            };
+            win.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Falha no diagnóstico: {ex.Message}", "Diagnóstico",
+                            MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        finally
+        {
+            BtnNetDiag.IsEnabled = true;
+            BtnNetDiag.Content = "Diagnóstico de rede";
+        }
+    }
+
     // ── Gráfico da sessão (Fama & Prata) ─────────────────────────────────────
     // Amostra 1x/min os totais acumulados (só com captura ligada e não pausada —
     // parado/pausado não gera ponto, senão o gráfico virava um platô gigante).

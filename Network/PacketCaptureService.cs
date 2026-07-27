@@ -46,6 +46,134 @@ public sealed class PacketCaptureService : IDisposable
     private const int DedupWindowMs = 500;
     private const int DedupPruneThreshold = 4096;
 
+    /// <summary>
+    /// Diagnóstico de rede: abre TODOS os adaptadores com filtro só de "udp" (sem
+    /// travar nas portas 5055-5058) e conta, por adaptador e por porta, o que
+    /// realmente passa. Devolve um relatório em texto.
+    ///
+    /// Existe porque a captura não funcionar com acelerador de rota (ExitLag) foi
+    /// "consertada" uma vez por hipótese — supondo que o tráfego ia pelo loopback —
+    /// e continuou sem funcionar. Sem medir, qualquer correção nova é chute: este
+    /// método responde objetivamente (a) quais adaptadores dá pra abrir, (b) se
+    /// chega QUALQUER pacote UDP, e (c) em que porta o jogo está de verdade, que é
+    /// exatamente o que falta pra saber se o filtro de porta é o problema ou se o
+    /// ExitLag encapsula/cifra o tráfego (caso em que nenhum filtro resolveria).
+    ///
+    /// Não usa o filtro de porta de propósito. Roda por poucos segundos e é
+    /// disparado manualmente, então o volume extra é aceitável.
+    /// </summary>
+    public string Diagnose(int seconds = 20)
+    {
+        if (_running)
+            return "Pare a captura antes de rodar o diagnóstico de rede.";
+
+        var report = new System.Text.StringBuilder();
+        report.AppendLine($"=== Diagnostico de rede — {DateTime.Now:yyyy-MM-dd HH:mm:ss} ===");
+        report.AppendLine($"Janela de escuta: {seconds}s | filtro: 'udp' (SEM filtro de porta)");
+        report.AppendLine($"Portas que a captura normal exige: {string.Join(", ", AlbionPorts)}");
+        report.AppendLine();
+
+        var devices = CaptureDeviceList.Instance;
+        report.AppendLine($"Adaptadores encontrados: {devices.Count}");
+
+        // (descricao do adaptador, porta) -> quantidade
+        var tally = new System.Collections.Concurrent.ConcurrentDictionary<string, long>();
+        var opened = new List<ICaptureDevice>();
+
+        foreach (var device in devices)
+        {
+            string desc = string.IsNullOrWhiteSpace(device.Description) ? device.Name : device.Description;
+            try
+            {
+                device.Open(DeviceModes.None, 1000);
+                try
+                {
+                    device.Filter = "udp";
+                    PacketArrivalEventHandler handler = (_, e) =>
+                    {
+                        try
+                        {
+                            var raw = e.GetPacket();
+                            var udp = Packet.ParsePacket(raw.LinkLayerType, raw.Data).Extract<UdpPacket>();
+                            if (udp is null) return;
+                            // Conta as duas pontas: o jogo pode aparecer como origem
+                            // (nosso cliente mandando) ou destino (servidor respondendo).
+                            tally.AddOrUpdate($"{desc}|{udp.SourcePort}->{udp.DestinationPort}", 1, (_, v) => v + 1);
+                        }
+                        catch { /* pacote fora do padrao: ignora */ }
+                    };
+                    device.OnPacketArrival += handler;
+                    device.StartCapture();
+                    opened.Add(device);
+                    report.AppendLine($"  [OK]    {desc}");
+                }
+                catch (Exception ex)
+                {
+                    report.AppendLine($"  [FALHA no filtro/start] {desc} — {ex.Message}");
+                    try { device.Close(); } catch { }
+                }
+            }
+            catch (Exception ex)
+            {
+                report.AppendLine($"  [NAO ABRIU] {desc} — {ex.Message}");
+            }
+        }
+
+        report.AppendLine();
+        if (opened.Count == 0)
+        {
+            report.AppendLine("NENHUM adaptador pode ser aberto. Npcap instalado? Rodando como administrador?");
+            return report.ToString();
+        }
+
+        System.Threading.Thread.Sleep(seconds * 1000);
+
+        foreach (var d in opened)
+        {
+            try { d.StopCapture(); d.Close(); } catch { }
+        }
+
+        var rows = tally.OrderByDescending(kv => kv.Value).ToList();
+        report.AppendLine($"Fluxos UDP observados: {rows.Count} | pacotes no total: {rows.Sum(r => r.Value)}");
+        report.AppendLine();
+
+        if (rows.Count == 0)
+        {
+            report.AppendLine("ZERO pacote UDP em qualquer adaptador.");
+            report.AppendLine("=> O problema NAO e' o filtro de porta: o Npcap nao esta entregando");
+            report.AppendLine("   o trafego pra este processo. Suspeitas: falta de permissao de");
+            report.AppendLine("   administrador, Npcap instalado sem suporte a loopback, ou o");
+            report.AppendLine("   acelerador entregando o trafego por um caminho que o Npcap nao ve.");
+            return report.ToString();
+        }
+
+        report.AppendLine("--- Top 40 fluxos (adaptador | origem->destino : pacotes) ---");
+        foreach (var kv in rows.Take(40))
+            report.AppendLine($"  {kv.Key} : {kv.Value}");
+
+        // A pergunta que importa: alguma dessas portas e' das que a captura exige?
+        var albionHits = rows.Where(kv => AlbionPorts.Any(p =>
+                                  kv.Key.Contains($"|{p}->") || kv.Key.EndsWith($"->{p}")))
+                             .ToList();
+        report.AppendLine();
+        if (albionHits.Count > 0)
+        {
+            report.AppendLine($"ENCONTRADO trafego nas portas do Albion ({albionHits.Sum(k => k.Value)} pacotes):");
+            foreach (var kv in albionHits.Take(10)) report.AppendLine($"  {kv.Key} : {kv.Value}");
+            report.AppendLine("=> As portas estao certas. Se a captura normal nao ve nada, o problema");
+            report.AppendLine("   esta no adaptador escolhido ou no filtro sendo aplicado.");
+        }
+        else
+        {
+            report.AppendLine("NENHUM pacote nas portas 5055-5058, mas HA trafego UDP.");
+            report.AppendLine("=> O jogo (via acelerador) NAO esta usando as portas esperadas.");
+            report.AppendLine("   Compare a lista acima com o trafego sem o acelerador ligado pra");
+            report.AppendLine("   descobrir a porta nova — se for porta fixa, basta incluir no filtro.");
+            report.AppendLine("   Se o acelerador encapsular/cifrar, nenhum filtro resolve.");
+        }
+        return report.ToString();
+    }
+
     public bool Start()
     {
         if (_running) return true;
@@ -101,10 +229,35 @@ public sealed class PacketCaptureService : IDisposable
         }
 
         _running = opened > 0;
+        // Registra QUAIS adaptadores entraram (e quais falharam). Antes só existia a
+        // contagem, que não ajudava a diagnosticar nada: "Capturando em 3 adaptador(es)"
+        // não diz se o adaptador que o acelerador de rota usa está entre eles.
+        LogAdapters();
         StatusChanged?.Invoke(_running
             ? $"Capturando em {opened} adaptador(es)"
             : "Não foi possível abrir nenhum adaptador de rede");
         return _running;
+    }
+
+    private void LogAdapters()
+    {
+        try
+        {
+            var dir = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp");
+            System.IO.Directory.CreateDirectory(dir);
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Captura iniciada — adaptadores em uso:");
+            foreach (var d in _devices)
+                sb.AppendLine($"  ATIVO: {(string.IsNullOrWhiteSpace(d.Description) ? d.Name : d.Description)}");
+            foreach (var d in CaptureDeviceList.Instance)
+            {
+                if (_devices.Any(x => x.Name == d.Name)) continue;
+                sb.AppendLine($"  fora:  {(string.IsNullOrWhiteSpace(d.Description) ? d.Name : d.Description)}");
+            }
+            System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "ops_diag.txt"), sb.ToString());
+        }
+        catch { /* diagnostico nunca derruba a captura */ }
     }
 
     private void OnPacketArrival(object sender, PacketCapture e)
