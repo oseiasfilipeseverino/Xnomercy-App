@@ -967,6 +967,7 @@ public partial class MainWindow : Window
     {
         DiagLogBigEvent(evt);   // calibração: loga eventos com números grandes (fama/prata)
         DiagLogNamedEvent(evt); // calibração: loga eventos com texto (achar o código real de NewMob)
+        PartyCalibrationLog.LogEvent(evt);   // calibração: achar quem carrega o roster do grupo
 
         var now = DateTime.Now;
         bool isGrabbedLoot = evt.EventCode == GameEventCodes.GrabbedLoot;

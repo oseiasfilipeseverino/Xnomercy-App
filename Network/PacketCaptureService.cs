@@ -144,11 +144,13 @@ public sealed class PacketCaptureService : IDisposable
             {
                 OpRequestReceived?.Invoke(req);
                 DiagLogOperation("req", req.OperationCode, req.Parameters);
+                PartyCalibrationLog.LogOperation("req", req.Parameters);
             }
             else if (raise && msg is PhotonOperationResponse resp)
             {
                 OpResponseReceived?.Invoke(resp);
                 DiagLogOperation("resp", resp.OperationCode, resp.Parameters);
+                PartyCalibrationLog.LogOperation("resp", resp.Parameters);
             }
         }
         return sawGameEvent;
