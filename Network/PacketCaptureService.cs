@@ -60,10 +60,20 @@ public sealed class PacketCaptureService : IDisposable
     // tentando decodificar todo tráfego da máquina (Discord, torrent, etc).
     private readonly HashSet<int> _learnedPorts = new();
     private readonly Dictionary<int, int> _discoveryHits = new();
+    private readonly Dictionary<int, int> _discoveryTries = new();
     private readonly object _learnLock = new();
-    private int _discoveryAttempts;
-    private const int MaxDiscoveryAttempts = 60000;   // teto de tentativas por sessão
+    // Teto POR PORTA, não global. O teto global de 60k queimava em ~25s num PC com
+    // tráfego intenso (medido: 238 mil pacotes numa sessão) e depois o app parava de
+    // procurar PRA SEMPRE, mesmo que o jogo só abrisse depois. Por porta, uma porta
+    // barulhenta que nunca decodifica para de ser tentada sem cegar as outras.
+    private const int MaxTriesPerPort = 3000;
     private const int HitsToLearn = 3;                // decodificações válidas p/ confiar na porta
+
+    // Deslocamento do encapsulamento. Aceleradores de rota costumam embrulhar o
+    // pacote original (ex: cabeçalho de relay UDP tipo SOCKS5 = 10 bytes pra IPv4),
+    // então o Photon do jogo não começa no byte 0 do payload UDP. Zero = sem
+    // encapsulamento (conexão direta). Descoberto por tentativa no OnPacketArrival.
+    private volatile int _payloadOffset;
 
     /// <summary>Portas confirmadas por conteúdo nesta sessão (diagnóstico/UI).</summary>
     public IReadOnlyCollection<int> LearnedPorts
@@ -71,10 +81,93 @@ public sealed class PacketCaptureService : IDisposable
         get { lock (_learnLock) return _learnedPorts.ToList(); }
     }
 
+    // Deslocamentos testados na descoberta. 0 = conexão direta (Photon no byte 0).
+    // 10 é o cabeçalho de relay UDP do SOCKS5 pra IPv4 (RSV+FRAG+ATYP+IP+porta), o
+    // formato mais comum em acelerador de rota; 22 é o equivalente pra IPv6. Os
+    // demais cobrem cabeçalhos proprietários de tamanho fixo. Vai do menor pro
+    // maior pra preferir a interpretação mais simples que funcionar.
+    private static readonly int[] CandidateOffsets =
+        { 0, 4, 6, 8, 10, 12, 16, 20, 22, 24, 28, 32, 36, 40, 44, 48 };
+
     private bool IsKnownGamePort(int src, int dst)
     {
         if (Array.IndexOf(AlbionPorts, src) >= 0 || Array.IndexOf(AlbionPorts, dst) >= 0) return true;
         lock (_learnLock) return _learnedPorts.Contains(src) || _learnedPorts.Contains(dst);
+    }
+
+    /// <summary>Ainda vale gastar CPU tentando decodificar esta porta? Conta as
+    /// tentativas POR PORTA — uma porta barulhenta que nunca decodifica se esgota
+    /// sozinha, sem impedir que portas novas sejam testadas.</summary>
+    private bool ShouldTryDiscovery(int src, int dst)
+    {
+        lock (_learnLock)
+        {
+            int a = _discoveryTries.GetValueOrDefault(src);
+            int b = _discoveryTries.GetValueOrDefault(dst);
+            if (a >= MaxTriesPerPort && b >= MaxTriesPerPort) return false;
+            _discoveryTries[src] = a + 1;
+            _discoveryTries[dst] = b + 1;
+            return true;
+        }
+    }
+
+    /// <summary>Tenta decodificar o payload a partir de um deslocamento e diz se saiu
+    /// evento de jogo VÁLIDO (param 252 presente). `raise=false` só testa, sem
+    /// disparar nada — usado na descoberta pra não injetar lixo nos painéis
+    /// enquanto o deslocamento certo ainda é desconhecido.</summary>
+    private bool TryDecodeAt(byte[] payload, int offset, bool raise)
+    {
+        if (offset >= payload.Length) return false;
+        byte[] slice;
+        if (offset == 0) slice = payload;
+        else
+        {
+            slice = new byte[payload.Length - offset];
+            Array.Copy(payload, offset, slice, 0, slice.Length);
+        }
+
+        bool sawGameEvent = false;
+        foreach (var appPayload in EnetPacketParser.ExtractApplicationPayloads(slice))
+        {
+            if (raise) DiagAppPayloadsExtracted++;
+            var msg = PhotonMessageParser.TryParseApplicationMessage(appPayload);
+            if (msg is PhotonEvent evt)
+            {
+                if (evt.EventCode < 0) continue;   // transporte interno, não é evento do jogo
+                sawGameEvent = true;
+                if (!raise) return true;           // na sondagem, uma confirmação basta
+                DiagEventsDecoded++;
+                SampleHex(appPayload);
+                EventReceived?.Invoke(evt);
+            }
+            else if (raise && msg is PhotonOperationRequest req)
+            {
+                OpRequestReceived?.Invoke(req);
+                DiagLogOperation("req", req.OperationCode, req.Parameters);
+            }
+            else if (raise && msg is PhotonOperationResponse resp)
+            {
+                OpResponseReceived?.Invoke(resp);
+                DiagLogOperation("resp", resp.OperationCode, resp.Parameters);
+            }
+        }
+        return sawGameEvent;
+    }
+
+    private void SampleHex(byte[] appPayload)
+    {
+        if (DiagSampleHex.Count >= MaxSamples) return;
+        string hex = Convert.ToHexString(appPayload);
+        DiagSampleHex.Add(hex);
+        try
+        {
+            var dir = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp");
+            System.IO.Directory.CreateDirectory(dir);
+            System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "diag_samples.txt"),
+                $"len={appPayload.Length}  {hex}\n");
+        }
+        catch { /* diagnóstico não pode derrubar a captura */ }
     }
 
     /// <summary>Registra que este par de portas entregou Photon válido. Ao bater
@@ -129,6 +222,8 @@ public sealed class PacketCaptureService : IDisposable
 
         // (descricao do adaptador, porta) -> quantidade
         var tally = new System.Collections.Concurrent.ConcurrentDictionary<string, long>();
+        // Amostras de payload por fluxo, pra testar deslocamento e despejar hex depois.
+        var samples = new System.Collections.Concurrent.ConcurrentDictionary<string, List<byte[]>>();
         var opened = new List<ICaptureDevice>();
 
         foreach (var device in devices)
@@ -149,7 +244,17 @@ public sealed class PacketCaptureService : IDisposable
                             if (udp is null) return;
                             // Conta as duas pontas: o jogo pode aparecer como origem
                             // (nosso cliente mandando) ou destino (servidor respondendo).
-                            tally.AddOrUpdate($"{desc}|{udp.SourcePort}->{udp.DestinationPort}", 1, (_, v) => v + 1);
+                            string key = $"{desc}|{udp.SourcePort}->{udp.DestinationPort}";
+                            tally.AddOrUpdate(key, 1, (_, v) => v + 1);
+
+                            // Guarda algumas amostras por fluxo — é com elas que a
+                            // análise de deslocamento roda depois da escuta.
+                            var pd = udp.PayloadData;
+                            if (pd is { Length: > 0 })
+                            {
+                                var list = samples.GetOrAdd(key, _ => new List<byte[]>());
+                                lock (list) { if (list.Count < 25) list.Add(pd); }
+                            }
                         }
                         catch { /* pacote fora do padrao: ignora */ }
                     };
@@ -217,10 +322,68 @@ public sealed class PacketCaptureService : IDisposable
         else
         {
             report.AppendLine("NENHUM pacote nas portas 5055-5058, mas HA trafego UDP.");
-            report.AppendLine("=> O jogo (via acelerador) NAO esta usando as portas esperadas.");
-            report.AppendLine("   Compare a lista acima com o trafego sem o acelerador ligado pra");
-            report.AppendLine("   descobrir a porta nova — se for porta fixa, basta incluir no filtro.");
-            report.AppendLine("   Se o acelerador encapsular/cifrar, nenhum filtro resolve.");
+            report.AppendLine("=> O jogo esta saindo por porta fora do padrao (acelerador de rota).");
+            report.AppendLine("   A captura reconhece o jogo pelo CONTEUDO, entao a porta em si nao");
+            report.AppendLine("   e' problema — o que importa e' a analise de deslocamento abaixo.");
+        }
+
+        // ── Analise de deslocamento ───────────────────────────────────────────
+        // Se o acelerador embrulha o pacote (ex: cabecalho de relay UDP), o Photon
+        // do jogo nao comeca no byte 0. Aqui testamos cada deslocamento candidato
+        // contra as amostras dos fluxos mais movimentados e dizemos qual funciona.
+        report.AppendLine();
+        report.AppendLine("=== Analise de deslocamento (onde o Photon comeca) ===");
+        bool achou = false;
+        foreach (var kv in rows.Take(6))
+        {
+            if (!samples.TryGetValue(kv.Key, out var list)) continue;
+            List<byte[]> copy;
+            lock (list) copy = list.ToList();
+            if (copy.Count == 0) continue;
+
+            var hits = new List<string>();
+            foreach (int off in CandidateOffsets)
+            {
+                int ok = copy.Count(p => TryDecodeAt(p, off, raise: false));
+                if (ok > 0) hits.Add($"byte {off}: {ok}/{copy.Count}");
+            }
+            report.AppendLine($"  {kv.Key} ({copy.Count} amostras)");
+            if (hits.Count > 0)
+            {
+                achou = true;
+                report.AppendLine($"    DECODIFICOU -> {string.Join(" | ", hits)}");
+            }
+            else
+            {
+                report.AppendLine("    nenhum deslocamento decodificou");
+            }
+        }
+
+        if (achou)
+        {
+            report.AppendLine();
+            report.AppendLine("=> Ha deslocamento que funciona: a captura vai achar sozinha e o app");
+            report.AppendLine("   deve passar a registrar loot/dano normalmente.");
+        }
+        else
+        {
+            report.AppendLine();
+            report.AppendLine("=> NENHUM deslocamento fixo decodificou. O acelerador provavelmente");
+            report.AppendLine("   CIFRA o trafego (ou usa cabecalho de tamanho variavel). Nesse caso");
+            report.AppendLine("   nao ha o que o app possa fazer: a alternativa e' jogar sem o");
+            report.AppendLine("   acelerador quando quiser usar o medidor, ou configurar o acelerador");
+            report.AppendLine("   pra NAO rotear o Albion.");
+            report.AppendLine();
+            report.AppendLine("--- Hex das primeiras amostras do fluxo principal (pra analise) ---");
+            var top = rows.First().Key;
+            if (samples.TryGetValue(top, out var sl))
+            {
+                List<byte[]> copy;
+                lock (sl) copy = sl.Take(6).ToList();
+                report.AppendLine($"fluxo: {top}");
+                foreach (var p in copy)
+                    report.AppendLine($"  len={p.Length} {Convert.ToHexString(p.AsSpan(0, Math.Min(80, p.Length)))}");
+            }
         }
         return report.ToString();
     }
@@ -328,66 +491,39 @@ public sealed class PacketCaptureService : IDisposable
 
             int srcPort = udp.SourcePort, dstPort = udp.DestinationPort;
             bool known = IsKnownGamePort(srcPort, dstPort);
-            if (!known)
-            {
-                // Porta desconhecida: só vale tentar decodificar enquanto estamos
-                // "procurando" o jogo. Sem esse teto, todo tráfego UDP da máquina
-                // (Discord, navegador, torrent...) passaria pelo parser Photon pra
-                // sempre, queimando CPU à toa — o filtro agora é só "udp".
-                if (_discoveryAttempts >= MaxDiscoveryAttempts) return;
-                _discoveryAttempts++;
-            }
 
             if (IsDuplicatePayload(udp.PayloadData)) return;
 
-            foreach (var appPayload in EnetPacketParser.ExtractApplicationPayloads(udp.PayloadData))
+            if (known)
             {
-                DiagAppPayloadsExtracted++;
+                // Rota rápida: porta já confirmada, decodifica direto no deslocamento
+                // que a descoberta encontrou (0 em conexão direta).
+                TryDecodeAt(udp.PayloadData, _payloadOffset, raise: true);
+                return;
+            }
 
-                // Amostra dos payloads de comandos SendReliable/SendUnreliable de verdade
-                // (não o pacote UDP inteiro) — é aqui dentro que a mensagem Photon
-                // (Event/Operation) deveria estar. Grava em arquivo pra ler com precisão.
-                if (DiagSampleHex.Count < MaxSamples)
-                {
-                    string hex = Convert.ToHexString(appPayload);
-                    DiagSampleHex.Add(hex);
-                    try
-                    {
-                        var dir = System.IO.Path.Combine(
-                            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp");
-                        System.IO.Directory.CreateDirectory(dir);
-                        System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "diag_samples.txt"),
-                            $"len={appPayload.Length}  {hex}\n");
-                    }
-                    catch { /* diagnóstico não pode derrubar a captura */ }
-                }
+            // Porta desconhecida: procura o jogo. Primeiro SONDA (sem disparar nada)
+            // cada deslocamento candidato — acelerador de rota embrulha o pacote, então
+            // o Photon pode não começar no byte 0. Só quando um deslocamento entrega um
+            // evento de jogo de verdade é que ele é fixado e a porta aprendida; assim
+            // nenhum lixo entra nos painéis enquanto o formato é desconhecido.
+            if (!ShouldTryDiscovery(srcPort, dstPort)) return;
 
-                var msg = PhotonMessageParser.TryParseApplicationMessage(appPayload);
-                if (msg is PhotonEvent evt)
+            foreach (int off in CandidateOffsets)
+            {
+                if (!TryDecodeAt(udp.PayloadData, off, raise: false)) continue;
+
+                if (_payloadOffset != off)
                 {
-                    DiagEventsDecoded++;
-                    // Confirma a porta pelo CONTEÚDO. Exige EventCode >= 0 (ou seja,
-                    // o parâmetro 252 presente, que é o código real do evento Albion):
-                    // é o que separa um evento de jogo de verdade de um pacote UDP
-                    // qualquer que por azar passou pelo parser. Sem essa exigência, um
-                    // falso positivo poderia "aprender" a porta do Discord e injetar
-                    // lixo no medidor de dano.
-                    if (!known && evt.EventCode >= 0) NoteDiscovery(srcPort, dstPort);
-                    EventReceived?.Invoke(evt);
+                    _payloadOffset = off;
+                    if (off != 0)
+                        StatusChanged?.Invoke(
+                            $"Encapsulamento detectado: dados do jogo começam no byte {off} " +
+                            "(acelerador de rota)");
                 }
-                // Operações (request/response) também são decodificadas, mas hoje não são
-                // consumidas em runtime — só logadas em beta pra calibrar o evento de grupo
-                // (o roster da party vem como operação, não como evento broadcast).
-                else if (msg is PhotonOperationRequest req)
-                {
-                    OpRequestReceived?.Invoke(req);   // self-detection (movimento, op real 24)
-                    DiagLogOperation("req", req.OperationCode, req.Parameters);
-                }
-                else if (msg is PhotonOperationResponse resp)
-                {
-                    OpResponseReceived?.Invoke(resp);   // self-detection (Join) e futuro grupo
-                    DiagLogOperation("resp", resp.OperationCode, resp.Parameters);
-                }
+                NoteDiscovery(srcPort, dstPort);
+                TryDecodeAt(udp.PayloadData, off, raise: true);   // agora processa de verdade
+                break;
             }
         }
         catch
@@ -506,8 +642,9 @@ public sealed class PacketCaptureService : IDisposable
         {
             _learnedPorts.Clear();
             _discoveryHits.Clear();
+            _discoveryTries.Clear();
         }
-        _discoveryAttempts = 0;
+        _payloadOffset = 0;
         _running = false;
     }
 
