@@ -115,11 +115,12 @@ public static class PlayerRegistry
     private static int _resolvingOwnGuildFlag;   // 0=livre, 1=ocupado (ver ResolveOwnGuildAsync)
 
     // Nome -> hora em que vimos o último sinal de que esse jogador está no SEU grupo.
-    // Alimentado por PartyInviteAccepted (240, quando alguém aceita seu convite) e
-    // PartyMemberStatus (229, broadcast periódico enquanto estiverem juntos — funciona
-    // nos dois sentidos, não importa quem convidou). Removido por PartyMemberLeft (182).
-    // Também expira sozinho (ver IsInParty) pra cobrir o caso de você ser expulso, que
-    // não tem confirmação na calibração: só vimos o 182 disparar de quem expulsa.
+    // Alimentado por três códigos: 240 (aceite de convite), 229 (status) e 182 — este
+    // último é hoje o ÚNICO que realmente dispara em captura real (240 só ocorre no
+    // instante do convite, então quem já estava em grupo antes de ligar a captura
+    // nunca o vê; e 229 não apareceu nenhuma vez nas capturas até agora).
+    // Nada remove da lista: a entrada expira sozinha em 60s (ver IsInParty), o que
+    // cobre saída/expulsão sem depender de um código de "saiu" confirmado.
     private static readonly ConcurrentDictionary<string, DateTime> _partyMembers = new();
     private static readonly TimeSpan PartyMemberTimeout = TimeSpan.FromSeconds(60);
 
@@ -211,8 +212,25 @@ public static class PlayerRegistry
         }
         if (evt.EventCode == GameEventCodes.PartyMemberLeft)
         {
-            if (evt.Parameters.TryGetValue(2, out var p3) && p3 is string leftName && leftName.Length > 0)
-                _partyMembers.TryRemove(leftName, out _);
+            // RECALIBRADO com captura real. Este código estava mapeado como "saiu do
+            // grupo" e REMOVIA a pessoa da lista — o que se mostrou errado: na captura
+            // ele dispara repetidamente com o nome de gente que continua no grupo
+            // (aparecem juntos nos eventos de loot logo em seguida), inclusive com o
+            // nome do PRÓPRIO jogador. Ninguém "sai" do grupo 7 vezes seguidas, e você
+            // não sai do seu próprio grupo enquanto joga. Formato observado:
+            //   [0]=array(2)  [1]=0 ou 1  [2]=nome
+            //
+            // Como remover era demonstravelmente errado (esvaziava a lista e deixava o
+            // filtro "Só meu grupo" sem ninguém), agora tratamos como SINAL DE
+            // PRESENÇA no grupo. O que exatamente [1]=0/1 significa segue não
+            // confirmado — por isso não usamos esse campo pra decidir nada. Se a
+            // interpretação estiver errada, o estrago é pequeno e se autocorrige:
+            // a entrada expira sozinha em 60s (ver IsInParty).
+            if (evt.Parameters.TryGetValue(2, out var p3) && p3 is string partyName && partyName.Length > 0)
+            {
+                _partyMembers[partyName] = DateTime.UtcNow;
+                if (_partyMembers.Count > 20000) _partyMembers.Clear();
+            }
             return;
         }
         if (evt.EventCode != GameEventCodes.NewCharacter) return;

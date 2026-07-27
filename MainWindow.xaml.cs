@@ -604,7 +604,13 @@ public partial class MainWindow : Window
                             && PlayerRegistry.GuildOfName(x.Name) == PlayerRegistry.OwnGuild))
             // "Só meu grupo": rastreado via eventos de grupo calibrados (entrada por
             // 229/240, saída por 182, com expiração de 60s como rede de segurança).
-            .Where(x => !partyOnly || PlayerRegistry.IsInParty(x.Name))
+            // x.Name == "Você" precisa passar explicitamente: a linha do proprio
+            // jogador se chama literalmente "Você", nao o nome do personagem, entao
+            // IsInParty("Você") comparava com SelfName e dava falso — o filtro
+            // escondia ATE VOCE e a lista ficava completamente vazia. O filtro de
+            // guild logo acima ja tratava isso; este ficou pra tras quando o painel
+            // passou a ser indexado por nome (v1.0.39).
+            .Where(x => !partyOnly || x.Name == "Você" || PlayerRegistry.IsInParty(x.Name))
             .OrderByDescending(x => x.Damage)
             .ToList();
 
