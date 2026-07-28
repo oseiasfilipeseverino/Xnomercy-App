@@ -29,9 +29,9 @@ public static class PlayerRegistry
     private static readonly ConcurrentDictionary<string, string> _nameToGuild = new();
 
     // Ordem de inserção de _byId/_nameToGuild — usada só pra podar os mais antigos
-    // (ver TrimOldest) em vez de zerar tudo de uma vez ao bater o teto. _mobs e
-    // _partyMembers continuam com Clear() total: seus próprios comentários já
-    // justificam isso (mob muda de ObjectId a cada zona mesmo; party expira sozinho).
+    // (ver TrimOldest) em vez de zerar tudo de uma vez ao bater o teto. _mobs segue
+    // com Clear() total, e nesse caso tudo bem: mob muda de ObjectId a cada zona
+    // mesmo. _partyMembers agora poda por expiração (ver MarcarNoGrupo).
     private static readonly ConcurrentQueue<long> _byIdOrder = new();
     private static readonly ConcurrentQueue<string> _nameToGuildOrder = new();
 
@@ -119,10 +119,33 @@ public static class PlayerRegistry
     // último é hoje o ÚNICO que realmente dispara em captura real (240 só ocorre no
     // instante do convite, então quem já estava em grupo antes de ligar a captura
     // nunca o vê; e 229 não apareceu nenhuma vez nas capturas até agora).
-    // Nada remove da lista: a entrada expira sozinha em 60s (ver IsInParty), o que
-    // cobre saída/expulsão sem depender de um código de "saiu" confirmado.
+    // Nenhum código de "saiu" é confiável, então ninguém é removido por evento: a
+    // entrada simplesmente expira em 60s na leitura (ver IsInParty), o que cobre
+    // saída e expulsão. A remoção física do dicionário é só higiene de memória e
+    // acontece em MarcarNoGrupo, sempre depois desse mesmo prazo.
     private static readonly ConcurrentDictionary<string, DateTime> _partyMembers = new();
     private static readonly TimeSpan PartyMemberTimeout = TimeSpan.FromSeconds(60);
+
+    /// <summary>
+    /// Registra presença no grupo, podando o que já expirou.
+    /// </summary>
+    /// <remarks>
+    /// Antes o teto de segurança era <c>Clear()</c> no dicionário inteiro. Um grupo
+    /// tem no máximo 20 pessoas, então na prática nunca disparava — mas se
+    /// disparasse, derrubaria o grupo legítimo junto e o filtro "Só meu grupo"
+    /// esvaziaria sem aviso, que é exatamente o sintoma que já perseguimos antes.
+    /// Remover só quem passou do timeout resolve o crescimento sem esse risco:
+    /// essas entradas já eram ignoradas na leitura (ver IsInParty).
+    /// </remarks>
+    private static void MarcarNoGrupo(string nome)
+    {
+        var agora = DateTime.UtcNow;
+        _partyMembers[nome] = agora;
+        if (_partyMembers.Count <= 64) return;
+        foreach (var kv in _partyMembers)
+            if (agora - kv.Value > PartyMemberTimeout)
+                _partyMembers.TryRemove(kv.Key, out _);
+    }
 
     public static void HandleEvent(PhotonEvent evt)
     {
@@ -193,11 +216,7 @@ public static class PlayerRegistry
             if (evt.Parameters.TryGetValue(0, out var p1) && p1 is string acceptedName && acceptedName.Length > 0
                 && evt.Parameters.TryGetValue(1, out var acc) && acc is bool ok && ok)
             {
-                _partyMembers[acceptedName] = DateTime.UtcNow;
-                // Mesmo teto de segurança que _byId/_mobs/_nameToGuild: sem o 182 (saída),
-                // nomes antigos só expiram na leitura (IsInParty), nunca são removidos do
-                // dicionário — numa sessão muito longa isso cresceria sem limite.
-                if (_partyMembers.Count > 20000) _partyMembers.Clear();
+                MarcarNoGrupo(acceptedName);
             }
             return;
         }
@@ -205,8 +224,7 @@ public static class PlayerRegistry
         {
             if (evt.Parameters.TryGetValue(1, out var p2) && p2 is string statusName && statusName.Length > 0)
             {
-                _partyMembers[statusName] = DateTime.UtcNow;
-                if (_partyMembers.Count > 20000) _partyMembers.Clear();
+                MarcarNoGrupo(statusName);
             }
             return;
         }
@@ -228,8 +246,7 @@ public static class PlayerRegistry
             // a entrada expira sozinha em 60s (ver IsInParty).
             if (evt.Parameters.TryGetValue(2, out var p3) && p3 is string partyName && partyName.Length > 0)
             {
-                _partyMembers[partyName] = DateTime.UtcNow;
-                if (_partyMembers.Count > 20000) _partyMembers.Clear();
+                MarcarNoGrupo(partyName);
             }
             return;
         }

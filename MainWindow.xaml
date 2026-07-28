@@ -10,7 +10,6 @@
         Title="XnoMercy" Height="800" Width="1280"
         Background="#131313"
         FontFamily="{StaticResource FontBody}"
-        StateChanged="Window_StateChanged"
         Closing="Window_Closing">
 
     <Window.Resources>

@@ -148,6 +148,22 @@ public partial class MainWindow : Window
     // Permite fechar de verdade pelo menu da bandeja (em vez de só minimizar).
     private bool _exitRequested;
 
+    // Handlers de eventos ESTÁTICOS guardados pra poder desassinar na saída — ver
+    // DesassinarEventosEstaticos() e o comentário na assinatura, no construtor.
+    private Action? _onEnteredDungeon;
+    private Action? _onLeftDungeon;
+
+    private void DesassinarEventosEstaticos()
+    {
+        try
+        {
+            SelfLootDetector.SelfLootDetected -= OnSelfLootDetected;
+            if (_onEnteredDungeon is not null) DungeonTimerTracker.EnteredDungeon -= _onEnteredDungeon;
+            if (_onLeftDungeon is not null) DungeonTimerTracker.LeftDungeon -= _onLeftDungeon;
+        }
+        catch { /* saída em andamento: não vale derrubar o fechamento por causa disso */ }
+    }
+
     private readonly PacketCaptureService _capture = new();
     private readonly ObservableCollection<LootEventRow> _lootRows = new();
     private readonly ObservableCollection<LootEventRow> _markedRows = new();
@@ -336,11 +352,18 @@ public partial class MainWindow : Window
         // pegar um item (request, não broadcast) — não depende do servidor confirmar
         // de volta corretamente (ver SelfLootDetector.cs pro porquê disso ser preciso).
         _capture.OpRequestReceived += SelfLootDetector.HandleOpRequest;
+        // Estes três são eventos ESTÁTICOS, e os handlers capturam esta janela. Sem
+        // desassinar, a MainWindow fica presa na memória pelo resto do processo —
+        // hoje inofensivo (a janela vive tanto quanto o app), mas vira vazamento no
+        // dia em que ela for recriada. Guardados em campo pra dar pra remover em
+        // DesassinarEventosEstaticos(), chamada na saída.
+        _onEnteredDungeon = () => Dispatcher.BeginInvoke(StartDungeonTimer);
+        _onLeftDungeon    = () => Dispatcher.BeginInvoke(StopDungeonTimer);
         SelfLootDetector.SelfLootDetected += OnSelfLootDetected;
         // Timer de fechamento de dungeon — ver DungeonTimerTracker.cs.
         _capture.OpResponseReceived += DungeonTimerTracker.HandleOpResponse;
-        DungeonTimerTracker.EnteredDungeon += () => Dispatcher.BeginInvoke(StartDungeonTimer);
-        DungeonTimerTracker.LeftDungeon += () => Dispatcher.BeginInvoke(StopDungeonTimer);
+        DungeonTimerTracker.EnteredDungeon += _onEnteredDungeon;
+        DungeonTimerTracker.LeftDungeon += _onLeftDungeon;
         _capture.StatusChanged += status => Dispatcher.BeginInvoke(() => TxtCaptureStatus.Text = status);
 
         // Em vez de atualizar a UI a cada evento (em combate são centenas/seg, o que
@@ -1608,12 +1631,9 @@ public partial class MainWindow : Window
     }
 
     // ── Bandeja do sistema: só o "X" esconde a janela, minimizar é normal ──
-    // (antes minimizar também escondia pra bandeja, o que confundia — agora
-    // minimizar só manda pra barra de tarefas, do jeito que o Windows já faz).
-    private void Window_StateChanged(object? sender, EventArgs e)
-    {
-    }
-
+    // (minimizar manda pra barra de tarefas, do jeito que o Windows já faz — por
+    // isso não há handler de StateChanged; ele existia vazio desde que minimizar
+    // deixou de esconder pra bandeja.)
     private void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
         if (_exitRequested) return;
@@ -1637,6 +1657,7 @@ public partial class MainWindow : Window
         // fechava o app em vez de clicar "Parar captura". Espera até 5s pelo envio.
         await Task.WhenAny(DiagReporter.ReportDiagFilesAsync(), Task.Delay(5000));
         _exitRequested = true;
+        DesassinarEventosEstaticos();
         _capture.Dispose();
         Close();
         Application.Current.Shutdown();
@@ -1693,6 +1714,7 @@ public partial class MainWindow : Window
     {
         if (_updateMgr == null || _pendingUpdate == null) return;
         _exitRequested = true;
+        DesassinarEventosEstaticos();
         _capture.Dispose();
         _updateMgr.ApplyUpdatesAndRestart(_pendingUpdate);
     }
