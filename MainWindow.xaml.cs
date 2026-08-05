@@ -139,7 +139,7 @@ public sealed class SessionHistoryRowDisplay
 
 public partial class MainWindow : Window
 {
-    private const string SiteUrl = "https://nome-xnomercy-site-production.up.railway.app";
+    private const string SiteUrl = SiteConfig.BaseUrl;
     private const int MaxLootRows = 500; // evita a lista crescer sem limite numa sessão longa
 
     // Versão real agora vem do pacote Velopack (definida no `vpk pack --packVersion`),

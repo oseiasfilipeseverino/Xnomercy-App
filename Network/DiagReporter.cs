@@ -17,7 +17,7 @@ namespace XnomercyApp.Network;
 /// </summary>
 public static class DiagReporter
 {
-    private const string SiteUrl = "https://nome-xnomercy-site-production.up.railway.app";
+    private const string SiteUrl = SiteConfig.BaseUrl;
     private const string Endpoint = "/api/app/diag";
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(10) };
     // Versão real do build (ex: "1.0.6+a1b2c3d") — vem do -p:Version do publish junto com
