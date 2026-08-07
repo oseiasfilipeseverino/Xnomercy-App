@@ -74,18 +74,42 @@ public static class GameEventCodes
     // "dano" no Albion — é tudo derivado daqui.
     public static int HealthUpdate { get; set; } = 6;
 
-    // PartyInviteAccepted: dispara no lado de quem CONVIDOU, quando o convidado aceita.
-    // [0]=nome de quem aceitou [1]=True. Confirmado em teste real (convite + aceite).
-    public static int PartyInviteAccepted { get; set; } = 240;
+    // PartyInviteAccepted: NÃO CALIBRADO.
+    //
+    // 240 não aparece nenhuma vez nas 1.800 linhas de captura de 07/08. Pode ser
+    // que o evento só dispare no cliente de quem CONVIDA, e a captura foi feita
+    // por quem foi convidado — mas sem dado que confirme, fica Unknown em vez de
+    // um número que parece calibrado e não é.
+    //
+    // Na prática o roster não depende dele: o PartyMemberStatus (104) já emite
+    // cada membro que entra.
+    public static int PartyInviteAccepted { get; set; } = Unknown;
 
-    // PartyMemberStatus: broadcast periódico (repete enquanto estiverem no mesmo grupo,
-    // dispara nos dois sentidos — não importa quem convidou). [1]=nome do membro
-    // [6]=guild dele. Confirmado em 3 testes (convidando e sendo convidado).
-    public static int PartyMemberStatus { get; set; } = 229;
+    // PartyMemberStatus: entrada de membro no grupo.
+    //   [0]=uuid  [1]=nome  [2]=True  [3]=timestamp
+    //
+    // RECALIBRADO em 07/08/2026 com 1.800 linhas de captura real (3 sessões).
+    // Estava mapeado como 229, que NÃO APARECE uma única vez nos dados — nem o
+    // 240 do PartyInviteAccepted. O roster nunca era montado, em silêncio.
+    //
+    // A prova de que 104 é o certo está na composição: na sessão das 22:58 os 10
+    // nomes emitidos são exatamente membros da XnoMercy que estavam na CTA
+    // (SirTrovao, PretinhaDMacumba, Shakgusha, SushlLover, BestinhaCR7, Carabit6,
+    // OttoMikelekethh, Xovonska, Montagus, Leanziin). Numa outra sessão, outro
+    // grupo coerente. Não é gente passando na tela — é composição.
+    public static int PartyMemberStatus { get; set; } = 104;
 
-    // PartyMemberLeft: alguém saiu/foi removido do grupo. [2]=nome de quem saiu.
-    // Confirmado: disparou exatamente quando a expulsão aconteceu.
-    public static int PartyMemberLeft { get; set; } = 182;
+    // PartyMemberLeft: NÃO CALIBRADO.
+    //
+    // Estava mapeado como 182, e a captura de 07/08 mostrou que 182 é MOVIMENTO:
+    //   [0]=Single[2]={-132,18, -175,23}  [1]=1  [2]="gayzaoviadao"
+    // São coordenadas x,y com o nome do PRÓPRIO jogador, repetidas dezenas de
+    // vezes. Ninguém sai do próprio grupo 29 vezes andando pelo mapa.
+    //
+    // Fica em Unknown de propósito: sem o código certo, é melhor o roster manter
+    // alguém que já saiu do que remover quem está — a poda por tempo em
+    // MarcarNoGrupo já limpa quem parou de aparecer.
+    public static int PartyMemberLeft { get; set; } = Unknown;
 
     public static bool IsCalibrated(int code) => code != Unknown;
 }
