@@ -801,11 +801,70 @@ public partial class MainWindow : Window
         _killTracker.HandleEvent(evt);
     }
 
+    /// <summary>
+    /// Explica que falta o Npcap, em vez de deixar o app fechar.
+    ///
+    /// O texto diz O QUE instalar, ONDE, e a opção que precisa estar marcada —
+    /// "WinPcap API-compatible Mode". Sem ela o Npcap instala mas o wpcap.dll
+    /// não aparece, e o sintoma volta idêntico.
+    /// </summary>
+    private void AvisarNpcapFaltando()
+    {
+        TxtCaptureStatus.Text = "Npcap não encontrado — a captura precisa dele.";
+        BtnCaptureToggle.Content = "Iniciar captura";
+        _capturing = false;
+
+        var r = MessageBox.Show(
+            "A captura precisa do Npcap, que não está instalado nesta máquina.\n\n" +
+            "Baixe em npcap.com e, durante a instalação, MARQUE a opção\n" +
+            "\"Install Npcap in WinPcap API-compatible Mode\".\n\n" +
+            "Sem essa opção ele instala mas o app continua não achando.\n\n" +
+            "Abrir a página de download agora?",
+            "Npcap não encontrado",
+            MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+        if (r != MessageBoxResult.Yes)
+            return;
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://npcap.com/#download")
+                          { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            // Sem navegador padrão configurado, por exemplo. O texto acima já
+            // trouxe o endereço, então não vale insistir.
+            System.Diagnostics.Debug.WriteLine($"[npcap] abrir download: {ex.Message}");
+        }
+    }
+
     private void BtnCaptureToggle_Click(object sender, RoutedEventArgs e)
     {
         if (!_capturing)
         {
-            _capturing = _capture.Start();
+            // Sem o Npcap instalado, o SharpPcap estoura DllNotFoundException ao
+            // procurar wpcap.dll — e o app FECHAVA. O único rastro era um arquivo
+            // de crash que o tester tinha que nos mandar; aconteceu 14 vezes com a
+            // mesma pessoa antes de alguém entender o que era.
+            //
+            // Faltar o Npcap é situação normal (instalação nova, ou ele foi
+            // removido por outro programa), não erro do app. Merece instrução, não
+            // tela fechando.
+            try
+            {
+                _capturing = _capture.Start();
+            }
+            catch (DllNotFoundException)
+            {
+                AvisarNpcapFaltando();
+                return;
+            }
+            catch (TypeInitializationException ex) when (ex.InnerException is DllNotFoundException)
+            {
+                // O SharpPcap às vezes embrulha a falha na inicialização do tipo.
+                AvisarNpcapFaltando();
+                return;
+            }
             BtnCaptureToggle.Content = _capturing ? "Parar captura" : "Iniciar captura";
         }
         else
