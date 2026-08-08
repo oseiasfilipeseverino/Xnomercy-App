@@ -35,6 +35,21 @@ public static class PartyCalibrationLog
         103,  // Info de guild (repetitivo)
         81, 82, 84, 85, 91, 96, 92,        // fama/prata (já calibrados)
         160, 141, 543, 540, 558,           // sync/telemetria de alto volume
+
+        // Acrescentados em 07/08 depois de medir as 3 capturas: cada um destes
+        // batia o teto de 25 sozinho, e os três juntos comiam um oitavo do
+        // orçamento total do arquivo sem informação nenhuma sobre grupo.
+        1, 11, 21, 22, 45, 98, 361, 602,
+    };
+
+    // Códigos que NUNCA são cortados, nem pelo teto por código nem pelo total.
+    // O evento de grupo é raro por natureza: quem sai do grupo sai uma vez. Se ele
+    // dividir orçamento com sync de posição, perde sempre.
+    private static readonly HashSet<int> PrioridadeEventos = new()
+    {
+        104,  // PartyMemberStatus — o único que monta o roster hoje
+        182,  // era o "saiu do grupo"; a captura mostrou ser movimento. Fica em
+              // observação porque carrega nome e ainda não foi explicado.
     };
 
     // Operações de alto volume: 24 = movimento do próprio personagem, 22 = idem,
@@ -42,11 +57,42 @@ public static class PartyCalibrationLog
     private static readonly HashSet<int> IgnoredOpCodes = new() { 22, 24, 300, 374 };
 
     private const int MaxPerCode = 25;
-    private const int MaxTotal = 600;
+
+    // Era 600. Nas três capturas de 07/08 os três arquivos bateram o teto exato
+    // (600, 599, 601) — ou seja, o log MORREU no meio da sessão. O party_diag.txt
+    // cobre das 22:57:27 às 23:01:59: quatro minutos e meio. Um evento de saída de
+    // grupo que aconteça depois disso simplesmente nunca é gravado, e foi por isso
+    // que nenhuma das capturas achou o PartyMemberLeft. A 600 linhas ~ 90 KB, 6000
+    // dá menos de 1 MB por arquivo — barato pro que resolve.
+    private const int MaxTotal = 6000;
 
     private static readonly ConcurrentDictionary<string, int> _perCode = new();
     private static int _total;
     private static readonly object _fileLock = new();
+
+    /// <summary>
+    /// Marca o começo de uma sessão de captura no arquivo.
+    /// </summary>
+    /// <remarks>
+    /// Os arquivos de diagnóstico ACUMULAM entre execuções do app, e até 07/08 não
+    /// havia nada separando uma sessão da outra. Analisando depois, era impossível
+    /// saber se 55 nomes distintos num arquivo eram 55 pessoas de uma vez (o que
+    /// derrubaria a leitura de que o 104 é grupo, já que grupo tem teto de 20) ou
+    /// cinco sessões de 11. As duas explicações cabiam no mesmo arquivo, então o
+    /// dado não decidia nada. Esta linha é o que torna o arquivo interpretável.
+    /// </remarks>
+    [System.Diagnostics.Conditional("DEBUG")]
+    [System.Diagnostics.Conditional("BETA")]
+    public static void IniciarSessao()
+    {
+        // Zera as cotas: cada sessão tem o orçamento inteiro pra si, senão a segunda
+        // captura do dia já nasce sem espaço por causa da primeira.
+        _perCode.Clear();
+        _total = 0;
+        var versao = System.Reflection.Assembly.GetExecutingAssembly()
+            .GetName().Version?.ToString() ?? "?";
+        Write("sessao", $"=== sessao {DateTime.Now:yyyy-MM-dd HH:mm:ss} app {versao} ===");
+    }
 
     [System.Diagnostics.Conditional("DEBUG")]
     [System.Diagnostics.Conditional("BETA")]
@@ -54,7 +100,8 @@ public static class PartyCalibrationLog
     {
         int code = evt.EventCode;
         if (code < 0 || IgnoredEventCodes.Contains(code)) return;
-        Write($"evt:{code}", $"code={code} {Dump(evt.Parameters)}");
+        Write($"evt:{code}", $"code={code} {Dump(evt.Parameters)}",
+              prioridade: PrioridadeEventos.Contains(code));
     }
 
     [System.Diagnostics.Conditional("DEBUG")]
@@ -72,17 +119,22 @@ public static class PartyCalibrationLog
         Write($"{kind}:{real}", $"{kind} op={real} {Dump(parms)}");
     }
 
-    private static void Write(string bucket, string line)
+    private static void Write(string bucket, string line, bool prioridade = false)
     {
-        if (_total >= MaxTotal) return;
-        // Teto por código: garante espaço pros eventos raros mesmo com um código
-        // comum disparando sem parar.
-        int usados = _perCode.AddOrUpdate(bucket, 1, (_, v) => v + 1);
-        if (usados > MaxPerCode) return;
+        // Prioridade passa por cima dos dois tetos: é o que garante que o evento de
+        // grupo, que é raro, não seja cortado por sync de posição, que é constante.
+        if (!prioridade)
+        {
+            if (_total >= MaxTotal) return;
+            // Teto por código: garante espaço pros eventos raros mesmo com um código
+            // comum disparando sem parar.
+            int usados = _perCode.AddOrUpdate(bucket, 1, (_, v) => v + 1);
+            if (usados > MaxPerCode) return;
+        }
 
         lock (_fileLock)
         {
-            if (_total >= MaxTotal) return;
+            if (!prioridade && _total >= MaxTotal) return;
             _total++;
             try
             {

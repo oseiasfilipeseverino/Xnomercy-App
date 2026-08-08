@@ -180,6 +180,15 @@ public partial class MainWindow
                 AvisarNpcapFaltando();
                 return;
             }
+            if (_capturing)
+            {
+                // Marca no arquivo onde esta sessão começa e devolve o orçamento
+                // inteiro dos diagnósticos pra ela. Sem isso os arquivos acumulavam
+                // sessão em cima de sessão sem divisória, e a segunda captura do dia
+                // já nascia sem cota por causa da primeira.
+                PartyCalibrationLog.IniciarSessao();
+                ReiniciarDiagNomeados();
+            }
             BtnCaptureToggle.Content = _capturing ? "Parar captura" : "Iniciar captura";
         }
         else
@@ -413,6 +422,17 @@ public partial class MainWindow
     // já calibrado) pra focar no que falta achar. Arquivo: %LocalAppData%\XnomercyApp\named_events_diag.txt
     private static int _diagNamedCount;
     private static readonly object _diagNamedLock = new();
+
+    /// <summary>Devolve a cota do named_events pra sessão que está começando.</summary>
+    /// <remarks>
+    /// O teto de 500 era por EXECUÇÃO do app, não por captura. Quem parava e recomeçava
+    /// a captura (o que o app pede pra rodar o diagnóstico de rede) gravava as 500
+    /// linhas na primeira e nada na segunda, sem nenhum aviso de que tinha parado.
+    /// </remarks>
+    private static void ReiniciarDiagNomeados()
+    {
+        lock (_diagNamedLock) _diagNamedCount = 0;
+    }
     [System.Diagnostics.Conditional("DEBUG")]
     [System.Diagnostics.Conditional("BETA")]
     private static void DiagLogNamedEvent(PhotonEvent evt)
@@ -434,8 +454,12 @@ public partial class MainWindow
                 System.IO.Directory.CreateDirectory(dir);
                 var parms = string.Join(" ", evt.Parameters.OrderBy(k => k.Key)
                     .Select(kv => $"[{kv.Key}]={DiagVal(kv.Value)}"));
+                // O horário entrou em 07/08. Sem ele, e como o arquivo acumula entre
+                // execuções, não dava pra saber se duas linhas eram da mesma sessão
+                // ou de semanas diferentes — o que tornava a contagem de nomes
+                // distintos inútil pra decidir qualquer coisa sobre grupo.
                 System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "named_events_diag.txt"),
-                    $"code={evt.EventCode} {parms}\n");
+                    $"[{DateTime.Now:HH:mm:ss}] code={evt.EventCode} {parms}\n");
             }
             catch { }
         }
