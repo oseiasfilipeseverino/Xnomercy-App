@@ -115,14 +115,15 @@ public static class PlayerRegistry
     private static int _resolvingOwnGuildFlag;   // 0=livre, 1=ocupado (ver ResolveOwnGuildAsync)
 
     // Nome -> hora em que vimos o último sinal de que esse jogador está no SEU grupo.
-    // Alimentado por três códigos: 240 (aceite de convite), 229 (status) e 182 — este
-    // último é hoje o ÚNICO que realmente dispara em captura real (240 só ocorre no
-    // instante do convite, então quem já estava em grupo antes de ligar a captura
-    // nunca o vê; e 229 não apareceu nenhuma vez nas capturas até agora).
-    // Nenhum código de "saiu" é confiável, então ninguém é removido por evento: a
-    // entrada simplesmente expira em 60s na leitura (ver IsInParty), o que cobre
-    // saída e expulsão. A remoção física do dicionário é só higiene de memória e
-    // acontece em MarcarNoGrupo, sempre depois desse mesmo prazo.
+    //
+    // Hoje quem alimenta isto é UM código só: o PartyMemberStatus (104), calibrado em
+    // 07/08 com captura real. Os outros dois candidatos (PartyInviteAccepted e
+    // PartyMemberLeft) estão Unknown e não disparam — ver GameEventCodes.
+    //
+    // Ninguém é removido por evento, porque nenhum código de "saiu" está confirmado: a
+    // entrada expira em 60s na leitura (ver IsInParty), o que cobre saída e expulsão
+    // com atraso. A remoção física do dicionário é só higiene de memória e acontece em
+    // MarcarNoGrupo, sempre depois desse mesmo prazo.
     private static readonly ConcurrentDictionary<string, DateTime> _partyMembers = new();
     private static readonly TimeSpan PartyMemberTimeout = TimeSpan.FromSeconds(60);
 
@@ -211,8 +212,12 @@ public static class PlayerRegistry
             HandleMoveName(evt);
             return;
         }
-        if (evt.EventCode == GameEventCodes.PartyInviteAccepted)
+        if (GameEventCodes.IsCalibrated(GameEventCodes.PartyInviteAccepted)
+            && evt.EventCode == GameEventCodes.PartyInviteAccepted)
         {
+            // Também não roda hoje (Unknown). O IsCalibrated na frente é o que impede
+            // este bloco de voltar a casar com pacote de transporte se alguém devolver
+            // o Unknown pra -1 sem perceber a colisão.
             if (evt.Parameters.TryGetValue(0, out var p1) && p1 is string acceptedName && acceptedName.Length > 0
                 && evt.Parameters.TryGetValue(1, out var acc) && acc is bool ok && ok)
             {
@@ -228,25 +233,26 @@ public static class PlayerRegistry
             }
             return;
         }
-        if (evt.EventCode == GameEventCodes.PartyMemberLeft)
+        if (GameEventCodes.IsCalibrated(GameEventCodes.PartyMemberLeft)
+            && evt.EventCode == GameEventCodes.PartyMemberLeft)
         {
-            // RECALIBRADO com captura real. Este código estava mapeado como "saiu do
-            // grupo" e REMOVIA a pessoa da lista — o que se mostrou errado: na captura
-            // ele dispara repetidamente com o nome de gente que continua no grupo
-            // (aparecem juntos nos eventos de loot logo em seguida), inclusive com o
-            // nome do PRÓPRIO jogador. Ninguém "sai" do grupo 7 vezes seguidas, e você
-            // não sai do seu próprio grupo enquanto joga. Formato observado:
-            //   [0]=array(2)  [1]=0 ou 1  [2]=nome
+            // NÃO RODA HOJE: PartyMemberLeft está Unknown (ver GameEventCodes). Estava
+            // mapeado como 182, e a captura de 07/08 mostrou que 182 é MOVIMENTO —
+            // coordenadas x,y com o nome do próprio jogador, repetidas dezenas de vezes.
             //
-            // Como remover era demonstravelmente errado (esvaziava a lista e deixava o
-            // filtro "Só meu grupo" sem ninguém), agora tratamos como SINAL DE
-            // PRESENÇA no grupo. O que exatamente [1]=0/1 significa segue não
-            // confirmado — por isso não usamos esse campo pra decidir nada. Se a
-            // interpretação estiver errada, o estrago é pequeno e se autocorrige:
-            // a entrada expira sozinha em 60s (ver IsInParty).
-            if (evt.Parameters.TryGetValue(2, out var p3) && p3 is string partyName && partyName.Length > 0)
+            // O corpo antigo chamava MarcarNoGrupo, ou seja, marcava PRESENÇA num
+            // evento chamado "saiu". Aquilo era a resposta certa pro 182 (que não é
+            // saída nenhuma), mas virava armadilha pra quem calibrasse o código de
+            // verdade depois: o evento de saída marcaria a pessoa como presente, e o
+            // filtro "Só meu grupo" ficaria preso em quem já saiu. Por isso o corpo
+            // agora faz o que o nome diz, atrás do IsCalibrated.
+            //
+            // O índice [2]=nome é herança do 182 e NÃO está confirmado pro evento real.
+            // Quando o party_diag.txt mostrar uma expulsão, conferir o índice antes de
+            // tirar o Unknown.
+            if (evt.Parameters.TryGetValue(2, out var p3) && p3 is string saiu && saiu.Length > 0)
             {
-                MarcarNoGrupo(partyName);
+                _partyMembers.TryRemove(saiu, out _);
             }
             return;
         }
@@ -439,9 +445,9 @@ public static class PlayerRegistry
     public static bool IsMob(long objectId) => _mobs.ContainsKey(objectId);
 
     // "Você" sempre conta como estando no seu próprio grupo. Pra qualquer outro nome,
-    // só vale enquanto o último sinal (229/240) não passou do timeout — assim, se você
-    // for expulso sem o app ver o 182 (só vimos disparar do lado de quem expulsa), o
-    // filtro se autocorrige em até 60s em vez de prender alguém pra sempre na lista.
+    // só vale enquanto o último PartyMemberStatus (104) daquele jogador não passou do
+    // timeout. É esse prazo que faz as vezes do evento de saída que não temos: quem sai
+    // ou é expulso some da lista em até 60s, em vez de ficar preso nela pra sempre.
     public static bool IsInParty(string name) =>
         name == SelfName || (_partyMembers.TryGetValue(name, out var last) && DateTime.UtcNow - last < PartyMemberTimeout);
 

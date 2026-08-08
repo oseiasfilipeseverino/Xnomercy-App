@@ -15,7 +15,25 @@ namespace XnomercyApp.Network;
 /// </summary>
 public static class GameEventCodes
 {
-    public const int Unknown = -1;
+    // NÃO troque por -1. O PhotonEvent.EventCode devolve -1 pra todo pacote SEM o
+    // parâmetro 252 — os eventos internos de transporte do Photon, que chegam o tempo
+    // todo durante a captura.
+    //
+    // Enquanto Unknown era -1, "não calibrado" e "não é evento do jogo" eram o MESMO
+    // número, e toda comparação `evt.EventCode == GameEventCodes.<não calibrado>`
+    // casava com o tráfego de transporte inteiro. Marcar um código como desconhecido
+    // não o desligava — ligava ele em tudo. Dois lugares pagavam por isso:
+    //
+    //   PlayerRegistry (PartyInviteAccepted): qualquer pacote de transporte com
+    //   [0]=texto e [1]=true entrava no roster do grupo como se fosse um jogador.
+    //
+    //   MainWindow.Captura (LootPickupEquipment): todo pacote de transporte era
+    //   marcado "🎯 POSSÍVEL LOOT" e empurrado pra lista de eventos marcados —
+    //   justamente a tela usada pra calibrar os códigos.
+    //
+    // int.MinValue não é alcançável pelo parser (o código real vem de um short),
+    // então o sentinela volta a significar só uma coisa.
+    public const int Unknown = int.MinValue;
 
     // OtherGrabbedLoot (GrabbedLootEvent) — o feed social de loot: quem pegou o quê
     // de quem. É a fonte certa pro Loot Log (NewSimpleItem só vê o próprio inventário).
