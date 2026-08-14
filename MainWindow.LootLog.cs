@@ -108,11 +108,55 @@ public partial class MainWindow
             && (PlayerRegistry.OwnGuild.Length == 0 || PlayerRegistry.GuildOfName(r.Looter) != PlayerRegistry.OwnGuild))
             return false;
         // "Só meu grupo": idem, mas usando o rastreamento de grupo (229/240/182).
+        // Com o roster vazio isto esconde TUDO. Ver AtualizarRotuloDoGrupo: o
+        // rótulo da caixa avisa quando não há ninguém detectado, senão a tela em
+        // branco é indistinguível de "não caiu loot".
         if (ChkPartyOnlyLoot.IsChecked == true && !PlayerRegistry.IsInParty(r.Looter)) return false;
         return true;
     }
 
-    private void LootFilter_Changed(object sender, RoutedEventArgs e) => _lootFeedView?.Refresh();
+    private void LootFilter_Changed(object sender, RoutedEventArgs e)
+    {
+        _lootFeedView?.Refresh();
+        AtualizarRotuloDoGrupo();
+    }
+
+    /// <summary>Mostra no rótulo das caixas quantos do grupo o app conhece.</summary>
+    /// <remarks>
+    /// Em 14/08 o Loot Log ficou em branco com "Só meu grupo" marcado e a captura
+    /// funcionando (8.508 eventos decodificados). Não havia como saber, olhando o
+    /// app, se não tinha caído loot ou se o roster estava vazio — o filtro
+    /// escondia tudo sem dizer nada.
+    ///
+    /// E roster vazio é o caso NORMAL quando a captura começa com o grupo já
+    /// formado: o servidor anuncia companheiro na ENTRADA, e quem já estava lá
+    /// não é anunciado de novo. Este rótulo transforma um app "quebrado" numa
+    /// instrução.
+    /// </remarks>
+    private void AtualizarRotuloDoGrupo()
+    {
+        int n = PlayerRegistry.MembrosNoGrupo();
+        object alvo = "Só meu grupo" + (n > 0 ? $" ({n})" : " — ninguém detectado");
+
+        if (!Equals(ChkPartyOnlyLoot.Content, alvo)) ChkPartyOnlyLoot.Content = alvo;
+        if (!Equals(ChkPartyOnlyDamage.Content, alvo)) ChkPartyOnlyDamage.Content = alvo;
+
+        // Só explica quando o filtro está LIGADO e não há ninguém: aí a lista
+        // vazia é consequência do filtro, não do jogo.
+        bool avisar = n == 0 && (ChkPartyOnlyLoot.IsChecked == true
+                                 || ChkPartyOnlyDamage.IsChecked == true);
+        string dica = avisar
+            ? "O filtro de grupo está ligado e o app não detectou ninguém — por isso a "
+              + "lista está vazia.\n\nO jogo só anuncia companheiro na ENTRADA do grupo: "
+              + "ligue a captura ANTES de formar o grupo, ou desmarque esta caixa."
+            : "";
+        object? tt = string.IsNullOrEmpty(dica) ? null : dica;
+        if (!Equals(ChkPartyOnlyLoot.ToolTip, tt))
+        {
+            ChkPartyOnlyLoot.ToolTip = tt;
+            ChkPartyOnlyDamage.ToolTip = tt;
+        }
+    }
 
     // Limpa o feed limpo e o modo avançado (eventos crus + marcados) — não para a
     // captura, só esvazia o que já foi mostrado, igual o "Reiniciar sessão" do Medidor.

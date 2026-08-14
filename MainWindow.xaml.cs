@@ -379,6 +379,7 @@ public partial class MainWindow : Window
         {
             if (_fameDirty) { _fameDirty = false; RefreshFamePanel(); }
             if (_damageDirty) { _damageDirty = false; RefreshDamagePanel(); }
+            AtualizarRotuloDoGrupo();
         };
         uiTimer.Start();
 

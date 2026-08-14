@@ -453,6 +453,27 @@ public static class PlayerRegistry
 
     public static bool IsInPartyById(long objectId) => objectId == SelfObjectId || IsInParty(NameOf(objectId));
 
+    /// <summary>Quantos companheiros de grupo (fora você) estão dentro do prazo.</summary>
+    /// <remarks>
+    /// Existe pra tela poder DIZER que o grupo está vazio. Em 14/08 o Oseias
+    /// ficou com o Loot Log em branco com "Só meu grupo" marcado, e não havia
+    /// como saber, olhando o app, se não tinha loot ou se o roster não tinha
+    /// ninguém — o filtro escondia tudo calado.
+    ///
+    /// O roster só se monta com a captura LIGADA no momento em que alguém entra
+    /// no grupo. Quem já estava lá antes de a captura começar nunca é anunciado
+    /// pelo servidor de novo, então o filtro fica vazio pra sempre naquela
+    /// sessão. Sem esta contagem, isso é indistinguível de "não caiu loot".
+    /// </remarks>
+    public static int MembrosNoGrupo()
+    {
+        var agora = DateTime.UtcNow;
+        int n = 0;
+        foreach (var kv in _partyMembers)
+            if (agora - kv.Value < PartyMemberTimeout) n++;
+        return n;
+    }
+
     private static void RegisterMob(long id)
     {
         _mobs[id] = 1;
