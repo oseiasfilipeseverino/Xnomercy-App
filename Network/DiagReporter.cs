@@ -68,6 +68,21 @@ public static class DiagReporter
             ("party_diag.txt", "party_diag"),
             ("errors.log", "errors"),
         };
+        // ── Um envio, não seis ───────────────────────────────────────────────
+        // Antes cada arquivo virava um POST, e cada POST virava um ANEXO separado
+        // no Discord. Com 6 arquivos por sessão e vários testadores, o Oseias
+        // ficava baixando anexo por anexo pra conseguir ler qualquer coisa —
+        // "está difícil juntar tudo, baixar um a um" (22/08).
+        //
+        // Agora os 6 são rotacionados, lidos e emendados num arquivo só, com
+        // cabeçalho de sessão e um separador por trecho. Uma sessão = um anexo.
+        // O conteúdo é o mesmo; o que muda é quantas vezes é preciso clicar.
+        //
+        // A rotação continua igual e continua sendo por arquivo: renomeia pra
+        // .sending ANTES de ler, e a captura segue gravando num arquivo novo e
+        // vazio. Antes era ler -> enviar -> esvaziar, e como o envio leva até
+        // 10s, tudo gravado nessa janela era apagado sem nunca ter sido enviado.
+        var staged = new List<(string Staging, string Kind, string Content)>();
         foreach (var (file, kind) in files)
         {
             try
@@ -75,15 +90,6 @@ public static class DiagReporter
                 var path = System.IO.Path.Combine(dir, file);
                 if (!System.IO.File.Exists(path)) continue;
 
-                // Rotaciona ANTES de ler: renomeia pra .sending e deixa a captura
-                // seguir gravando num arquivo novo e vazio.
-                //
-                // Antes era ler -> enviar -> WriteAllText(path, "") pra esvaziar.
-                // O envio leva até 10s, e se a captura ainda estivesse rodando
-                // nesse meio-tempo (acontece ao sair do app com a captura ligada),
-                // tudo que fosse gravado nessa janela era APAGADO junto sem nunca
-                // ter sido enviado — perda silenciosa justamente dos dados de
-                // calibração que a gente quer receber.
                 var staging = path + ".sending";
                 try
                 {
@@ -111,16 +117,40 @@ public static class DiagReporter
                     try { System.IO.File.Delete(staging); } catch { }
                     continue;
                 }
-
-                bool ok = await SendAsync(kind, content);
-                if (ok)
-                {
-                    try { System.IO.File.Delete(staging); } catch { }
-                }
-                // Se falhou, o .sending fica no disco e é reenviado na próxima
-                // tentativa (ver o merge logo acima) — nada se perde.
+                staged.Add((staging, kind, content));
             }
             catch (Exception e) { LogLocal($"erro ao processar {file}: {e.Message}"); }
+        }
+
+        if (staged.Count == 0) return;
+
+        var sb = new StringBuilder();
+        sb.Append("========================================================\n");
+        sb.Append($"sessao {DateTime.Now:yyyy-MM-dd HH:mm:ss}  app {AppVersion}\n");
+        sb.Append($"{staged.Count} trecho(s): {string.Join(", ", staged.Select(s => s.Kind))}\n");
+        sb.Append("========================================================\n");
+        foreach (var (_, kind, content) in staged)
+        {
+            sb.Append($"\n\n===== {kind} ({content.Length} chars) =====\n");
+            sb.Append(content);
+            if (!content.EndsWith("\n")) sb.Append('\n');
+        }
+
+        bool ok = await SendAsync("sessao", sb.ToString());
+        if (ok)
+        {
+            // Só apaga DEPOIS de o envio confirmar. Falhando, os .sending ficam
+            // no disco e são emendados na próxima abertura (ver o merge acima) —
+            // nada se perde, e o arquivo seguinte vem com as duas sessões.
+            foreach (var (staging, _, _) in staged)
+            {
+                try { System.IO.File.Delete(staging); } catch { }
+            }
+        }
+        else
+        {
+            LogLocal($"sessao com {staged.Count} trecho(s) nao foi enviada — "
+                     + "os .sending ficaram pra proxima abertura");
         }
     }
 
