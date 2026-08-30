@@ -588,9 +588,17 @@ public sealed class PacketCaptureService : IDisposable
         // Ignora ruído de alto volume que afoga o log (e estoura o teto antes da operação
         // de grupo aparecer): op 22 = seu próprio movimento (várias/seg). E op 300 =
         // telemetria de hardware (GPU/CPU/OS), fora do escopo combinado.
+        // O código REAL da operação vem no parâmetro 253 — o OperationCode do header
+        // é sempre 1 no Albion. O PartyCalibrationLog já lia certo; este aqui rotulava
+        // com o `opCode` do header, e por isso as 3.413 linhas de ops_diag das capturas
+        // de 27-29/08 saíram TODAS como "op=1". O dado estava na linha o tempo todo,
+        // mas não dava pra filtrar nem agrupar por operação — que é justamente o que
+        // este arquivo existe pra permitir.
+        int real = -1;
         if (parms.TryGetValue(253, out var rc) && rc is not null)
         {
-            try { int real = Convert.ToInt32(rc); if (real == 22 || real == 300) return; } catch { }
+            try { real = Convert.ToInt32(rc); } catch { real = -1; }
+            if (real == 22 || real == 300) return;
         }
         lock (_opDiagLock)
         {
@@ -602,8 +610,13 @@ public sealed class PacketCaptureService : IDisposable
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp");
                 System.IO.Directory.CreateDirectory(dir);
                 var text = string.Join(" ", parms.OrderBy(k => k.Key).Select(kv => $"[{kv.Key}]={OpVal(kv.Value)}"));
+                // O horário entrou junto: sem ele, e como o arquivo acumula entre
+                // execuções, não dava pra cruzar uma operação com "eu estava em grupo
+                // às 20:05" — que é a única forma de confirmar o roster de verdade.
+                // Mesma correção que o named_events_diag já tinha recebido em 07/08.
+                var rotulo = real >= 0 ? real.ToString() : $"?{opCode}";
                 System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "ops_diag.txt"),
-                    $"{kind} op={opCode} {text}\n");
+                    $"[{DateTime.Now:HH:mm:ss}] {kind} op={rotulo} {text}\n");
             }
             catch { }
         }

@@ -40,6 +40,19 @@ public static class PartyCalibrationLog
         // batia o teto de 25 sozinho, e os três juntos comiam um oitavo do
         // orçamento total do arquivo sem informação nenhuma sobre grupo.
         1, 11, 21, 22, 45, 98, 361, 602,
+
+        // Acrescentados em 29/08 depois de medir as 33.807 linhas de 27-29/08.
+        // Todos foram investigados nominalmente e NÃO são grupo — deixá-los
+        // entrando só consome o orçamento do arquivo que existe pra achar o que
+        // ainda falta:
+        104,  // entrada no alcance de renderização (2.990 linhas, 81 nomes
+              // distintos, um a cada 2s, cada um repetindo 20-44x)
+        182,  // movimento (coordenadas + nome, 339 linhas)
+        619,  // troféu de kill na ilha (UNIQUE_FURNITUREITEM_KILLTROPHY_*)
+        210,  // lista de acesso de baú/ilha (nome + owner/noaccess/visitor)
+        140,  // {aliança, guild}
+        144, 145, 146, 147,   // ranking/leaderboard (arrays de 20+ nomes)
+        285, 393, 598,        // eventos sazonais / baús / jornal
     };
 
     // Códigos que NUNCA são cortados, nem pelo teto por código nem pelo total.
@@ -47,9 +60,16 @@ public static class PartyCalibrationLog
     // dividir orçamento com sync de posição, perde sempre.
     private static readonly HashSet<int> PrioridadeEventos = new()
     {
-        104,  // PartyMemberStatus — o único que monta o roster hoje
-        182,  // era o "saiu do grupo"; a captura mostrou ser movimento. Fica em
-              // observação porque carrega nome e ainda não foi explicado.
+        // 104 e 182 SAÍRAM daqui em 29/08. Os dois estão explicados e descartados —
+        // 104 é entrada no alcance de renderização (81 nomes distintos numa captura,
+        // um a cada 2s), 182 é movimento. Gastavam a cota de prioridade justamente
+        // pra garantir espaço ao evento raro que ainda não foi achado: das 33.807
+        // linhas capturadas em 27-29/08, mais de 3.300 eram esses dois.
+        //
+        // A lista fica VAZIA de propósito. Priorizar código descartado é pior que
+        // não priorizar nada: dá a impressão de que a busca está coberta enquanto
+        // o orçamento vai todo pro ruído já conhecido. Quando houver um candidato
+        // com evidência (nome certo, janela de tempo certa), ele entra aqui.
     };
 
     // Operações de alto volume: 24 = movimento do próprio personagem, 22 = idem,

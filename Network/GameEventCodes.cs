@@ -103,19 +103,49 @@ public static class GameEventCodes
     // cada membro que entra.
     public static int PartyInviteAccepted { get; set; } = Unknown;
 
-    // PartyMemberStatus: entrada de membro no grupo.
-    //   [0]=uuid  [1]=nome  [2]=True  [3]=timestamp
+    // PartyMemberStatus: entrada de membro no grupo. NÃO CALIBRADO.
     //
-    // RECALIBRADO em 07/08/2026 com 1.800 linhas de captura real (3 sessões).
-    // Estava mapeado como 229, que NÃO APARECE uma única vez nos dados — nem o
-    // 240 do PartyInviteAccepted. O roster nunca era montado, em silêncio.
+    // Esteve em 104 de 07/08 a 29/08/2026, e 104 ESTÁ ERRADO. A captura de 27-29/08
+    // (33.807 linhas, 15 sessões, 3 máquinas) mostra o que ele é de verdade:
     //
-    // A prova de que 104 é o certo está na composição: na sessão das 22:58 os 10
-    // nomes emitidos são exatamente membros da XnoMercy que estavam na CTA
-    // (SirTrovao, PretinhaDMacumba, Shakgusha, SushlLover, BestinhaCR7, Carabit6,
-    // OttoMikelekethh, Xovonska, Montagus, Leanziin). Numa outra sessão, outro
-    // grupo coerente. Não é gente passando na tela — é composição.
-    public static int PartyMemberStatus { get; set; } = 104;
+    //     2.990 linhas, 81 nomes DISTINTOS, um a cada ~2 segundos,
+    //     cada nome repetindo 20-44 vezes
+    //
+    //     19:27:34 code=104 [1]="TilapiaBeisuda"
+    //     19:27:36 code=104 [1]="ThiagoCabralz"
+    //     19:27:38 code=104 [1]="Mathzz13"
+    //
+    // Grupo de 81 pessoas que fica re-adicionando os mesmos nomes não existe. É
+    // jogador entrando no ALCANCE DE RENDERIZAÇÃO. Era isso que enchia a lista
+    // "Só meu grupo" de estranhos.
+    //
+    // A justificativa antiga era: "na sessão das 22:58 os 10 nomes são exatamente
+    // membros da XnoMercy que estavam na CTA". O argumento parecia forte e era
+    // circular — numa CTA, quem está PERTO de você são seus companheiros de guild.
+    // Proximidade e composição de grupo têm exatamente a mesma cara ali. Uma
+    // sessão pequena não distingue as duas; 81 nomes distingue na hora.
+    //
+    // Fica Unknown de propósito. O filtro passa a dizer "ninguém detectado" (ver
+    // MainWindow.LootLog.AtualizarRotuloDoGrupo) em vez de apresentar 81 estranhos
+    // como se fossem o seu grupo. Uma lista errada com cara de certa é pior que
+    // lista nenhuma — é a razão de metade das correções deste repositório.
+    //
+    // PRA CALIBRAR DE VERDADE é preciso uma captura com contexto: alguém em grupo
+    // que anote "estava com fulano e sicrano das 20:00 às 20:10". Aí o código de
+    // grupo é o que emite ESSES nomes NESSA janela e mais ninguém. Sem o horário
+    // anotado do lado de fora, qualquer código que emita nome de guildmate passa
+    // por candidato — foi assim que o 104 entrou.
+    //
+    // JÁ DESCARTADOS, pra ninguém refazer o caminho:
+    //   104  proximidade (81 nomes, acima)
+    //   182  movimento (coordenadas x,y + nome, dezenas de repetições)
+    //   619  troféu de kill na ilha (UNIQUE_FURNITUREITEM_KILLTROPHY_*)
+    //   210  lista de acesso de baú/ilha (nome + owner/noaccess/visitor)
+    //   140  {aliança, guild}
+    //   144-147  ranking/leaderboard (arrays de 20+ nomes com repetição)
+    //   op 2  o Join do PRÓPRIO jogador — é de onde sai o SelfName
+    //         (uma sessão inteira só tem UM nome nele; grupo teria vários)
+    public static int PartyMemberStatus { get; set; } = Unknown;
 
     // PartyMemberLeft: NÃO CALIBRADO.
     //

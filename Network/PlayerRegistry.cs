@@ -225,7 +225,18 @@ public static class PlayerRegistry
             }
             return;
         }
-        if (evt.EventCode == GameEventCodes.PartyMemberStatus)
+        // IsCalibrated na frente, como nos outros dois blocos de party. Era o único
+        // sem a guarda: enquanto PartyMemberStatus valia 104 isso não fazia diferença,
+        // mas em 29/08 ele voltou pra Unknown (104 é proximidade, não grupo — ver
+        // GameEventCodes) e sem a guarda este bloco viraria a armadilha que o próprio
+        // comentário do Unknown descreve: se alguém devolvesse o sentinela pra -1,
+        // TODO pacote de transporte do Photon casaria aqui e o roster voltaria a se
+        // encher de gente que só passou na tela.
+        //
+        // O índice [1]=nome é herança do 104 e NÃO vale pro evento real de grupo,
+        // que ainda não foi encontrado. Conferir antes de tirar o Unknown.
+        if (GameEventCodes.IsCalibrated(GameEventCodes.PartyMemberStatus)
+            && evt.EventCode == GameEventCodes.PartyMemberStatus)
         {
             if (evt.Parameters.TryGetValue(1, out var p2) && p2 is string statusName && statusName.Length > 0)
             {

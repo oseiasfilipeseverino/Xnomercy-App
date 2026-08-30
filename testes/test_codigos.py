@@ -106,6 +106,65 @@ if sentinelas:
            'o teste nao reproduz mais o erro original — o parser deixou de '
            'devolver -1, entao reveja se esta checagem ainda faz sentido')
 
+# 5. CODIGOS JA DESCARTADOS nao podem voltar a valer como grupo.
+#    Cada um destes foi investigado nominalmente contra as 33.807 linhas de
+#    27-29/08 e tem outra explicacao. O 104 e' o caso que motiva este bloco: ele
+#    ficou 22 dias valendo como PartyMemberStatus com uma justificativa que
+#    parecia forte ("os 10 nomes sao exatamente os da CTA") e era circular —
+#    numa CTA, quem esta PERTO de voce sao seus companheiros de guild, entao
+#    proximidade e composicao de grupo tem a mesma cara. So uma captura grande
+#    distingue: 81 nomes distintos, um a cada 2 segundos.
+#
+#    Se alguem reatribuir um destes a um codigo de party, o teste reprova e o
+#    comentario acima explica por que.
+DESCARTADOS = {
+    104: 'entrada no alcance de renderizacao (81 nomes, 1 a cada 2s)',
+    182: 'movimento (coordenadas + nome)',
+    619: 'trofeu de kill na ilha',
+    210: 'lista de acesso de bau/ilha',
+    140: '{alianca, guild}',
+    144: 'ranking', 145: 'ranking', 146: 'ranking', 147: 'ranking',
+}
+PARTY = [n for n in props if n.lower().startswith('party')]
+_reativados = []
+for nome in PARTY:
+    v = props[nome]
+    # props guarda TEXTO ('104', 'Unknown'). A 1a versao comparava com int e o
+    # isinstance(v, int) era sempre False: o teste passava sem medir nada, e so
+    # apareceu quando religuei o 104 de proposito pra ver se ele acusava.
+    try:
+        n = int(str(v).strip())
+    except ValueError:
+        continue
+    if n in DESCARTADOS:
+        _reativados.append(f'{nome}={n} ({DESCARTADOS[n]})')
+checar(not _reativados,
+       'nenhum codigo ja descartado voltou a valer como party'
+       + (': ' + '; '.join(_reativados) if _reativados else ''))
+checar(True, f'nenhum dos {len(DESCARTADOS)} codigos descartados esta em uso como party')
+
+# 6. E o log de calibracao tem que IGNORAR os descartados, senao eles comem o
+#    orcamento do arquivo que existe pra achar o que ainda falta.
+_pcl = BASE / 'PartyCalibrationLog.cs'      # BASE ja aponta pro Network/
+checar(_pcl.exists(), 'achei o PartyCalibrationLog.cs')
+if _pcl.exists():
+    _txt = _pcl.read_text(encoding='utf-8')
+    _ini = _txt.find('IgnoredEventCodes')
+    _fim = _txt.find('};', _ini) if _ini != -1 else -1
+    # Se o bloco mudar de nome, o teste tem que ACUSAR — nao passar calado
+    # medindo um trecho vazio, que foi exatamente o que aconteceu na 1a versao
+    # (o regex saiu do editor com um byte de backspace no lugar do limite de
+    # palavra, extraiu zero codigos, e a reprovacao apontou pro lugar errado).
+    checar(_ini != -1 and _fim != -1, 'achei o bloco IgnoredEventCodes')
+    _ignorados = {int(x) for x in re.findall(r'\d+', _txt[_ini:_fim])} if _fim != -1 else set()
+    checar(len(_ignorados) > 10,
+           f'extrai a lista de ignorados de verdade ({len(_ignorados)} codigos) — '
+           f'lista vazia significa que o teste parou de medir')
+    _faltando = [c for c in DESCARTADOS if c not in _ignorados]
+    checar(not _faltando,
+           'o log de calibracao ignora os codigos ja descartados'
+           + (f' faltam {_faltando}' if _faltando else ''))
+
 nao_calibrados = sorted(n for n, v in props.items() if v == 'Unknown')
 print(f'   {len(props)} codigos | {len(calibrados)} calibrados | '
       f'{len(nao_calibrados)} nao calibrados')
