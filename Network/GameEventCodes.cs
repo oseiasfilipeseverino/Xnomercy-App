@@ -45,6 +45,39 @@ public static class GameEventCodes
     // nunca 277 (zero ocorrências de 277 em várias sessões de captura).
     public static int GrabbedLoot { get; set; } = 279;      // OtherGrabbedLoot
 
+    // PartyFameShare: MESMO código 279, outro FORMATO. Calibrado em 01/09/2026.
+    //
+    // O 279 chega de duas formas, e só uma é loot:
+    //
+    //   loot de mob      [0]=fonte [1]=@MOB_KEEPER_GIANT [2]=nome [4]=199 [5]=1
+    //   rateio de fama   [0]=fonte           [2]=nome [3]=True    [5]=12159299
+    //
+    // A segunda vem em RAJADA: no mesmo segundo, da mesma fonte, uma linha por
+    // pessoa, todas com o mesmo valor em [5]. Isso é o rateio de fama de uma
+    // morte — e no Albion fama é dividida com o SEU GRUPO, não com quem está por
+    // perto. É por isso que serve de roster.
+    //
+    // A PROVA, na captura de 01/09 (sessao 22), é a que os dois candidatos
+    // errados anteriores não teriam passado:
+    //
+    //     proximidade (code=104):  24 nomes
+    //     rateio      (code=279):  20 nomes
+    //     em comum:                 0
+    //
+    // Zero. As 20 pessoas que recebem o rateio não são NENHUMA das 24 que
+    // apareceram por perto. Bystander não recebe fama.
+    //
+    // E o conjunto é estável, que é o que um grupo faz e proximidade não:
+    //     sessao 24 e 25 — as MESMAS 20 pessoas em todas as rajadas
+    //     sessao 15/16/17 — as MESMAS 5 pessoas em 15 rajadas seguidas
+    //     sessao 26 — 18 estáveis, caindo pra 11 quando o grupo mudou
+    //
+    // 20 é o teto de grupo do Albion, e é onde as sessões cheias param.
+    //
+    // O 279 continua sendo GrabbedLoot também — quem consome tem que olhar o
+    // FORMATO, não só o código. Ver PlayerRegistry.EhRateioDeGrupo.
+    public static int PartyFameShare { get; set; } = 279;
+
     // NewSimpleItem: [0]=ObjectId [1]=índice do item (tipo) [2]=quantidade
     // [4]=valor estimado [7]=durabilidade. (Mantido só pro modo avançado/diagnóstico.)
     public static int LootPickup { get; set; } = 32;        // NewSimpleItem

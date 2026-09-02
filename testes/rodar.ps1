@@ -6,7 +6,7 @@
 $env:PYTHONIOENCODING = 'utf-8'
 
 $falhou = 0
-foreach ($t in 'test_xaml', 'test_codigos') {
+foreach ($t in 'test_xaml', 'test_codigos', 'test_grupo') {
     Write-Host "`n--- $t ---"
     python "$PSScriptRoot\$t.py"
     if ($LASTEXITCODE -ne 0) { $falhou++ }

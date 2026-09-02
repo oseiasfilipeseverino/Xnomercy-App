@@ -90,8 +90,37 @@ calibrados = {n: int(v) for n, v in props.items() if re.fullmatch(r'\d+', v)}
 repetidos = {}
 for nome, valor in calibrados.items():
     repetidos.setdefault(valor, []).append(nome)
-colisoes = {v: ns for v, ns in repetidos.items() if len(ns) > 1}
+
+# Compartilhamento DECLARADO: um mesmo codigo pode carregar formatos diferentes,
+# e ai dois nomes apontando pra ele e' correto — desde que quem consome saiba
+# distinguir os formatos. Fora desta lista, codigo repetido continua sendo erro:
+# quase sempre e' copiar/colar, e o sintoma e' um evento alimentar duas features
+# ao mesmo tempo em silencio.
+#
+# 279 carrega loot de mob E rateio de fama do grupo. Quem separa os dois e' o
+# PlayerRegistry.EhRateioDeGrupo, e o test_grupo cobre a separacao com linhas
+# reais das capturas.
+COMPARTILHADOS = {
+    279: ({'GrabbedLoot', 'PartyFameShare'},
+          'formatos diferentes, separados por EhRateioDeGrupo (ver test_grupo)'),
+}
+colisoes = {}
+for v, ns in repetidos.items():
+    if len(ns) <= 1:
+        continue
+    esperado = COMPARTILHADOS.get(v)
+    if esperado and set(ns) == esperado[0]:
+        continue                      # compartilhamento declarado, tudo bem
+    colisoes[v] = ns
 checar(not colisoes, f'codigos calibrados repetidos: {colisoes}')
+
+# A lista de compartilhados so vale se for EXATA: se alguem acrescentar um 3o
+# nome ao 279, tem que reprovar em vez de passar pela excecao.
+for v, (nomes_ok, _) in COMPARTILHADOS.items():
+    achados = set(repetidos.get(v, []))
+    checar(achados == nomes_ok,
+           f'o compartilhamento declarado de {v} bate com o codigo '
+           f'(esperado {sorted(nomes_ok)}, achei {sorted(achados)})')
 
 # 3. Codigo calibrado nao pode valer um sentinela do parser (mesmo problema do
 #    item 1, pela porta dos fundos: alguem escrever `= -1` na mao).

@@ -138,6 +138,30 @@ public static class PlayerRegistry
     /// Remover só quem passou do timeout resolve o crescimento sem esse risco:
     /// essas entradas já eram ignoradas na leitura (ver IsInParty).
     /// </remarks>
+    /// <summary>
+    /// O 279 chegou no formato de RATEIO DE FAMA (grupo) e não no de loot de mob?
+    ///
+    ///   loot de mob      [0]=fonte [1]=@MOB_KEEPER_GIANT [2]=nome [4]=199 [5]=1
+    ///   rateio de fama   [0]=fonte           [2]=nome [3]=True    [5]=12159299
+    ///
+    /// O que separa: o loot de mob traz [1] com o nome do mob e [4] com a
+    /// quantidade; o rateio não traz nenhum dos dois, e traz [3].
+    ///
+    /// Discriminar pela AUSÊNCIA de [1] sozinho seria frágil — um formato novo sem
+    /// [1] entraria como grupo. Por isso exige também o [3] presente e um [5]
+    /// grande: fama de rateio vem em milhões, quantidade de loot vem em unidades.
+    /// </summary>
+    private static bool EhRateioDeGrupo(PhotonEvent evt)
+    {
+        if (evt.Parameters.ContainsKey(1)) return false;    // tem mob = é loot
+        if (evt.Parameters.ContainsKey(4)) return false;    // tem quantidade = é loot
+        if (!evt.Parameters.ContainsKey(3)) return false;   // rateio sempre traz [3]
+        // [5] é o valor rateado. Na captura de 01/09 os menores foram ~345.000 e
+        // os maiores ~14 milhões; loot de mob traz 1. Mil é folga de sobra pros
+        // dois lados.
+        return evt.Parameters.TryGetValue(5, out var v) && ToLong(v) >= 1000;
+    }
+
     private static void MarcarNoGrupo(string nome)
     {
         var agora = DateTime.UtcNow;
@@ -225,6 +249,21 @@ public static class PlayerRegistry
             }
             return;
         }
+        // Rateio de fama do grupo (279 no formato de rateio, não no de loot).
+        // Calibrado em 01/09/2026 — ver GameEventCodes.PartyFameShare pra prova.
+        // Fica ANTES do PartyMemberStatus porque hoje é a ÚNICA fonte de roster
+        // que funciona; o 104 está Unknown desde que se mostrou proximidade.
+        if (GameEventCodes.IsCalibrated(GameEventCodes.PartyFameShare)
+            && evt.EventCode == GameEventCodes.PartyFameShare
+            && EhRateioDeGrupo(evt)
+            && evt.Parameters.TryGetValue(2, out var pf) && pf is string nomeRateio
+            && nomeRateio.Length > 0)
+        {
+            MarcarNoGrupo(nomeRateio);
+            // Sem return: o mesmo evento ainda é o feed de loot social, e quem
+            // consome GrabbedLoot precisa continuar recebendo.
+        }
+
         // IsCalibrated na frente, como nos outros dois blocos de party. Era o único
         // sem a guarda: enquanto PartyMemberStatus valia 104 isso não fazia diferença,
         // mas em 29/08 ele voltou pra Unknown (104 é proximidade, não grupo — ver
