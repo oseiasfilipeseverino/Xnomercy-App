@@ -116,16 +116,44 @@ public static class PlayerRegistry
 
     // Nome -> hora em que vimos o último sinal de que esse jogador está no SEU grupo.
     //
-    // Hoje quem alimenta isto é UM código só: o PartyMemberStatus (104), calibrado em
-    // 07/08 com captura real. Os outros dois candidatos (PartyInviteAccepted e
-    // PartyMemberLeft) estão Unknown e não disparam — ver GameEventCodes.
+    // Hoje quem alimenta isto é o rateio de fama (279 no formato de rateio),
+    // calibrado em 01/09 — ver GameEventCodes.PartyFameShare. O PartyMemberStatus
+    // (104) saiu: era proximidade, não grupo.
     //
-    // Ninguém é removido por evento, porque nenhum código de "saiu" está confirmado: a
-    // entrada expira em 60s na leitura (ver IsInParty), o que cobre saída e expulsão
-    // com atraso. A remoção física do dicionário é só higiene de memória e acontece em
+    // Ninguém é removido por evento, porque nenhum código de "saiu" está confirmado:
+    // a entrada expira na leitura (ver IsInParty), o que cobre saída e expulsão com
+    // atraso. A remoção física do dicionário é só higiene de memória e acontece em
     // MarcarNoGrupo, sempre depois desse mesmo prazo.
     private static readonly ConcurrentDictionary<string, DateTime> _partyMembers = new();
-    private static readonly TimeSpan PartyMemberTimeout = TimeSpan.FromSeconds(60);
+
+    // 120s, e o número é MEDIDO, não escolhido.
+    //
+    // O rateio de fama só inclui quem estava por perto na hora da morte — não é o
+    // roster completo do grupo. Quem ficou pra trás numa passagem, morreu, ou entrou
+    // em combate separado simplesmente não aparece naquela rajada, e reaparece na
+    // seguinte. Nas capturas de 01-05/09 o ShootingStarBR some e volta 4 vezes em 2
+    // minutos por isso — não entrou e saiu do grupo 4 vezes.
+    //
+    // Então a janela precisa cobrir o INTERVALO ENTRE APARIÇÕES da mesma pessoa.
+    // Medido sobre 928 intervalos reais das 8 capturas:
+    //
+    //     p50  6s      janela de  60s cobre 87,2%   <- era esta
+    //     p75  28s     janela de  90s cobre 95,4%
+    //     p90  68s     janela de 120s cobre 99,5%   <- e esta
+    //     p95  73s     janela de 180s cobre 100%
+    //     p99  95s
+    //
+    // Com 60s, 1 em cada 8 intervalos passava do prazo e a pessoa PISCAVA pra fora
+    // da lista estando no grupo — que é a queixa original ("o grupo continua sem
+    // aparecer sendo que o Lapreo está no meu grupo"), só que intermitente.
+    //
+    // O preço de 120s é que quem sai de verdade fica na lista até 2 minutos. Entre
+    // esconder o loot de um membro real e mostrar por 2 minutos o de quem saiu, o
+    // primeiro é pior: o filtro existe pra a pessoa VER o grupo dela.
+    //
+    // 180s cobriria 100%, mas o ganho sobre 120s é 0,5% e o custo é dobrar a
+    // permanência de quem saiu. Não vale.
+    private static readonly TimeSpan PartyMemberTimeout = TimeSpan.FromSeconds(120);
 
     /// <summary>
     /// Registra presença no grupo, podando o que já expirou.

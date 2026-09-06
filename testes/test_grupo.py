@@ -122,7 +122,11 @@ checar('ContainsKey(3)' in corpo, 'exige [3]')
 checar('1000' in corpo, 'exige valor grande em [5]')
 
 print('\n-- o rateio alimenta o roster, e nao rouba o loot')
-i_bloco = FONTE_REG.find('GameEventCodes.PartyFameShare')
+# Procura a LINHA DE CODIGO, nao qualquer mencao ao nome. A 1a versao usava
+# find('GameEventCodes.PartyFameShare') e passou a achar um COMENTARIO quando o
+# _partyMembers ganhou uma explicacao citando o mesmo nome — o teste reprovou
+# apontando pro lugar errado. Ancorar no `if (` amarra no codigo de verdade.
+i_bloco = FONTE_REG.find('if (GameEventCodes.IsCalibrated(GameEventCodes.PartyFameShare)')
 bloco = FONTE_REG[i_bloco:i_bloco + 900] if i_bloco != -1 else ''
 checar(i_bloco != -1, 'o bloco do PartyFameShare existe no HandleEvent')
 checar('MarcarNoGrupo' in bloco, 'e ele marca a pessoa no grupo')
@@ -132,6 +136,30 @@ checar('IsCalibrated' in bloco, 'com a guarda IsCalibrated, como os outros')
 depois = bloco[bloco.find('MarcarNoGrupo'):]
 checar('return;' not in depois.split('}')[0],
        'NAO da return — senao o feed de loot social pararia de receber o 279')
+
+print('\n-- a janela de expiracao cobre o intervalo REAL entre aparicoes')
+# O rateio so inclui quem estava por perto na hora da morte, entao a mesma
+# pessoa some e volta entre rajadas — nas capturas de 01-05/09 o ShootingStarBR
+# some e volta 4 vezes em 2 minutos sem ter saido do grupo. A janela precisa
+# cobrir esse intervalo, senao a pessoa PISCA pra fora da lista estando no
+# grupo, que e' a queixa original em forma intermitente.
+#
+# Medido sobre 928 intervalos reais das 8 capturas:
+#     p50 6s | p75 28s | p90 68s | p95 73s | p99 95s
+#     janela  60s cobre 87,2%  <- era esta
+#     janela 120s cobre 99,5%  <- e esta
+#     janela 180s cobre 100%   (ganho de 0,5% dobrando a permanencia de quem saiu)
+P90_MEDIDO, P99_MEDIDO = 68, 95
+m = re.search(r'PartyMemberTimeout = TimeSpan\.FromSeconds\((\d+)\)', FONTE_REG)
+checar(m is not None, 'achei a janela de expiracao')
+janela = int(m.group(1)) if m else 0
+checar(janela > P90_MEDIDO,
+       f'a janela ({janela}s) passa do p90 medido ({P90_MEDIDO}s)')
+checar(janela > P99_MEDIDO,
+       f'e do p99 ({P99_MEDIDO}s) — com 60s, 1 em cada 8 intervalos estourava')
+checar(janela <= 180,
+       f'mas nao passa de 180s ({janela}s): e o tempo que quem SAIU fica na '
+       f'lista, e acima disso o ganho de cobertura e menor que 0,5%')
 
 print('\n-- o 104 continua fora')
 m = re.search(r'PartyMemberStatus \{ get; set; \} = (\w+);', FONTE_COD)
