@@ -3,6 +3,10 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
+    <!-- testes/ tem um harness em C# (testes/harness_dano) com Program.cs próprio.
+         Sem excluir a pasta, o SDK pega todo .cs por padrão e o build do app ganha um
+         segundo Main() — quebra o release. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);testes/**</DefaultItemExcludes>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>

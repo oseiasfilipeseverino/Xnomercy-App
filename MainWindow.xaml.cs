@@ -111,12 +111,38 @@ public sealed class DamageRowDisplay : System.ComponentModel.INotifyPropertyChan
     }
 }
 
-public sealed class DamageBySpellRowDisplay
+// Mesmo esquema da DamageRowDisplay: propriedades que avisam a tela, pra linha ser
+// ATUALIZADA no lugar em vez de recriada. Antes eram `init` e o painel inteiro era
+// limpo e remontado a cada refresh (350ms) enquanto alguém estava selecionado —
+// em combate a lista de habilidades piscava e voltava pro topo sem parar.
+public sealed class DamageBySpellRowDisplay : System.ComponentModel.INotifyPropertyChanged
 {
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+    private void Notify(string n) =>
+        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(n));
+
     public string Name { get; init; } = "";
-    public long Damage { get; init; }
-    public string DamagePct { get; init; } = "";
-    public double DamagePctValue { get; init; }
+
+    private long _damage;
+    public long Damage
+    {
+        get => _damage;
+        set { if (_damage != value) { _damage = value; Notify(nameof(Damage)); } }
+    }
+
+    private string _damagePct = "";
+    public string DamagePct
+    {
+        get => _damagePct;
+        set { if (_damagePct != value) { _damagePct = value; Notify(nameof(DamagePct)); } }
+    }
+
+    private double _damagePctValue;
+    public double DamagePctValue
+    {
+        get => _damagePctValue;
+        set { if (_damagePctValue != value) { _damagePctValue = value; Notify(nameof(DamagePctValue)); } }
+    }
 }
 
 public sealed class MobKillRowDisplay

@@ -52,8 +52,11 @@ public partial class MainWindow
             .Where(x => !guildOnly || x.Name == "Você"
                         || (PlayerRegistry.OwnGuild.Length > 0
                             && PlayerRegistry.GuildOfName(x.Name) == PlayerRegistry.OwnGuild))
-            // "Só meu grupo": rastreado via eventos de grupo calibrados (entrada por
-            // 229/240, saída por 182, com expiração de 60s como rede de segurança).
+            // "Só meu grupo": roster vem do rateio de fama (code 279 no formato de
+            // rateio, calibrado em 01/09), com expiração de 120s medida sobre 928
+            // intervalos reais — ver GameEventCodes.PartyFameShare e
+            // PlayerRegistry.PartyMemberTimeout. O comentário antigo daqui falava em
+            // 229/240/182 e 60s: códigos todos descartados, prazo errado.
             // x.Name == "Você" precisa passar explicitamente: a linha do proprio
             // jogador se chama literalmente "Você", nao o nome do personagem, entao
             // IsInParty("Você") comparava com SelfName e dava falso — o filtro
@@ -142,6 +145,7 @@ public partial class MainWindow
         else
         {
             _damageBySkillRows.Clear();
+            _skillPanelPlayer = null;   // reabrir o mesmo jogador remonta do zero
             PanelDamageBySkill.Visibility = Visibility.Collapsed;
         }
     }
@@ -158,22 +162,49 @@ public partial class MainWindow
         }
     }
 
+    // Quem está sendo mostrado no painel de habilidades agora. Trocar de jogador
+    // limpa o painel de propósito (as habilidades são outras); refresh do MESMO
+    // jogador atualiza no lugar.
+    private string? _skillPanelPlayer;
+
     private void RefreshDamageBySkillPanel(string playerName)
     {
         var bySpell = _damageTracker.SnapshotBySpell(playerName);
         long total = bySpell.Sum(x => x.Damage);
-        _damageBySkillRows.Clear();
-        foreach (var s in bySpell)
+
+        // Antes: Clear() e remontar tudo, a cada 350ms em combate. O painel piscava,
+        // a rolagem voltava pro topo e não dava pra ler a habilidade que se queria
+        // acompanhar. É o mesmo problema que a lista principal já tinha resolvido
+        // atualizando no lugar (ver RefreshDamagePanel) — este painel ficou pra trás.
+        if (_skillPanelPlayer != playerName)
         {
-            double pct = total > 0 ? s.Damage * 100.0 / total : 0;
-            _damageBySkillRows.Add(new DamageBySpellRowDisplay
-            {
-                Name = s.Name,
-                Damage = s.Damage,
-                DamagePct = pct.ToString("0.0") + "%",
-                DamagePctValue = pct,
-            });
+            _damageBySkillRows.Clear();
+            _skillPanelPlayer = playerName;
         }
+
+        var existentes = new Dictionary<string, DamageBySpellRowDisplay>(_damageBySkillRows.Count);
+        foreach (var r in _damageBySkillRows) existentes[r.Name] = r;
+
+        for (int i = 0; i < bySpell.Count; i++)
+        {
+            var s = bySpell[i];
+            double pct = total > 0 ? s.Damage * 100.0 / total : 0;
+            if (!existentes.TryGetValue(s.Name, out var row))
+            {
+                row = new DamageBySpellRowDisplay { Name = s.Name };
+                _damageBySkillRows.Insert(Math.Min(i, _damageBySkillRows.Count), row);
+            }
+            row.Damage = s.Damage;
+            row.DamagePct = pct.ToString("0.0") + "%";
+            row.DamagePctValue = pct;
+
+            int atual = _damageBySkillRows.IndexOf(row);
+            if (atual != i && i < _damageBySkillRows.Count) _damageBySkillRows.Move(atual, i);
+        }
+
+        var manter = new HashSet<string>(bySpell.Select(x => x.Name));
+        for (int i = _damageBySkillRows.Count - 1; i >= 0; i--)
+            if (!manter.Contains(_damageBySkillRows[i].Name)) _damageBySkillRows.RemoveAt(i);
     }
 
     // Liga/desliga "ocultar sem nome" — só redesenha (o filtro é aplicado no refresh).
