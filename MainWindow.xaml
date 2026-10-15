@@ -83,6 +83,36 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <!-- Textura "cota de malha", a mesma do site (opcao B, 15/10): aneis
+             entrelacados em dourado quase apagado sobre o fundo #131313. -->
+        <DrawingBrush x:Key="FundoMalha" TileMode="Tile" Viewport="0,0,22,22" ViewportUnits="Absolute" Viewbox="0,0,22,22" ViewboxUnits="Absolute">
+            <DrawingBrush.Drawing>
+                <DrawingGroup>
+                    <GeometryDrawing Brush="#131313"><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,22,22"/></GeometryDrawing.Geometry></GeometryDrawing>
+                    <GeometryDrawing Geometry="M7.5,0 A7.5,7.5 0 0 1 0,7.5 M14.5,0 A7.5,7.5 0 0 0 22,7.5 M0,14.5 A7.5,7.5 0 0 1 7.5,22 M22,14.5 A7.5,7.5 0 0 0 14.5,22 M18.5,11 A7.5,7.5 0 1 1 3.5,11 A7.5,7.5 0 1 1 18.5,11 Z">
+                        <GeometryDrawing.Pen><Pen Brush="#17c9a227" Thickness="1.4"/></GeometryDrawing.Pen>
+                    </GeometryDrawing>
+                </DrawingGroup>
+            </DrawingBrush.Drawing>
+        </DrawingBrush>
+        <!-- Icones desenhados (traco), no lugar dos emojis: emoji muda de cara
+             conforme a versao do Windows e nao segue a cor do tema. Grade 24x24. -->
+        <Geometry x:Key="IcoFama">M12,2.5 L14.9,8.6 L21.5,9.3 L16.6,13.8 L18,20.4 L12,17 L6,20.4 L7.4,13.8 L2.5,9.3 L9.1,8.6 Z</Geometry>
+        <Geometry x:Key="IcoLoot">M8,6 L21,6 M8,12 L21,12 M8,18 L21,18 M3,6 L4.5,6 M3,12 L4.5,12 M3,18 L4.5,18</Geometry>
+        <Geometry x:Key="IcoEspadas">M14.5,17.5 L3,6 L3,3 L6,3 L17.5,14.5 M13,19 L19,13 M16,16 L20,20 M19,21 L21,19 M14.5,6.5 L18,3 L21,3 L21,6 L17.5,9.5 M5,14 L9,18 M7,17 L4,20 M3,19 L5,21</Geometry>
+        <Geometry x:Key="IcoMartelo">M15,12 L6.5,20.5 A2.12,2.12 0 0 1 3.5,17.5 L12,9 M12,9 L15,12 M13,4 L20,11 L17.5,13.5 L10.5,6.5 Z</Geometry>
+        <Geometry x:Key="IcoRelogio">M21,12 A9,9 0 1 1 3,12 A9,9 0 1 1 21,12 Z M12,7 L12,12 L15.5,14</Geometry>
+        <Geometry x:Key="IcoCadeado">M5,11 L19,11 L19,21 L5,21 Z M8,11 L8,7.5 A4,4 0 0 1 16,7.5 L16,11 M12,15 L12,17</Geometry>
+        <Geometry x:Key="IcoPino">M12,21.5 C12,21.5 5,15 5,9.5 A7,7 0 0 1 19,9.5 C19,15 12,21.5 12,21.5 Z M14,9.5 A2,2 0 1 1 10,9.5 A2,2 0 1 1 14,9.5 Z</Geometry>
+        <Style x:Key="Ico" TargetType="Path">
+            <Setter Property="Stroke" Value="White"/>
+            <Setter Property="StrokeThickness" Value="1.8"/>
+            <Setter Property="StrokeLineJoin" Value="Round"/>
+            <Setter Property="StrokeStartLineCap" Value="Round"/>
+            <Setter Property="StrokeEndLineCap" Value="Round"/>
+            <Setter Property="Stretch" Value="Uniform"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
     </Window.Resources>
 
     <Grid>
@@ -130,19 +160,19 @@
                         </Border.Background>
                     </Border>
                     <Button x:Name="NavFame" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="fame">
-                        <StackPanel Orientation="Horizontal"><TextBlock Text="★" FontSize="13" Margin="0,0,10,0" VerticalAlignment="Center" Opacity=".45"/><TextBlock Text="Fama &amp; Prata" VerticalAlignment="Center"/></StackPanel>
+                        <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IcoFama}" Style="{StaticResource Ico}" Width="15" Height="15" Margin="0,0,10,0" Opacity=".55"/><TextBlock Text="Fama &amp; Prata" VerticalAlignment="Center"/></StackPanel>
                     </Button>
                     <Button x:Name="NavLoot" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="loot">
-                        <StackPanel Orientation="Horizontal"><TextBlock Text="▦" FontSize="13" Margin="0,0,10,0" VerticalAlignment="Center" Opacity=".45"/><TextBlock Text="Loot Log" VerticalAlignment="Center"/></StackPanel>
+                        <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IcoLoot}" Style="{StaticResource Ico}" Width="15" Height="15" Margin="0,0,10,0" Opacity=".55"/><TextBlock Text="Loot Log" VerticalAlignment="Center"/></StackPanel>
                     </Button>
                     <Button x:Name="NavDamage" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="damage">
-                        <StackPanel Orientation="Horizontal"><TextBlock Text="⚔" FontSize="13" Margin="0,0,10,0" VerticalAlignment="Center" Opacity=".45"/><TextBlock Text="Medidor de Dano" VerticalAlignment="Center"/></StackPanel>
+                        <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IcoEspadas}" Style="{StaticResource Ico}" Width="15" Height="15" Margin="0,0,10,0" Opacity=".55"/><TextBlock Text="Medidor de Dano" VerticalAlignment="Center"/></StackPanel>
                     </Button>
                     <Button x:Name="NavCraft" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="craft">
-                        <StackPanel Orientation="Horizontal"><TextBlock Text="⚒" FontSize="13" Margin="0,0,10,0" VerticalAlignment="Center" Opacity=".45"/><TextBlock Text="Craft" VerticalAlignment="Center"/></StackPanel>
+                        <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IcoMartelo}" Style="{StaticResource Ico}" Width="15" Height="15" Margin="0,0,10,0" Opacity=".55"/><TextBlock Text="Craft" VerticalAlignment="Center"/></StackPanel>
                     </Button>
                     <Button x:Name="NavSessions" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="sessions">
-                        <StackPanel Orientation="Horizontal"><TextBlock Text="🕘" FontSize="13" Margin="0,0,10,0" VerticalAlignment="Center" Opacity=".45"/><TextBlock Text="Sessões" VerticalAlignment="Center"/></StackPanel>
+                        <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IcoRelogio}" Style="{StaticResource Ico}" Width="15" Height="15" Margin="0,0,10,0" Opacity=".55"/><TextBlock Text="Sessões" VerticalAlignment="Center"/></StackPanel>
                     </Button>
                 </StackPanel>
                 <StackPanel x:Name="SidebarBottom" DockPanel.Dock="Bottom" Margin="22,0,22,18">
@@ -196,7 +226,7 @@
             <wv2:WebView2 x:Name="WebView" Visibility="Visible"/>
 
             <!-- Marca enquanto a tela de login do site carrega (some no 1º carregamento) -->
-            <Grid x:Name="LoginLoading" Background="#131313">
+            <Grid x:Name="LoginLoading" Background="{StaticResource FundoMalha}">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="420">
                     <TextBlock Text="XNOMERCY" FontFamily="{StaticResource FontHead}" FontSize="46" Foreground="#c9a227" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                     <TextBlock x:Name="TxtLoginLoadingStatus" Text="Carregando..." Foreground="#8CFFFFFF" FontSize="14" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" Margin="0,6,0,0"/>
@@ -205,7 +235,7 @@
 
             <!-- Pedido único de consentimento pro envio de diagnóstico (fase de teste).
                  Some pra sempre depois da 1ª resposta (ver ConsentStore). -->
-            <Grid x:Name="PanelConsent" Visibility="Collapsed" Background="#131313">
+            <Grid x:Name="PanelConsent" Visibility="Collapsed" Background="{StaticResource FundoMalha}">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520">
                     <TextBlock Text="XNOMERCY" FontFamily="{StaticResource FontHead}" FontSize="30" Foreground="#c9a227" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                     <TextBlock Foreground="#DEFFFFFF" FontSize="14" Margin="0,18,0,0" TextWrapping="Wrap" TextAlignment="Center"
@@ -221,7 +251,7 @@
                 </StackPanel>
             </Grid>
 
-            <Grid x:Name="PanelLoot" Visibility="Collapsed" Background="#131313">
+            <Grid x:Name="PanelLoot" Visibility="Collapsed" Background="{StaticResource FundoMalha}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -287,7 +317,7 @@
                 </ListView>
 
                 <!-- Modo avançado (oculto por padrão): dados brutos pra depuração -->
-                <Grid x:Name="PanelAdvanced" Grid.Row="1" Visibility="Collapsed" Background="#131313">
+                <Grid x:Name="PanelAdvanced" Grid.Row="1" Visibility="Collapsed" Background="{StaticResource FundoMalha}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto" MaxHeight="220"/>
@@ -297,8 +327,10 @@
                         <TextBlock Foreground="#8CFFFFFF" FontSize="12" TextWrapping="Wrap"
                                    Text="Mostrando todos os eventos de rede decodificados, sem filtro. Clique no botão dourado bem na hora que pegar o item — os eventos próximos ficam fixos na caixa verde abaixo."/>
                         <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                            <Button x:Name="BtnMarkMoment" Content="📍 Marquei o momento!" Click="BtnMarkMoment_Click"
-                                    Padding="14,6" Background="#c9a227" Foreground="Black" FontWeight="Bold" BorderThickness="0" Cursor="Hand"/>
+                            <Button x:Name="BtnMarkMoment" Click="BtnMarkMoment_Click"
+                                    Padding="14,6" Background="#c9a227" Foreground="Black" FontWeight="Bold" BorderThickness="0" Cursor="Hand">
+                                <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IcoPino}" Style="{StaticResource Ico}" Stroke="Black" Width="14" Height="14" Margin="0,0,6,0"/><TextBlock Text="Marquei o momento!"/></StackPanel>
+                            </Button>
                             <Button x:Name="BtnClearMarked" Content="Limpar marcados" Click="BtnClearMarked_Click"
                                     Padding="14,6" Background="#2e2e2e" Foreground="White" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"/>
                         </StackPanel>
@@ -310,7 +342,7 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
-                            <TextBlock Grid.Row="0" Text="📍 Eventos marcados (candidatos a loot)" Foreground="#4ade80" FontWeight="Bold" Margin="8,6,8,4"/>
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="8,6,8,4"><Path Data="{StaticResource IcoPino}" Style="{StaticResource Ico}" Stroke="#4ade80" Width="14" Height="14" Margin="0,0,6,0"/><TextBlock Text="Eventos marcados (candidatos a loot)" Foreground="#4ade80" FontWeight="Bold"/></StackPanel>
                             <ListView x:Name="ListMarkedEvents" Grid.Row="1" Background="Transparent" Foreground="White" BorderThickness="0" MaxHeight="180">
                                 <ListView.View>
                                     <GridView>
@@ -346,7 +378,7 @@
                 </Grid>
             </Grid>
 
-            <Grid x:Name="PanelDamage" Visibility="Collapsed" Background="#131313">
+            <Grid x:Name="PanelDamage" Visibility="Collapsed" Background="{StaticResource FundoMalha}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -446,9 +478,9 @@
             </Grid>
 
             <!-- Mostrado quando a conta de teste não tem permissão pra essa aba -->
-            <Grid x:Name="PanelBlocked" Visibility="Collapsed" Background="#131313">
+            <Grid x:Name="PanelBlocked" Visibility="Collapsed" Background="{StaticResource FundoMalha}">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="600">
-                    <TextBlock Text="🔒" FontSize="48" HorizontalAlignment="Center"/>
+                    <Path Data="{StaticResource IcoCadeado}" Style="{StaticResource Ico}" Stroke="#dc2626" StrokeThickness="2" Width="52" Height="52" HorizontalAlignment="Center"/>
                     <TextBlock Text="VOCÊ ESTÁ BLOQUEADO DE ACESSAR ESSA PARTE!" Foreground="#dc2626"
                                FontFamily="{StaticResource FontHead}" FontSize="30" FontWeight="SemiBold"
                                HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,16,0,0"/>
@@ -457,7 +489,7 @@
                 </StackPanel>
             </Grid>
 
-            <Grid x:Name="PanelFame" Visibility="Collapsed" Background="#131313">
+            <Grid x:Name="PanelFame" Visibility="Collapsed" Background="{StaticResource FundoMalha}">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <TextBlock Text="Fama &amp; Prata" Foreground="#c9a227" FontFamily="{StaticResource FontHead}" FontSize="32" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                     <TextBlock x:Name="TxtFameSessionStart" Foreground="#8CFFFFFF" FontSize="12" Margin="0,4,0,16" HorizontalAlignment="Center"/>
@@ -491,7 +523,7 @@
                              nome de quem deu o último hit = você. -->
                         <Border Background="#1b1b1b" CornerRadius="6" Padding="30,22" MinWidth="180">
                             <StackPanel>
-                                <TextBlock Text="⚔️" FontSize="28" HorizontalAlignment="Center"/>
+                                <Path Data="{StaticResource IcoEspadas}" Style="{StaticResource Ico}" Stroke="#86efac" Width="34" Height="34" HorizontalAlignment="Center"/>
                                 <TextBlock Text="MOBS MORTOS" Foreground="#8CFFFFFF" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
                                 <TextBlock x:Name="TxtMobKillsTotal" Text="0" Foreground="#86efac" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center"/>
                                 <TextBlock x:Name="TxtMobKillsPerHour" Text="0/hora" Foreground="#8CFFFFFF" FontSize="14" HorizontalAlignment="Center"/>
@@ -539,7 +571,7 @@
             <!-- Histórico local de sessões (Task #8) — um resumo é gravado toda vez que
                  a captura é parada (ver SaveSessionToHistory em MainWindow.xaml.cs).
                  Só local (SessionHistoryStore.cs), nada é enviado pro servidor. -->
-            <Grid x:Name="PanelSessions" Visibility="Collapsed" Background="#131313">
+            <Grid x:Name="PanelSessions" Visibility="Collapsed" Background="{StaticResource FundoMalha}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
