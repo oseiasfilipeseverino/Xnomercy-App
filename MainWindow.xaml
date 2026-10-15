@@ -130,19 +130,19 @@
                         </Border.Background>
                     </Border>
                     <Button x:Name="NavFame" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="fame">
-                        <StackPanel Orientation="Horizontal"><TextBlock Text="★" FontSize="11" Margin="0,0,10,0" VerticalAlignment="Center" Opacity=".45"/><TextBlock Text="Fama &amp; Prata" VerticalAlignment="Center"/></StackPanel>
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="★" FontSize="13" Margin="0,0,10,0" VerticalAlignment="Center" Opacity=".45"/><TextBlock Text="Fama &amp; Prata" VerticalAlignment="Center"/></StackPanel>
                     </Button>
                     <Button x:Name="NavLoot" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="loot">
-                        <StackPanel Orientation="Horizontal"><TextBlock Text="▦" FontSize="11" Margin="0,0,10,0" VerticalAlignment="Center" Opacity=".45"/><TextBlock Text="Loot Log" VerticalAlignment="Center"/></StackPanel>
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="▦" FontSize="13" Margin="0,0,10,0" VerticalAlignment="Center" Opacity=".45"/><TextBlock Text="Loot Log" VerticalAlignment="Center"/></StackPanel>
                     </Button>
                     <Button x:Name="NavDamage" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="damage">
-                        <StackPanel Orientation="Horizontal"><TextBlock Text="⚔" FontSize="11" Margin="0,0,10,0" VerticalAlignment="Center" Opacity=".45"/><TextBlock Text="Medidor de Dano" VerticalAlignment="Center"/></StackPanel>
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="⚔" FontSize="13" Margin="0,0,10,0" VerticalAlignment="Center" Opacity=".45"/><TextBlock Text="Medidor de Dano" VerticalAlignment="Center"/></StackPanel>
                     </Button>
                     <Button x:Name="NavCraft" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="craft">
-                        <StackPanel Orientation="Horizontal"><TextBlock Text="⚒" FontSize="11" Margin="0,0,10,0" VerticalAlignment="Center" Opacity=".45"/><TextBlock Text="Craft" VerticalAlignment="Center"/></StackPanel>
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="⚒" FontSize="13" Margin="0,0,10,0" VerticalAlignment="Center" Opacity=".45"/><TextBlock Text="Craft" VerticalAlignment="Center"/></StackPanel>
                     </Button>
                     <Button x:Name="NavSessions" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="sessions">
-                        <StackPanel Orientation="Horizontal"><TextBlock Text="🕘" FontSize="11" Margin="0,0,10,0" VerticalAlignment="Center" Opacity=".45"/><TextBlock Text="Sessões" VerticalAlignment="Center"/></StackPanel>
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="🕘" FontSize="13" Margin="0,0,10,0" VerticalAlignment="Center" Opacity=".45"/><TextBlock Text="Sessões" VerticalAlignment="Center"/></StackPanel>
                     </Button>
                 </StackPanel>
                 <StackPanel x:Name="SidebarBottom" DockPanel.Dock="Bottom" Margin="22,0,22,18">
@@ -183,7 +183,7 @@
                     <Border x:Name="PanelDungeonTimer" Visibility="Collapsed" Background="#1a1208" CornerRadius="6"
                             Padding="10,8" Margin="0,10,0,0">
                         <StackPanel>
-                            <TextBlock Text="ENTRADA DA DUNGEON FECHA EM" Foreground="#c9a227" FontSize="10" FontWeight="Bold"/>
+                            <TextBlock Text="ENTRADA DA DUNGEON FECHA EM" Foreground="#c9a227" FontSize="12" FontWeight="Bold"/>
                             <TextBlock x:Name="TxtDungeonTimer" Text="01:30" Foreground="White" FontFamily="{StaticResource FontHead}" FontSize="24" FontWeight="Bold"/>
                         </StackPanel>
                     </Border>
@@ -269,7 +269,7 @@
                                     <ColumnDefinition Width="26"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{Binding Time}" Foreground="#3d3d3d" FontSize="10"
+                                <TextBlock Grid.Column="0" Text="{Binding Time}" Foreground="#8a8a8a" FontSize="12"
                                            VerticalAlignment="Center" Margin="10,0,0,0"/>
                                 <Image Grid.Column="1" Source="{Binding ItemIcon}" Width="22" Height="22"
                                        VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
@@ -462,70 +462,68 @@
                     <TextBlock Text="Fama &amp; Prata" Foreground="#c9a227" FontFamily="{StaticResource FontHead}" FontSize="32" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                     <TextBlock x:Name="TxtFameSessionStart" Foreground="#8CFFFFFF" FontSize="12" Margin="0,4,0,16" HorizontalAlignment="Center"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <Border Background="#1b1b1b" CornerRadius="6" Padding="22,16" Margin="0,0,12,0">
+                        <Border Background="#1b1b1b" CornerRadius="6" Padding="30,22" MinWidth="180" Margin="0,0,12,0">
                             <StackPanel>
-                                <Image Source="Icons/fame.png" Width="26" Height="26" HorizontalAlignment="Center"/>
-                                <TextBlock Text="FAMA VERMELHA" Foreground="#8CFFFFFF" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
-                                <TextBlock x:Name="TxtFameTotal" Text="0" Foreground="#f87171" FontSize="26" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                <TextBlock x:Name="TxtFamePerHour" Text="0/hora" Foreground="#8CFFFFFF" FontSize="11" HorizontalAlignment="Center"/>
+                                <Image Source="Icons/fame.png" Width="34" Height="34" HorizontalAlignment="Center"/>
+                                <TextBlock Text="FAMA VERMELHA" Foreground="#8CFFFFFF" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                                <TextBlock x:Name="TxtFameTotal" Text="0" Foreground="#f87171" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtFamePerHour" Text="0/hora" Foreground="#8CFFFFFF" FontSize="14" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="#1b1b1b" CornerRadius="6" Padding="22,16" Margin="0,0,12,0">
+                        <Border Background="#1b1b1b" CornerRadius="6" Padding="30,22" MinWidth="180" Margin="0,0,12,0">
                             <StackPanel>
-                                <Image Source="Icons/yellow_fame.png" Width="26" Height="26" HorizontalAlignment="Center"/>
-                                <TextBlock Text="FAMA AMARELA" Foreground="#8CFFFFFF" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
-                                <TextBlock x:Name="TxtYellowFameTotal" Text="—" Foreground="#fde047" FontSize="26" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                <TextBlock x:Name="TxtYellowFamePerHour" Text="0/hora" Foreground="#8CFFFFFF" FontSize="11" HorizontalAlignment="Center"/>
+                                <Image Source="Icons/yellow_fame.png" Width="34" Height="34" HorizontalAlignment="Center"/>
+                                <TextBlock Text="FAMA AMARELA" Foreground="#8CFFFFFF" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                                <TextBlock x:Name="TxtYellowFameTotal" Text="—" Foreground="#fde047" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtYellowFamePerHour" Text="0/hora" Foreground="#8CFFFFFF" FontSize="14" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="#1b1b1b" CornerRadius="6" Padding="22,16" Margin="0,0,12,0">
+                        <Border Background="#1b1b1b" CornerRadius="6" Padding="30,22" MinWidth="180" Margin="0,0,12,0">
                             <StackPanel>
-                                <Image Source="Icons/silver.png" Width="26" Height="26" HorizontalAlignment="Center"/>
-                                <TextBlock Text="PRATA" Foreground="#8CFFFFFF" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
-                                <TextBlock x:Name="TxtSilverTotal" Text="0" Foreground="#e2e8f0" FontSize="26" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                <TextBlock x:Name="TxtSilverPerHour" Text="0/hora" Foreground="#8CFFFFFF" FontSize="11" HorizontalAlignment="Center"/>
+                                <Image Source="Icons/silver.png" Width="34" Height="34" HorizontalAlignment="Center"/>
+                                <TextBlock Text="PRATA" Foreground="#8CFFFFFF" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                                <TextBlock x:Name="TxtSilverTotal" Text="0" Foreground="#e2e8f0" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtSilverPerHour" Text="0/hora" Foreground="#8CFFFFFF" FontSize="14" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
                         <!-- Mobs mortos em mundo aberto (Task #2) — ver OpenWorldKillTracker.cs.
                              Conta pelo evento MobKilled (166), já calibrado, filtrando pelo
                              nome de quem deu o último hit = você. -->
-                        <Border Background="#1b1b1b" CornerRadius="6" Padding="22,16">
+                        <Border Background="#1b1b1b" CornerRadius="6" Padding="30,22" MinWidth="180">
                             <StackPanel>
-                                <TextBlock Text="⚔️" FontSize="22" HorizontalAlignment="Center"/>
-                                <TextBlock Text="MOBS MORTOS" Foreground="#8CFFFFFF" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
-                                <TextBlock x:Name="TxtMobKillsTotal" Text="0" Foreground="#86efac" FontSize="26" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                <TextBlock x:Name="TxtMobKillsPerHour" Text="0/hora" Foreground="#8CFFFFFF" FontSize="11" HorizontalAlignment="Center"/>
+                                <TextBlock Text="⚔️" FontSize="28" HorizontalAlignment="Center"/>
+                                <TextBlock Text="MOBS MORTOS" Foreground="#8CFFFFFF" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                                <TextBlock x:Name="TxtMobKillsTotal" Text="0" Foreground="#86efac" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtMobKillsPerHour" Text="0/hora" Foreground="#8CFFFFFF" FontSize="14" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
                     <Button x:Name="BtnFameReset" Content="Reiniciar sessão" Click="BtnFameReset_Click"
                             Padding="14,6" Margin="0,20,0,0" Background="#2e2e2e" Foreground="White" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="TxtFameHint" Foreground="#8CFFFFFF" FontSize="11" Margin="0,16,0,0" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="440"
-                               Text="Fama amarela (facção/standing) ainda em calibração — me diga de qual conteúdo ela vem pra eu achar o código."/>
 
                     <!-- Gráfico da sessão: evolução acumulada de fama e prata, amostrada
                          a cada minuto (ver _sessionSamples). Cada série é normalizada ao
                          próprio máximo — o formato mostra ONDE o farm rendeu, não compara
                          valor absoluto de fama contra prata. -->
-                    <Border x:Name="PanelSessionChart" Background="#1b1b1b" CornerRadius="6" Width="440"
+                    <Border x:Name="PanelSessionChart" Background="#1b1b1b" CornerRadius="6" Width="756"
                             Margin="0,20,0,0" Padding="12,10" Visibility="Collapsed">
                         <StackPanel>
                             <Grid Margin="0,0,0,6">
-                                <TextBlock Text="EVOLUÇÃO DA SESSÃO" Foreground="#8CFFFFFF" FontSize="10" FontWeight="Bold"/>
+                                <TextBlock Text="EVOLUÇÃO DA SESSÃO" Foreground="#8CFFFFFF" FontSize="12" FontWeight="Bold"/>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                                     <Rectangle Width="10" Height="3" Fill="#f87171" VerticalAlignment="Center"/>
-                                    <TextBlock Text="Fama" Foreground="#8CFFFFFF" FontSize="10" Margin="4,0,10,0"/>
+                                    <TextBlock Text="Fama" Foreground="#8CFFFFFF" FontSize="12" Margin="4,0,10,0"/>
                                     <Rectangle Width="10" Height="3" Fill="#e2e8f0" VerticalAlignment="Center"/>
-                                    <TextBlock Text="Prata" Foreground="#8CFFFFFF" FontSize="10" Margin="4,0,0,0"/>
+                                    <TextBlock Text="Prata" Foreground="#8CFFFFFF" FontSize="12" Margin="4,0,0,0"/>
                                 </StackPanel>
                             </Grid>
                             <Canvas x:Name="SessionChartCanvas" Height="90" Width="416" ClipToBounds="True"/>
-                            <TextBlock x:Name="TxtSessionChartHint" Text="" Foreground="#57FFFFFF" FontSize="10" Margin="0,4,0,0"/>
+                            <TextBlock x:Name="TxtSessionChartHint" Text="" Foreground="#57FFFFFF" FontSize="12" Margin="0,4,0,0"/>
                         </StackPanel>
                     </Border>
 
                     <!-- Quebra de mobs mortos por tipo — só aparece depois do 1º kill. -->
-                    <ListView x:Name="ListMobKills" Margin="0,20,0,0" MaxHeight="220" Width="440"
+                    <ListView x:Name="ListMobKills" Margin="0,20,0,0" MaxHeight="220" Width="756"
                               Background="#1b1b1b" Foreground="White" BorderThickness="0">
                         <ListView.View>
                             <GridView>
