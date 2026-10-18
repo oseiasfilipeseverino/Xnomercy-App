@@ -208,5 +208,41 @@ public static class GameEventCodes
     // MarcarNoGrupo já limpa quem parou de aparecer.
     public static int PartyMemberLeft { get; set; } = Unknown;
 
+    // Leave (SAT 1): [0]=ObjectId — o objeto saiu da sua tela (jogador, mob, item).
+    // Usado desde 18/10/2026 pra esquecer o nome de quem saiu: o jogo reaproveita o
+    // número, e sem isso o próximo dono herdava o nome antigo.
+    public static int Leave { get; set; } = 1;
+
+    // HarvestFinished (SAT 61): coleta concluída — ver GatheringTracker.
+    public static int HarvestFinished { get; set; } = 61;
+
+    /// <summary>
+    /// Desloca os números BAIXOS quando um patch insere evento no começo da lista
+    /// (ver EventOffset.ObserveBaixo). Duas faixas, cada uma com a sua âncora:
+    ///   faixa do dano (até 28) ........ âncora HealthUpdates (SAT 7)
+    ///   faixa de nomes/fama/prata/mob . âncora NewCharacter (SAT 29)
+    /// Os valores-base são os da lista do SAT, que bate com o jogo até ~123.
+    /// </summary>
+    public static void AplicarDeltasBaixos(int dano, int nomes)
+    {
+        Leave = 1 + dano;
+        HealthUpdate = 6 + dano;
+        HealthUpdates = 7 + dano;
+
+        NewCharacter = 29 + nomes;
+        Move = 30 + nomes;
+        LootPickup = 32 + nomes;
+        HarvestFinished = 61 + nomes;
+        SilverTaken = 62 + nomes;
+        MobSpeak = 74 + nomes;
+        SilverGain = 81 + nomes;
+        FameGain = 82 + nomes;
+        YellowFame = 84 + nomes;
+        CharacterEquipmentChanged = 90 + nomes;
+        RegenerationHealthChanged = 91 + nomes;
+        RegenerationPlayerCombo = 96 + nomes;
+        NewMob = 123 + nomes;
+    }
+
     public static bool IsCalibrated(int code) => code != Unknown;
 }

@@ -18,7 +18,8 @@ namespace XnomercyApp.Network;
 /// </summary>
 public sealed class GatheringTracker
 {
-    public const int HarvestFinished = 61;
+    // Número vivo (segue a calibração automática — ver EventOffset.ObserveBaixo).
+    public static int HarvestFinished => GameEventCodes.HarvestFinished;
 
     public sealed class Linha
     {

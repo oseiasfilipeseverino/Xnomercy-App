@@ -91,12 +91,11 @@ public partial class MainWindow
             else
             {
                 var info = PlayerRegistry.Get(e.LastObjectId);
-                if (info != null && info.MainHand >= 0)
-                {
-                    var uniq = ItemCatalog.GetUniqueName(info.MainHand);
-                    if (!string.IsNullOrEmpty(uniq))
-                        icon = $"https://render.albiononline.com/v1/item/{uniq}.png?size=64";
-                }
+                // Quem saiu da tela não tem mais o número (Leave): a arma vem do último
+                // equipamento visto pelo nome.
+                var uniq = info != null && info.MainHand > 0 ? ItemCatalog.GetUniqueName(info.MainHand) : GroupGear.ArmaPorNome(e.Name);
+                if (!string.IsNullOrEmpty(uniq))
+                    icon = $"https://render.albiononline.com/v1/item/{uniq}.png?size=64";
             }
             double pct = total > 0 ? e.Damage * 100.0 / total : 0;
 

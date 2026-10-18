@@ -211,6 +211,21 @@ public static class PlayerRegistry
 
     public static void HandleEvent(PhotonEvent evt)
     {
+        // Saiu da tela (Leave, SAT 1: [0]=ObjectId). O jogo REAPROVEITA o número pra
+        // outra coisa que entrar depois — sem esquecer aqui, o próximo dono do número
+        // herdava o nome (e o dano dele ia pra linha de quem já tinha saído) ou ficava
+        // marcado como mob. Desde 18/10/2026. Você mesmo nunca é esquecido.
+        if (evt.EventCode == GameEventCodes.Leave)
+        {
+            if (evt.Parameters.Count <= 3 && evt.Parameters.TryGetValue(0, out var lv) && ToLong(lv) is long saiu
+                && saiu != SelfObjectId)
+            {
+                _byId.TryRemove(saiu, out _);
+                _mobs.TryRemove(saiu, out _);
+                GroupGear.Saiu(saiu);
+            }
+            return;
+        }
         if ((evt.EventCode == GameEventCodes.FameGain || evt.EventCode == GameEventCodes.SilverGain
              || evt.EventCode == GameEventCodes.SilverTaken)
             && evt.Parameters.TryGetValue(0, out var sid) && ToLong(sid) is long self && self > 0)

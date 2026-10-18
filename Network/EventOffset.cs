@@ -25,6 +25,8 @@ public static class EventOffset
 {
     public const int AnchorAccessStatus = 209;
     public const int AnchorOtherGrabbedLoot = 278;
+    // MobKilled está na faixa de cima: o nosso 166 (calibrado no jogo) é o SAT 165 + 1.
+    public const int AnchorMobKilled = 165;
 
     private static readonly object _lock = new();
     private static int _delta = 1;
@@ -41,10 +43,77 @@ public static class EventOffset
     /// <summary>Disparado quando o deslocamento confirmado MUDA (patch novo).</summary>
     public static event System.Action<int>? Mudou;
 
+    // ── Números BAIXOS (18/10/2026) ──────────────────────────────────────────
+    // Até aqui só a faixa de 209 em diante se recalibrava. Se um patch inserir um
+    // evento no começo da lista, dano, nomes, fama e prata param juntos — e a Saúde
+    // da captura só AVISA. Agora duas âncoras de formato inconfundível ajustam
+    // sozinhas, cada uma a sua faixa (ver GameEventCodes.AplicarDeltasBaixos):
+    //   HealthUpdates (SAT 7):  [0] número, [2] LISTA de variações, [6] LISTA de
+    //                           causadores do mesmo tamanho — nenhum outro evento
+    //                           perto disso manda duas listas paralelas assim
+    //   NewCharacter (SAT 29):  [0] número, [1] nome sem espaço, [40] lista de
+    //                           equipamento com 8+ espaços
+    // Como evento solto pode enganar, a troca só acontece depois de 3 vistos
+    // seguidos com o MESMO deslocamento (as âncoras de cima trocam na hora porque
+    // têm texto fixo do jogo, "@_Owner").
+    public const int AnchorHealthUpdates = 7, AnchorNewCharacter = 29;
+    private const int ConfirmacoesBaixas = 3;
+    private static int _deltaDano, _deltaNomes;
+    private static (int Delta, int Vistos) _candDano, _candNomes;
+
+    public static int DeltaDano { get { lock (_lock) return _deltaDano; } }
+    public static int DeltaNomes { get { lock (_lock) return _deltaNomes; } }
+
+    private static int? ObserveBaixo(PhotonEvent evt)
+    {
+        int code = evt.EventCode;
+        var p = evt.Parameters;
+        bool dano = false;
+        int visto;
+        if (code is >= AnchorHealthUpdates - 3 and <= AnchorHealthUpdates + 3
+            && p.TryGetValue(0, out var a0) && PhotonParam.ToLong(a0) != null
+            && p.TryGetValue(2, out var l2) && l2 is Array mud && mud.Length > 0 && !(l2 is string?[])
+            && p.TryGetValue(6, out var l6) && l6 is Array cau && cau.Length == mud.Length && !(l6 is string?[]))
+        {
+            dano = true;
+            visto = code - AnchorHealthUpdates;
+        }
+        else if (code is >= AnchorNewCharacter - 3 and <= AnchorNewCharacter + 3
+                 && p.TryGetValue(0, out var b0) && PhotonParam.ToLong(b0) != null
+                 && p.TryGetValue(1, out var n1) && n1 is string nome && nome.Length is >= 2 and <= 20 && !nome.Any(char.IsWhiteSpace)
+                 && p.TryGetValue(40, out var e40) && e40 is Array { Length: >= 8 } && !(e40 is string?[]))
+        {
+            visto = code - AnchorNewCharacter;
+        }
+        else return null;
+
+        bool mudou = false;
+        lock (_lock)
+        {
+            ref var cand = ref dano ? ref _candDano : ref _candNomes;
+            int atual = dano ? _deltaDano : _deltaNomes;
+            if (visto == atual) { cand = (atual, 0); return visto; }
+            cand = cand.Delta == visto ? (visto, cand.Vistos + 1) : (visto, 1);
+            if (cand.Vistos >= ConfirmacoesBaixas)
+            {
+                if (dano) _deltaDano = visto; else _deltaNomes = visto;
+                cand = (visto, 0);
+                _confirmadoEm = System.DateTime.Now;
+                _fonte = dano ? "golpes agrupados" : "jogador novo na tela";
+                mudou = true;
+            }
+        }
+        if (!mudou) return null;
+        GameEventCodes.AplicarDeltasBaixos(DeltaDano, DeltaNomes);
+        Mudou?.Invoke(visto);
+        return visto;
+    }
+
     /// <summary>Confere o evento contra as âncoras. Devolve o deslocamento visto, ou null.</summary>
     public static int? Observe(PhotonEvent evt)
     {
         int code = evt.EventCode;
+        if (code >= 0 && code < 60) return ObserveBaixo(evt);
         if (code < 150 || code > 400) return null;
         var p = evt.Parameters;
         int? visto = null;
@@ -76,6 +145,7 @@ public static class EventOffset
         {
             GameEventCodes.GrabbedLoot = AnchorOtherGrabbedLoot + d;
             GameEventCodes.PartyFameShare = AnchorOtherGrabbedLoot + d;
+            GameEventCodes.MobKilled = AnchorMobKilled + d;
             Mudou?.Invoke(d);
         }
         return d;
@@ -84,8 +154,14 @@ public static class EventOffset
     /// <summary>Só pro teste: volta ao estado inicial.</summary>
     public static void Reset()
     {
-        lock (_lock) { _delta = 1; _confirmadoEm = null; _fonte = "pacotes de 12/10"; }
+        lock (_lock)
+        {
+            _delta = 1; _confirmadoEm = null; _fonte = "pacotes de 12/10";
+            _deltaDano = _deltaNomes = 0; _candDano = _candNomes = (0, 0);
+        }
         GameEventCodes.GrabbedLoot = AnchorOtherGrabbedLoot + 1;
         GameEventCodes.PartyFameShare = AnchorOtherGrabbedLoot + 1;
+        GameEventCodes.MobKilled = AnchorMobKilled + 1;
+        GameEventCodes.AplicarDeltasBaixos(0, 0);
     }
 }

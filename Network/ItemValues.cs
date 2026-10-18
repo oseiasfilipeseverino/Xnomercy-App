@@ -84,7 +84,8 @@ public static class ItemValues
     public static bool Observar(PhotonEvent evt)
     {
         int c = evt.EventCode;
-        if (c is not (30 or 31 or 32)) return false;
+        int simples = GameEventCodes.LootPickup;   // 32 (NewSimpleItem); 30 e 31 vêm logo antes
+        if (c < simples - 2 || c > simples) return false;
         var p = evt.Parameters;
         // Formato de item: [1] índice de item que existe no catálogo, [2] quantidade,
         // [4] valor. Nada de texto no [5] — o 30 já foi lido como movimento de

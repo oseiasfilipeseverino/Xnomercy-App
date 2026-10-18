@@ -81,6 +81,11 @@ Write-Host "`n--- harness_semnpcap (captura sem Npcap) ---"
 dotnet run --project "$PSScriptRoot\harness_semnpcap\harness_semnpcap.csproj" -c Release --nologo
 if ($LASTEXITCODE -ne 0) { $falhou++ }
 
+# -- calibracao dos numeros baixos e Leave
+Write-Host "`n--- harness_calibracao (calibracao dos numeros baixos e Leave) ---"
+dotnet run --project "$PSScriptRoot\harness_calibracao\harness_calibracao.csproj" -c Release --nologo
+if ($LASTEXITCODE -ne 0) { $falhou++ }
+
 if ($falhou -gt 0) {
     Write-Host "`n$falhou teste(s) reprovaram" -ForegroundColor Red
     exit 1

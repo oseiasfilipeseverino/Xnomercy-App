@@ -31,6 +31,9 @@ public static class GroupGear
 
     private static readonly ConcurrentDictionary<long, Info> _porId = new();
     private static readonly ConcurrentDictionary<string, long> _idPorNome = new(StringComparer.OrdinalIgnoreCase);
+    // Último equipamento visto de cada nome — continua depois que a pessoa sai da tela
+    // (o número dela é esquecido no Leave, o nome não).
+    private static readonly ConcurrentDictionary<string, Info> _ultimoPorNome = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, double> _ipRealPorGuid = new(StringComparer.OrdinalIgnoreCase);
     private static int[]? _meuEquipEvento;
     private static string?[]? _meuEquipApi;
@@ -48,8 +51,11 @@ public static class GroupGear
             var equip = p.TryGetValue(40, out var e) ? Lista(e) : null;
             string guid = p.TryGetValue(7, out var g) && g is byte[] { Length: 16 } gb ? Convert.ToHexString(gb) : "";
             if (_porId.Count > MaxJogadores) { _porId.Clear(); _idPorNome.Clear(); }
-            _porId[id] = new Info { Nome = nome, Guid = guid, Equip = equip };
+            if (_ultimoPorNome.Count > MaxJogadores) _ultimoPorNome.Clear();
+            var nova = new Info { Nome = nome, Guid = guid, Equip = equip };
+            _porId[id] = nova;
             _idPorNome[nome] = id;
+            _ultimoPorNome[nome] = nova;
             Mudou?.Invoke();
         }
         else if (evt.EventCode == GameEventCodes.CharacterEquipmentChanged)
@@ -62,6 +68,17 @@ public static class GroupGear
             Mudou?.Invoke();
         }
     }
+
+    /// <summary>Leave: o número fica livre pro jogo reaproveitar. O nome guarda o último equipamento.</summary>
+    public static void Saiu(long id)
+    {
+        if (_porId.TryRemove(id, out var info) && _idPorNome.TryGetValue(info.Nome, out var atual) && atual == id)
+            _idPorNome.TryRemove(info.Nome, out _);
+    }
+
+    /// <summary>Arma (unique name) do último equipamento visto desse nome — pro ícone do medidor.</summary>
+    public static string? ArmaPorNome(string nome) =>
+        _ultimoPorNome.TryGetValue(nome, out var i) && i.Equip is { Length: > 0 } e && e[0] > 0 ? ItemCatalog.GetUniqueName(e[0]) : null;
 
     /// <summary>Resposta de INSPEÇÃO: [0]=GUID [1]=equipamento [3]=IP real. Reconhecida pelo formato.</summary>
     public static bool HandleOpResponse(PhotonOperationResponse op) => HandleInspecao(op.Parameters);
@@ -123,11 +140,17 @@ public static class GroupGear
             fonte = "do jogo";
             if (info.Guid.Length > 0 && _ipRealPorGuid.TryGetValue(info.Guid, out var r)) real = r;
         }
+        else if (_ultimoPorNome.TryGetValue(nome, out var antigo) && antigo.Equip != null)
+        {
+            slots = Nomes(antigo.Equip);
+            fonte = "visto antes — fora da sua tela agora";
+            if (antigo.Guid.Length > 0 && _ipRealPorGuid.TryGetValue(antigo.Guid, out var r)) real = r;
+        }
         else fonte = "fora de alcance — o equipamento aparece quando a pessoa estiver na sua tela";
 
         return new Linha(nome, slots?.FirstOrDefault(), slots, slots != null ? ItemPowerCatalog.IpMedio(slots) : null, real, fonte);
     }
 
     /// <summary>Pra testes.</summary>
-    public static void Limpar() { _porId.Clear(); _idPorNome.Clear(); _ipRealPorGuid.Clear(); _meuEquipEvento = null; _meuEquipApi = null; }
+    public static void Limpar() { _porId.Clear(); _idPorNome.Clear(); _ultimoPorNome.Clear(); _ipRealPorGuid.Clear(); _meuEquipEvento = null; _meuEquipApi = null; }
 }
