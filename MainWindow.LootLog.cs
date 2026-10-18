@@ -78,6 +78,8 @@ public partial class MainWindow
             IsMob = isMob,
             ItemUniqueName = uniqueName,
             ItemPlainName = plainName,
+            ItemIndex = itemIdx,
+            Valor = !isSilver && itemIdx >= 0 && ItemValues.Valor(itemIdx) is long unit ? unit * amount : null,
             Quantity = isSilver ? amount / 10000 : amount,
             LooterGuild = PlayerRegistry.GuildOfName(looter),
             FromGuild = isMob ? "" : PlayerRegistry.GuildOfName(from),
@@ -119,6 +121,30 @@ public partial class MainWindow
     {
         _lootFeedView?.Refresh();
         AtualizarRotuloDoGrupo();
+        AtualizarTotalDoLoot();
+    }
+
+    /// <summary>Preço novo chegou: completa as linhas que ainda estavam sem valor.</summary>
+    private void PreencherValoresDoLoot()
+    {
+        foreach (var r in _lootFeed)
+            if (r.Valor == null && r.ItemIndex >= 0 && ItemValues.Valor(r.ItemIndex) is long unit)
+                r.Valor = unit * r.Quantity;
+    }
+
+    /// <summary>Soma do que está À VISTA (respeita os filtros): "o grupo pegou X".</summary>
+    private void AtualizarTotalDoLoot()
+    {
+        long total = 0; int com = 0, sem = 0;
+        if (_lootFeedView != null)
+            foreach (var o in _lootFeedView)
+                if (o is LootFeedRow r && !r.IsSilver)
+                {
+                    if (r.Valor is long v) { total += v; com++; } else sem++;
+                }
+        string texto = com == 0 && sem == 0 ? ""
+            : $"Valor estimado à vista: {total:N0} prata" + (sem > 0 ? $" ({sem} item(ns) ainda sem preço)" : "");
+        if (TxtLootTotal.Text != texto) TxtLootTotal.Text = texto;
     }
 
     /// <summary>Mostra no rótulo das caixas quantos do grupo o app conhece.</summary>
@@ -237,9 +263,9 @@ public partial class MainWindow
         };
         if (dlg.ShowDialog() != true) return;
         var sb = new System.Text.StringBuilder();
-        sb.AppendLine("Hora;Quem pegou;Item;De quem");
+        sb.AppendLine("Hora;Quem pegou;Item;De quem;Valor estimado (prata)");
         foreach (var r in _lootFeed)
-            sb.AppendLine($"{r.Time};{Csv(r.Looter)};{Csv(r.Item)};{Csv(r.From)}");
+            sb.AppendLine($"{r.Time};{Csv(r.Looter)};{Csv(r.Item)};{Csv(r.From)};{(r.Valor is long v ? v.ToString() : "")}");
         try
         {
             System.IO.File.WriteAllText(dlg.FileName, sb.ToString(), System.Text.Encoding.UTF8);

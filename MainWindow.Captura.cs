@@ -175,6 +175,7 @@ public partial class MainWindow
         OnPhotonEvent(evt);
         EventOffset.Observe(evt);          // calibração automática da numeração (antes de quem usa os códigos)
         CaptureHealth.Observar(evt);       // saúde da captura: número fixo chegou no formato esperado?
+        ItemValues.Observar(evt);          // valor estimado de item que o jogo manda (valor do loot)
         if (PartyTracker.Handle(evt) != null) CaptureHealth.Marcar("Grupo");   // grupo exato (eventos de grupo do jogo)
         if (_gatherTracker.HandleEvent(evt)) { _coletaDirty = true; CaptureHealth.Marcar("Coleta"); }   // aba Coleta
         PlayerRegistry.HandleEvent(evt);

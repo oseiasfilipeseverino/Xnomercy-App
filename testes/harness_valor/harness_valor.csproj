@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Exercita o ItemValues REAL (a DLL compilada do app), nao uma
+    reimplementacao. O estado do PlayerRegistry e privado e e ajustado por reflexao.
+
+    Precisa do app compilado antes:
+        dotnet build -c Release          (na pasta do app)
+        dotnet run -c Release            (nesta pasta)
+
+    ATENCAO ao testar uma versao antiga do tracker e voltar: Copy-Item preserva a
+    data do arquivo, e o MSBuild pode achar que nao ha nada pra recompilar. Use
+    a opcao no-incremental do dotnet build no app. Isso ja enganou uma rodada deste teste.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <NoWarn>MSB3277</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="XnomercyApp">
+      <HintPath>..\..\bin\Release\net8.0-windows\XnomercyApp.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>

@@ -39,8 +39,30 @@ public sealed class LootEventRow : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
 }
 
-public sealed class LootFeedRow
+public sealed class LootFeedRow : INotifyPropertyChanged
 {
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    // Valor estimado do que foi pego (quantidade × prata por unidade), desde
+    // 18/10/2026. Pode chegar DEPOIS da linha (preço do mercado vem pela internet),
+    // por isso avisa a tela quando muda. Ver Network/ItemValues.cs.
+    public int ItemIndex { get; init; } = -1;
+    private long? _valor;
+    public long? Valor
+    {
+        get => _valor;
+        set
+        {
+            if (_valor == value) return;
+            _valor = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Valor)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ValorTexto)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ValorDica)));
+        }
+    }
+    public string ValorTexto => _valor is long v && v > 0 ? $"≈ {v:N0}" : "";
+    public string? ValorDica => _valor is > 0 && ItemIndex >= 0 ? $"Valor estimado: {ItemValues.Fonte(ItemIndex)}" : null;
+
     public string Time { get; init; } = "";
     public string Looter { get; init; } = "";
     public string Item { get; init; } = "";    // "1x Elder's Stone Hammer" ou "1.550.115 prata"
@@ -208,6 +230,7 @@ public partial class MainWindow : Window
         try
         {
             SelfLootDetector.SelfLootDetected -= OnSelfLootDetected;
+            ItemValues.Salvar();
             if (_onEnteredDungeon is not null) DungeonTimerTracker.EnteredDungeon -= _onEnteredDungeon;
             if (_onLeftDungeon is not null) DungeonTimerTracker.LeftDungeon -= _onLeftDungeon;
         }
@@ -232,6 +255,7 @@ public partial class MainWindow : Window
     private volatile bool _damageDirty;
     private volatile bool _advancedVisible;   // só processa a lista crua quando o modo avançado está à vista
     private bool _loggedIn;
+    private volatile bool _valoresMudaram;   // ItemValues aprendeu preço novo: recalcula o Loot Log
     private string? _avisoCaptura;   // aviso que fica no lugar dos contadores (ver diagTimer)
     private bool _canTracker = true;   // Loot Log + Medidor de Dano + Fama & Prata (vêm juntos)
     private bool _canCraft = true;
@@ -284,6 +308,8 @@ public partial class MainWindow : Window
                 ItemIcon = IconUrl(idx),
                 IsSilver = false,
                 IsMob = false,
+                ItemIndex = idx,
+                Valor = ItemValues.Valor(idx) is long v ? v * qty : null,
             };
             _lootFeed.Insert(0, row);
             while (_lootFeed.Count > MaxLootRows) _lootFeed.RemoveAt(_lootFeed.Count - 1);
@@ -436,6 +462,8 @@ public partial class MainWindow : Window
         // Em vez de atualizar a UI a cada evento (em combate são centenas/seg, o que
         // travava a thread de captura e fazia perder pacotes), os trackers só marcam
         // "sujo" e um timer redesenha no máximo ~3x/seg, na thread da UI.
+        ItemValues.Carregar();   // valores que o jogo já mostrou em sessões anteriores
+        ItemValues.Mudou += () => _valoresMudaram = true;
         _fameTracker.Updated += () => _fameDirty = true;
         _killTracker.Updated += () => _fameDirty = true;
         _damageTracker.Updated += () => _damageDirty = true;
@@ -449,6 +477,8 @@ public partial class MainWindow : Window
             // ao abrir a aba, ShowPanel redesenha). Antes rodava 3x/s com a aba escondida.
             if (_damageDirty && PanelDamage.Visibility == Visibility.Visible) { _damageDirty = false; RefreshDamagePanel(); }
             AtualizarRotuloDoGrupo();
+            if (_valoresMudaram) { _valoresMudaram = false; PreencherValoresDoLoot(); }
+            if (PanelLoot.Visibility == Visibility.Visible) AtualizarTotalDoLoot();
         };
         uiTimer.Start();
 

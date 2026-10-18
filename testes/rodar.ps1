@@ -61,6 +61,11 @@ Write-Host "`n--- harness_revisao (correcoes da revisao) ---"
 dotnet run --project "$PSScriptRoot\harness_revisao\harness_revisao.csproj" -c Release --nologo
 if ($LASTEXITCODE -ne 0) { $falhou++ }
 
+# -- Valor do loot (ItemValues, 18/10/2026)
+Write-Host "`n--- harness_valor (valor do loot) ---"
+dotnet run --project "$PSScriptRoot\harness_valor\harness_valor.csproj" -c Release --nologo
+if ($LASTEXITCODE -ne 0) { $falhou++ }
+
 if ($falhou -gt 0) {
     Write-Host "`n$falhou teste(s) reprovaram" -ForegroundColor Red
     exit 1
