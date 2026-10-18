@@ -216,6 +216,11 @@ public static class GameEventCodes
     // HarvestFinished (SAT 61): coleta concluída — ver GatheringTracker.
     public static int HarvestFinished { get; set; } = 61;
 
+    // Facção (SAT 85/86) e baú aberto (SAT 99) — ver FactionTracker e StorageTracker.
+    public static int UpdateCurrency { get; set; } = 85;
+    public static int UpdateFactionStanding { get; set; } = 86;
+    public static int AttachItemContainer { get; set; } = 99;
+
     /// <summary>
     /// Desloca os números BAIXOS quando um patch insere evento no começo da lista
     /// (ver EventOffset.ObserveBaixo). Duas faixas, cada uma com a sua âncora:
@@ -241,6 +246,9 @@ public static class GameEventCodes
         CharacterEquipmentChanged = 90 + nomes;
         RegenerationHealthChanged = 91 + nomes;
         RegenerationPlayerCombo = 96 + nomes;
+        UpdateCurrency = 85 + nomes;
+        UpdateFactionStanding = 86 + nomes;
+        AttachItemContainer = 99 + nomes;
         NewMob = 123 + nomes;
     }
 

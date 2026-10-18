@@ -37,8 +37,11 @@ public partial class MainWindow
         ListColeta.ItemsSource = linhas.Select(l => new ColetaLinha
         {
             Nome = ItemCatalog.GetName(l.Item) ?? $"item {l.Item}",
-            Detalhe = $"{Num(l.Coletas)} coleta{(l.Coletas > 1 ? "s" : "")} · normal {Num(l.Normal)}"
-                      + (l.BonusColetor + l.BonusPremium > 0 ? $" · bônus {Num(l.BonusColetor + l.BonusPremium)}" : ""),
+            Detalhe = l.Pesca
+                ? $"pescado · {Num(l.Coletas)} vez{(l.Coletas > 1 ? "es" : "")}"
+                  + (ItemValues.Valor(l.Item) is long v ? $" · ≈ {Num(v * l.Total)} prata" : "")
+                : $"{Num(l.Coletas)} coleta{(l.Coletas > 1 ? "s" : "")} · normal {Num(l.Normal)}"
+                  + (l.BonusColetor + l.BonusPremium > 0 ? $" · bônus {Num(l.BonusColetor + l.BonusPremium)}" : ""),
             Total = Num(l.Total),
             Icone = IconUrl(l.Item),
         }).ToList();

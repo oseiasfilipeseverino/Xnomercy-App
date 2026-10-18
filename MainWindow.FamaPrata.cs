@@ -92,6 +92,16 @@ public partial class MainWindow
         var elapsed = DateTime.Now - _fameTracker.SessionStart;
         TxtFameSessionStart.Text = $"Sessão desde {_fameTracker.SessionStart:HH:mm:ss} · {elapsed:hh\\:mm\\:ss}";
 
+        var f = _faccao.Totais();
+        var partes = new List<string>();
+        if (f.Pontos > 0) partes.Add($"Pontos de facção: {f.Pontos:N0}");
+        if (f.Moedas > 0) partes.Add($"Moedas de facção: {f.Moedas:N0}");
+        if (f.Bandeira > 0) partes.Add($"Pontos de bandeira: {f.Bandeira:N0}");
+        if (f.Might > 0) partes.Add($"Might: {f.Might:N0}");
+        if (f.Favor > 0) partes.Add($"Favor: {f.Favor:N0}");
+        TxtFaccao.Text = string.Join("   ·   ", partes);
+        TxtFaccao.Visibility = partes.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+
         TxtMobKillsTotal.Text = _killTracker.TotalKills.ToString("N0");
         TxtMobKillsPerHour.Text = $"{_killTracker.KillsPerHour:0.0}/hora";
         _mobKillRows.Clear();
@@ -103,6 +113,7 @@ public partial class MainWindow
     {
         _fameTracker.Reset();
         _killTracker.Reset();
+        _faccao.Reset();
         // Gráfico acompanha a mesma "sessão" do tracker — reiniciar limpa os dois.
         _sessionSamples.Clear();
         _lastSampleAt = DateTime.MinValue;

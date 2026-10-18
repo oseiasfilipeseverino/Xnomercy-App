@@ -254,6 +254,10 @@ public partial class MainWindow : Window
     private readonly DamageMeterTracker _damageTracker = new();
     private readonly MapHistory _mapas = new(MapHistory.CaminhoPadrao);
     private readonly FightHistory _lutas = new(FightHistory.CaminhoPadrao);
+    private readonly FactionTracker _faccao = new();
+    private readonly StorageTracker _baus = new(StorageTracker.CaminhoPadrao);
+    private readonly DeathLog _mortes = new(DeathLog.CaminhoPadrao);
+    private volatile bool _bausDirty = true;
     private volatile bool _mapasDirty = true;
     private bool _capturing;
     private bool _paused;
@@ -446,7 +450,15 @@ public partial class MainWindow : Window
         SelfLootDetector.SelfLootDetected += OnSelfLootDetected;
         // Timer de fechamento de dungeon — ver DungeonTimerTracker.cs.
         _capture.OpResponseReceived += DungeonTimerTracker.HandleOpResponse;
-        _capture.OpResponseReceived += op => { if (!_paused && _mapas.HandleOpResponse(op)) CaptureHealth.Marcar("Mapa"); };
+        _capture.OpResponseReceived += op =>
+        {
+            if (_paused || !_mapas.HandleOpResponse(op)) return;
+            CaptureHealth.Marcar("Mapa");
+            _gatherTracker.EncerrarPesca();   // trocou de zona: o inventário é reenviado, não é peixe novo
+        };
+        _capture.OpRequestReceived += op => { if (!_paused) _gatherTracker.HandleOpRequest(op.Parameters); };   // vara de pesca
+        _faccao.Mudou += () => _fameDirty = true;
+        _baus.Mudou += () => _bausDirty = true;
         _mapas.Mudou += () => _mapasDirty = true;
         _fameTracker.Ganhou += (fama, prata) => _mapas.Somar(fama: fama, prata: prata);
         _killTracker.Matou += () => _mapas.Somar(mobs: 1);
@@ -491,7 +503,8 @@ public partial class MainWindow : Window
             // ao abrir a aba, ShowPanel redesenha). Antes rodava 3x/s com a aba escondida.
             if (_damageDirty && PanelDamage.Visibility == Visibility.Visible) { _damageDirty = false; RefreshDamagePanel(); }
             AtualizarRotuloDoGrupo();
-            if (_valoresMudaram) { _valoresMudaram = false; PreencherValoresDoLoot(); }
+            if (_valoresMudaram) { _valoresMudaram = false; PreencherValoresDoLoot(); _mortes.PreencherValores(); _bausDirty = true; }
+            if (_bausDirty && PanelBaus.Visibility == Visibility.Visible) { _bausDirty = false; RefreshBaus(); }
             if (PanelGrupo.Visibility == Visibility.Visible) RefreshGrupo();
             if (_mapasDirty) { _mapasDirty = false; AtualizarMapaAtual(); if (PanelMapas.Visibility == Visibility.Visible) RefreshMapas(); }
             if (PanelLoot.Visibility == Visibility.Visible) AtualizarTotalDoLoot();

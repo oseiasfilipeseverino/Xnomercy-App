@@ -39,6 +39,8 @@ public static class CaptureHealth
         ("Coleta",            "aparece ao coletar recurso"),
         ("Vendas",            "aparece ao abrir o mercado ou a caixa de correio"),
         ("Energia da guild",  "aparece ao abrir o registro de energia da guild"),
+        ("Facção e Might & Favor", "aparece ao ganhar pontos de facção ou Might & Favor"),
+        ("Baús e banco",      "aparece ao abrir um baú ou uma aba do banco"),
     };
 
     private sealed class Contador

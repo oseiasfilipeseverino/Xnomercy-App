@@ -177,6 +177,8 @@ public partial class MainWindow
         CaptureHealth.Observar(evt);       // saúde da captura: número fixo chegou no formato esperado?
         ItemValues.Observar(evt);          // valor estimado de item que o jogo manda (valor do loot)
         GroupGear.HandleEvent(evt);        // equipamento de quem está por perto (painel do grupo)
+        _faccao.HandleEvent(evt);          // pontos de facção e Might & Favor
+        _baus.HandleEvent(evt);            // conteúdo de baú e banco
         if (PartyTracker.Handle(evt) != null) CaptureHealth.Marcar("Grupo");   // grupo exato (eventos de grupo do jogo)
         if (_gatherTracker.HandleEvent(evt)) { _coletaDirty = true; CaptureHealth.Marcar("Coleta"); }   // aba Coleta
         PlayerRegistry.HandleEvent(evt);
@@ -431,6 +433,9 @@ public partial class MainWindow
         {
             if (feedRow != null)
             {
+                // Saque do SEU corpo: perda na morte (ver DeathLog).
+                _mortes.Registrar(feedRow.From, feedRow.Looter, feedRow.LooterGuild, feedRow.ItemIndex,
+                                  feedRow.Quantity, feedRow.Valor, _mapas.MapaAtual, DateTime.UtcNow);
                 // Loot SEU entra no histórico de mapas (o dos outros não).
                 if (PlayerRegistry.SelfName is string eu && string.Equals(feedRow.Looter, eu, StringComparison.OrdinalIgnoreCase))
                     _mapas.Somar(loot: feedRow.Valor ?? 0, itens: 1);

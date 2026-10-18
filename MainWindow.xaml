@@ -105,6 +105,7 @@
         <Geometry x:Key="IcoCadeado">M5,11 L19,11 L19,21 L5,21 Z M8,11 L8,7.5 A4,4 0 0 1 16,7.5 L16,11 M12,15 L12,17</Geometry>
         <Geometry x:Key="IcoColeta">M14.5,3.5 C9,1.5 4.5,3 2.5,6 C6.5,5 10,6 12,8 M12,8 L20.5,20.5 M9.5,4.5 L19.5,14.5</Geometry>
         <Geometry x:Key="IcoGrupo">M9,11 A3.5,3.5 0 1 1 9,10.99 Z M2.5,20 C2.5,15.5 15.5,15.5 15.5,20 M17,10 A2.8,2.8 0 1 1 17,9.99 Z M16.5,14.2 C19.5,14 21.5,16 21.5,19</Geometry>
+        <Geometry x:Key="IcoBau">M3,9 L21,9 L21,20 L3,20 Z M3,9 L5,4 L19,4 L21,9 M10,12 L14,12 L14,15 L10,15 Z</Geometry>
         <Geometry x:Key="IcoMapa">M3,6 L9,3.5 L15,6 L21,3.5 L21,18 L15,20.5 L9,18 L3,20.5 Z M9,3.5 L9,18 M15,6 L15,20.5</Geometry>
         <Geometry x:Key="IcoVendas">M3,6 L21,6 L19,14 L6,14 Z M6,14 L4.5,3.5 L2,3.5 M8,19 A1.5,1.5 0 1 1 8,18.99 Z M17,19 A1.5,1.5 0 1 1 17,18.99 Z</Geometry>
         <Geometry x:Key="IcoPino">M12,21.5 C12,21.5 5,15 5,9.5 A7,7 0 0 1 19,9.5 C19,15 12,21.5 12,21.5 Z M14,9.5 A2,2 0 1 1 10,9.5 A2,2 0 1 1 14,9.5 Z</Geometry>
@@ -186,6 +187,9 @@
                     </Button>
                     <Button x:Name="NavMapas" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="mapas">
                         <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IcoMapa}" Style="{StaticResource Ico}" Width="15" Height="15" Margin="0,0,10,0" Opacity=".55"/><TextBlock Text="Mapas e Dungeons" VerticalAlignment="Center"/></StackPanel>
+                    </Button>
+                    <Button x:Name="NavBaus" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="baus">
+                        <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IcoBau}" Style="{StaticResource Ico}" Width="15" Height="15" Margin="0,0,10,0" Opacity=".55"/><TextBlock Text="Baús e Banco" VerticalAlignment="Center"/></StackPanel>
                     </Button>
                     <Button x:Name="NavSessions" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="sessions">
                         <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IcoRelogio}" Style="{StaticResource Ico}" Width="15" Height="15" Margin="0,0,10,0" Opacity=".55"/><TextBlock Text="Sessões" VerticalAlignment="Center"/></StackPanel>
@@ -304,6 +308,9 @@
                         <Button x:Name="BtnExportLootLogger" Content="Exportar p/ Loot Logger" Click="BtnExportLootLogger_Click"
                                 Padding="14,6" Background="#242424" Foreground="#c9a227" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"
                                 ToolTip="Formato aceito pelo AO Loot Logger Viewer (matheus.sampaio.us). Só inclui loot de JOGADOR — prata e saque de mob ficam fora, igual o logger original."/>
+                        <Button x:Name="BtnMinhasPerdas" Content="Minhas perdas" Click="BtnMinhasPerdas_Click"
+                                Padding="14,6" Background="#242424" Foreground="#f87171" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"
+                                ToolTip="O que pegaram do seu corpo quando você morreu, quem pegou e quanto valia"/>
                         <Button x:Name="BtnLootReset" Content="Reiniciar sessão" Click="BtnLootReset_Click"
                                 Padding="14,6" Background="#2e2e2e" Foreground="White" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"/>
                         <ToggleButton x:Name="BtnAdvancedMode" Content="Modo avançado" Click="BtnAdvancedMode_Click"
@@ -599,6 +606,8 @@
                             </StackPanel>
                         </Border>
                     </StackPanel>
+                    <TextBlock x:Name="TxtFaccao" Visibility="Collapsed" Foreground="#c9a227" FontSize="14" FontWeight="SemiBold"
+                               HorizontalAlignment="Center" Margin="0,14,0,0" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="756"/>
                     <Button x:Name="BtnFameReset" Content="Reiniciar sessão" Click="BtnFameReset_Click"
                             Padding="14,6" Margin="0,20,0,0" Background="#2e2e2e" Foreground="White" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Center"/>
 
@@ -698,6 +707,42 @@
 
             <!-- Vendas (18/10/2026): o que você vendeu e comprou no mercado, pelas CARTAS
                  que o jogo manda. Ver Network/MarketMailTracker.cs. -->
+            <!-- Baús e Banco (18/10/2026): o que tinha em cada aba do banco/baú que você abriu. Ver MainWindow.Baus.cs. -->
+            <Grid x:Name="PanelBaus" Visibility="Collapsed" Background="{StaticResource FundoMalha}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,40,0,20" Width="756">
+                    <TextBlock Text="Baús e Banco" Foreground="#c9a227" FontFamily="{StaticResource FontHead}" FontSize="32" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    <TextBlock Foreground="#8CFFFFFF" FontSize="12" Margin="0,4,0,12" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="640"
+                               Text="Cada aba do banco ou baú que você abre no jogo fica guardada aqui, com o que tinha dentro e o valor estimado. Dá pra conferir o banco de outra cidade sem ir até lá (mostra como estava na última vez que você abriu)."/>
+                    <TextBlock x:Name="TxtBausResumo" Text="" Foreground="#c9a227" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                    <ItemsControl x:Name="ListBaus">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#1b1b1b" CornerRadius="6" Padding="12,8" Margin="0,0,0,6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Titulo}" Foreground="White" FontSize="14" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Detalhe}" Foreground="#8CFFFFFF" FontSize="12"/>
+                                            <TextBlock Text="{Binding Itens}" Foreground="#DEFFFFFF" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Top" Margin="12,0,0,0">
+                                            <TextBlock Text="{Binding Valor}" Foreground="#c9a227" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right"/>
+                                            <Button Content="Esquecer" Tag="{Binding Guid}" Click="BtnBauEsquecer_Click" Margin="0,6,0,0"
+                                                    Padding="10,3" Background="#2e2e2e" Foreground="#8CFFFFFF" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Right"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+                </ScrollViewer>
+            </Grid>
+
             <!-- Grupo (18/10/2026): arma e IP de cada membro. Ver MainWindow.Grupo.cs / Network/GroupGear.cs. -->
             <Grid x:Name="PanelGrupo" Visibility="Collapsed" Background="{StaticResource FundoMalha}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">

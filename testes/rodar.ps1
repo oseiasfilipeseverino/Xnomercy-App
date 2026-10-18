@@ -91,6 +91,11 @@ Write-Host "`n--- harness_lutas (lutas salvas e sessoes) ---"
 dotnet run --project "$PSScriptRoot\harness_lutas\harness_lutas.csproj" -c Release --nologo
 if ($LASTEXITCODE -ne 0) { $falhou++ }
 
+# -- pesca, faccao, bau e banco, perdas
+Write-Host "`n--- harness_sat4 (pesca, faccao, bau e banco, perdas) ---"
+dotnet run --project "$PSScriptRoot\harness_sat4\harness_sat4.csproj" -c Release --nologo
+if ($LASTEXITCODE -ne 0) { $falhou++ }
+
 if ($falhou -gt 0) {
     Write-Host "`n$falhou teste(s) reprovaram" -ForegroundColor Red
     exit 1
