@@ -231,6 +231,7 @@ public partial class MainWindow : Window
         {
             SelfLootDetector.SelfLootDetected -= OnSelfLootDetected;
             ItemValues.Salvar();
+            _mapas.Salvar();
             if (_onEnteredDungeon is not null) DungeonTimerTracker.EnteredDungeon -= _onEnteredDungeon;
             if (_onLeftDungeon is not null) DungeonTimerTracker.LeftDungeon -= _onLeftDungeon;
         }
@@ -249,6 +250,8 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<MobKillRowDisplay> _mobKillRows = new();
     private readonly ObservableCollection<SessionHistoryRowDisplay> _sessionRows = new();
     private readonly DamageMeterTracker _damageTracker = new();
+    private readonly MapHistory _mapas = new(MapHistory.CaminhoPadrao);
+    private volatile bool _mapasDirty = true;
     private bool _capturing;
     private bool _paused;
     private volatile bool _fameDirty;
@@ -313,6 +316,7 @@ public partial class MainWindow : Window
             };
             _lootFeed.Insert(0, row);
             while (_lootFeed.Count > MaxLootRows) _lootFeed.RemoveAt(_lootFeed.Count - 1);
+            _mapas.Somar(loot: row.Valor ?? 0, itens: 1);   // o que VOCÊ pegou, no mapa atual
         });
     }
 
@@ -439,6 +443,11 @@ public partial class MainWindow : Window
         SelfLootDetector.SelfLootDetected += OnSelfLootDetected;
         // Timer de fechamento de dungeon — ver DungeonTimerTracker.cs.
         _capture.OpResponseReceived += DungeonTimerTracker.HandleOpResponse;
+        _capture.OpResponseReceived += op => { if (!_paused && _mapas.HandleOpResponse(op)) CaptureHealth.Marcar("Mapa"); };
+        _mapas.Mudou += () => _mapasDirty = true;
+        _fameTracker.Ganhou += (fama, prata) => _mapas.Somar(fama: fama, prata: prata);
+        _killTracker.Matou += () => _mapas.Somar(mobs: 1);
+        _ = MapCatalog.EnsureLoadedAsync();
         _capture.OpResponseReceived += GuildEnergyLog.HandleOpResponse;   // registro de energia da guild
         _capture.OpResponseReceived += _vendas.HandleOpResponse;          // cartas do mercado (aba Vendas)
         _capture.OpRequestReceived += _vendas.HandleOpRequest;            // compra/venda instantânea (aba Vendas)
@@ -478,6 +487,7 @@ public partial class MainWindow : Window
             if (_damageDirty && PanelDamage.Visibility == Visibility.Visible) { _damageDirty = false; RefreshDamagePanel(); }
             AtualizarRotuloDoGrupo();
             if (_valoresMudaram) { _valoresMudaram = false; PreencherValoresDoLoot(); }
+            if (_mapasDirty) { _mapasDirty = false; AtualizarMapaAtual(); if (PanelMapas.Visibility == Visibility.Visible) RefreshMapas(); }
             if (PanelLoot.Visibility == Visibility.Visible) AtualizarTotalDoLoot();
         };
         uiTimer.Start();

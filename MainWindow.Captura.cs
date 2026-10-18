@@ -417,6 +417,9 @@ public partial class MainWindow
         {
             if (feedRow != null)
             {
+                // Loot SEU entra no histórico de mapas (o dos outros não).
+                if (PlayerRegistry.SelfName is string eu && string.Equals(feedRow.Looter, eu, StringComparison.OrdinalIgnoreCase))
+                    _mapas.Somar(loot: feedRow.Valor ?? 0, itens: 1);
                 _lootFeed.Insert(0, feedRow);
                 while (_lootFeed.Count > MaxLootRows) _lootFeed.RemoveAt(_lootFeed.Count - 1);
             }

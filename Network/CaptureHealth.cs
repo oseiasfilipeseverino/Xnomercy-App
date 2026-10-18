@@ -34,6 +34,7 @@ public static class CaptureHealth
         ("Prata",             "aparece ao pegar prata"),
         ("Loot",              "aparece quando alguém pega item de um corpo"),
         ("Mobs",              "aparece perto de monstros"),
+        ("Mapa",              "aparece ao trocar de zona"),
         ("Grupo",             "aparece ao entrar, sair ou desfazer grupo"),
         ("Coleta",            "aparece ao coletar recurso"),
         ("Vendas",            "aparece ao abrir o mercado ou a caixa de correio"),

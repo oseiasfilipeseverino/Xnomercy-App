@@ -21,6 +21,7 @@ namespace XnomercyApp.Network;
 public static class DungeonTimerTracker
 {
     private const int OpChangeCluster = 36;
+    private const int OpJoin = 2;
     private const int DungeonClosesAfterSeconds = 90;
 
     // _inDungeon era um bool estático sem proteção — único tracker do app nesse estado
@@ -42,9 +43,14 @@ public static class DungeonTimerTracker
         if (!op.Parameters.TryGetValue(253, out var rc) || rc is null) return;
         int real;
         try { real = Convert.ToInt32(rc); } catch { return; }
-        if (real != OpChangeCluster) return;
-
-        if (!op.Parameters.TryGetValue(0, out var clusterObj) || clusterObj is not string clusterStr) return;
+        // Duas fontes da troca de zona: a ChangeCluster (36, número do comentário do
+        // SAT, nunca conferido em captura nossa) e, desde 18/10/2026, a Join (2), que
+        // o app já usa e sabe que funciona: o mapa novo vem no [8]. Mesmo estado
+        // _inDungeon, então as duas juntas não disparam o timer duas vezes.
+        string? clusterStr = null;
+        if (real == OpChangeCluster && op.Parameters.TryGetValue(0, out var clusterObj) && clusterObj is string c0) clusterStr = c0;
+        else if (real == OpJoin && op.Parameters.TryGetValue(8, out var mapa) && mapa is not null) clusterStr = mapa.ToString();
+        if (clusterStr == null) return;
 
         bool isDungeon = clusterStr.Contains("RANDOMDUNGEON", StringComparison.OrdinalIgnoreCase);
 

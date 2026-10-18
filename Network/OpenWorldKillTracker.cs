@@ -26,6 +26,7 @@ public sealed class OpenWorldKillTracker
     private DateTime _sessionStart = DateTime.Now;
 
     public event Action? Updated;
+    public event Action? Matou;   // um mob a mais (pro histórico de mapas)
 
     public void HandleEvent(PhotonEvent evt)
     {
@@ -49,6 +50,7 @@ public sealed class OpenWorldKillTracker
             _totalKills++;
         }
         Updated?.Invoke();
+        Matou?.Invoke();
     }
 
     public int TotalKills { get { lock (_lock) return _totalKills; } }

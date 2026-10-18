@@ -37,6 +37,9 @@ public sealed class FameSilverTracker
 
     public event Action? Updated;
 
+    /// <summary>Quanto entrou neste evento (fama vermelha, prata líquida) — pro histórico de mapas.</summary>
+    public event Action<long, long>? Ganhou;
+
     public void HandleEvent(PhotonEvent evt)
     {
         // Mesmo padrão de lock do DamageMeterTracker: a thread de captura escreve aqui
@@ -54,12 +57,16 @@ public sealed class FameSilverTracker
             bool premium = evt.Parameters.TryGetValue(5, out var p) && p is bool pb && pb;
             long satchelRaw = TryGetParam(evt, 10, out long s) && s > 0 ? s : 0;
             long gainedRaw = (premium ? fameWithZoneRaw * 3 / 2 : fameWithZoneRaw) + satchelRaw;
+            long antes, depois;
             lock (_lock)
             {
+                antes = TotalFame;
                 _fameRaw += gainedRaw;
                 TotalFame = _fameRaw / 10000;
+                depois = TotalFame;
             }
             Updated?.Invoke();
+            if (depois > antes) Ganhou?.Invoke(depois - antes, 0);
         }
         else if (evt.EventCode == GameEventCodes.YellowFame && TryGetParam(evt, 2, out long yellowGain))
         {
@@ -75,12 +82,16 @@ public sealed class FameSilverTracker
         {
             if (silverBruto < 0) return;
             long silverAmt = PrataLiquida(evt, silverBruto);
+            long antes, depois;
             lock (_lock)
             {
+                antes = TotalSilver;
                 _silverRaw += silverAmt;
                 TotalSilver = _silverRaw / 10000;
+                depois = TotalSilver;
             }
             Updated?.Invoke();
+            if (depois > antes) Ganhou?.Invoke(0, depois - antes);
         }
     }
 

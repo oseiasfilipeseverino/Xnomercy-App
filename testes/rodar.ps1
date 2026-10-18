@@ -66,6 +66,11 @@ Write-Host "`n--- harness_valor (valor do loot) ---"
 dotnet run --project "$PSScriptRoot\harness_valor\harness_valor.csproj" -c Release --nologo
 if ($LASTEXITCODE -ne 0) { $falhou++ }
 
+# -- Mapas e Dungeons (MapHistory, 18/10/2026)
+Write-Host "`n--- harness_mapas (mapas e dungeons) ---"
+dotnet run --project "$PSScriptRoot\harness_mapas\harness_mapas.csproj" -c Release --nologo
+if ($LASTEXITCODE -ne 0) { $falhou++ }
+
 if ($falhou -gt 0) {
     Write-Host "`n$falhou teste(s) reprovaram" -ForegroundColor Red
     exit 1
