@@ -45,10 +45,11 @@ public partial class MainWindow
         PanelDamage.Visibility = Visibility.Collapsed;
         PanelFame.Visibility = Visibility.Collapsed;
         PanelSessions.Visibility = Visibility.Collapsed;
+        PanelGathering.Visibility = Visibility.Collapsed;
         PanelBlocked.Visibility = Visibility.Collapsed;
         _advancedVisible = false;
 
-        bool isTrackerTab = tag is "loot" or "damage" or "fame" or "sessions";
+        bool isTrackerTab = tag is "loot" or "damage" or "fame" or "sessions" or "gathering";
         if ((isTrackerTab && !_canTracker) || (tag == "craft" && !_canCraft))
         {
             PanelBlocked.Visibility = Visibility.Visible;
@@ -61,6 +62,7 @@ public partial class MainWindow
             case "damage":   PanelDamage.Visibility = Visibility.Visible; break;
             case "fame":     PanelFame.Visibility = Visibility.Visible; RedrawSessionChart(); break;
             case "sessions": PanelSessions.Visibility = Visibility.Visible; break;
+            case "gathering": PanelGathering.Visibility = Visibility.Visible; RefreshColeta(); break;
             case "craft":
                 // Craft = página de mercado do site embutida (reaproveita a calculadora pronta).
                 if (WebView.CoreWebView2 != null && !(WebView.Source?.ToString().Contains("/mercado") ?? false))
@@ -73,7 +75,7 @@ public partial class MainWindow
 
     private void SetActiveNav(Button active)
     {
-        foreach (var btn in new[] { NavLoot, NavDamage, NavFame, NavCraft, NavSessions })
+        foreach (var btn in new[] { NavLoot, NavDamage, NavFame, NavCraft, NavGathering, NavSessions })
         {
             bool isActive = btn == active;
             btn.Foreground = isActive ? NavActiveBrush : NavIdleBrush;

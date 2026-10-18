@@ -453,6 +453,7 @@ public partial class MainWindow : Window
         {
             SampleSessionChart();
             if (PanelFame.Visibility == Visibility.Visible) RefreshFamePanel();
+            if (PanelGathering.Visibility == Visibility.Visible && _coletaDirty) RefreshColeta();
             if (_overlay?.IsVisible == true)
                 _overlay.UpdateStats(_fameTracker.TotalFame, _fameTracker.FamePerHour,
                                      _fameTracker.TotalSilver, _fameTracker.SilverPerHour,

@@ -111,6 +111,7 @@ public partial class MainWindow
         if (_paused) return;
         OnPhotonEvent(evt);
         PartyTracker.Handle(evt);          // grupo exato (eventos de grupo do jogo)
+        if (_gatherTracker.HandleEvent(evt)) _coletaDirty = true;   // aba Coleta
         PlayerRegistry.HandleEvent(evt);
         _fameTracker.HandleEvent(evt);
         _damageTracker.HandleEvent(evt);

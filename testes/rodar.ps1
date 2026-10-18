@@ -46,6 +46,11 @@ Write-Host "`n--- harness_energia (registro de energia da guild) ---"
 dotnet run --project "$PSScriptRoot\harness_energia\harness_energia.csproj" -c Release --nologo
 if ($LASTEXITCODE -ne 0) { $falhou++ }
 
+# -- Aba Coleta (18/10/2026)
+Write-Host "`n--- harness_coleta (aba Coleta) ---"
+dotnet run --project "$PSScriptRoot\harness_coleta\harness_coleta.csproj" -c Release --nologo
+if ($LASTEXITCODE -ne 0) { $falhou++ }
+
 if ($falhou -gt 0) {
     Write-Host "`n$falhou teste(s) reprovaram" -ForegroundColor Red
     exit 1

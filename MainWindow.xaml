@@ -103,6 +103,7 @@
         <Geometry x:Key="IcoMartelo">M15,12 L6.5,20.5 A2.12,2.12 0 0 1 3.5,17.5 L12,9 M12,9 L15,12 M13,4 L20,11 L17.5,13.5 L10.5,6.5 Z</Geometry>
         <Geometry x:Key="IcoRelogio">M21,12 A9,9 0 1 1 3,12 A9,9 0 1 1 21,12 Z M12,7 L12,12 L15.5,14</Geometry>
         <Geometry x:Key="IcoCadeado">M5,11 L19,11 L19,21 L5,21 Z M8,11 L8,7.5 A4,4 0 0 1 16,7.5 L16,11 M12,15 L12,17</Geometry>
+        <Geometry x:Key="IcoColeta">M14.5,3.5 C9,1.5 4.5,3 2.5,6 C6.5,5 10,6 12,8 M12,8 L20.5,20.5 M9.5,4.5 L19.5,14.5</Geometry>
         <Geometry x:Key="IcoPino">M12,21.5 C12,21.5 5,15 5,9.5 A7,7 0 0 1 19,9.5 C19,15 12,21.5 12,21.5 Z M14,9.5 A2,2 0 1 1 10,9.5 A2,2 0 1 1 14,9.5 Z</Geometry>
         <Style x:Key="Ico" TargetType="Path">
             <Setter Property="Stroke" Value="White"/>
@@ -170,6 +171,9 @@
                     </Button>
                     <Button x:Name="NavCraft" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="craft">
                         <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IcoMartelo}" Style="{StaticResource Ico}" Width="15" Height="15" Margin="0,0,10,0" Opacity=".55"/><TextBlock Text="Craft" VerticalAlignment="Center"/></StackPanel>
+                    </Button>
+                    <Button x:Name="NavGathering" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="gathering">
+                        <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IcoColeta}" Style="{StaticResource Ico}" Width="15" Height="15" Margin="0,0,10,0" Opacity=".55"/><TextBlock Text="Coleta" VerticalAlignment="Center"/></StackPanel>
                     </Button>
                     <Button x:Name="NavSessions" Style="{StaticResource NavBtn}" Click="Nav_Click" Tag="sessions">
                         <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IcoRelogio}" Style="{StaticResource Ico}" Width="15" Height="15" Margin="0,0,10,0" Opacity=".55"/><TextBlock Text="Sessões" VerticalAlignment="Center"/></StackPanel>
@@ -586,6 +590,62 @@
             <!-- Histórico local de sessões (Task #8) — um resumo é gravado toda vez que
                  a captura é parada (ver SaveSessionToHistory em MainWindow.xaml.cs).
                  Só local (SessionHistoryStore.cs), nada é enviado pro servidor. -->
+            <!-- Coleta (18/10/2026): o que VOCÊ coletou na sessão, por recurso.
+                 Evento HarvestFinished (61) — ver Network/GatheringTracker.cs. -->
+            <Grid x:Name="PanelGathering" Visibility="Collapsed" Background="{StaticResource FundoMalha}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,40,0,20" Width="756">
+                    <TextBlock Text="Coleta" Foreground="#c9a227" FontFamily="{StaticResource FontHead}" FontSize="32" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="TxtColetaInicio" Foreground="#8CFFFFFF" FontSize="12" Margin="0,4,0,16" HorizontalAlignment="Center"
+                               Text="Comece a coletar com a captura ligada — cada recurso que você pegar aparece aqui."/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Border Background="#1b1b1b" CornerRadius="6" Padding="30,22" MinWidth="180" Margin="0,0,12,0">
+                            <StackPanel>
+                                <TextBlock Text="TOTAL COLETADO" Foreground="#8CFFFFFF" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtColetaTotal" Text="0" Foreground="#e0c060" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtColetaHora" Text="0/hora" Foreground="#8CFFFFFF" FontSize="14" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="#1b1b1b" CornerRadius="6" Padding="30,22" MinWidth="180" Margin="0,0,12,0">
+                            <StackPanel>
+                                <TextBlock Text="DE BÔNUS" Foreground="#8CFFFFFF" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtColetaBonus" Text="0" Foreground="#86efac" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtColetaBonusDet" Text="coletor + Premium" Foreground="#8CFFFFFF" FontSize="14" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="#1b1b1b" CornerRadius="6" Padding="30,22" MinWidth="180">
+                            <StackPanel>
+                                <TextBlock Text="COLETAS" Foreground="#8CFFFFFF" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtColetaVezes" Text="0" Foreground="#e2e8f0" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock Text="nós coletados" Foreground="#8CFFFFFF" FontSize="14" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                    <ItemsControl x:Name="ListColeta" Margin="0,20,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#1b1b1b" CornerRadius="6" Padding="12,8" Margin="0,0,0,6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="40"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Image Source="{Binding Icone}" Width="34" Height="34" VerticalAlignment="Center"/>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                            <TextBlock Text="{Binding Nome}" Foreground="White" FontSize="14" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Detalhe}" Foreground="#8CFFFFFF" FontSize="12"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="2" Text="{Binding Total}" Foreground="#e0c060" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button x:Name="BtnColetaReset" Content="Reiniciar coleta" Click="BtnColetaReset_Click"
+                            Padding="14,6" Margin="0,14,0,0" Background="#2e2e2e" Foreground="White" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+
             <Grid x:Name="PanelSessions" Visibility="Collapsed" Background="{StaticResource FundoMalha}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
