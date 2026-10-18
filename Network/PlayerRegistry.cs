@@ -190,6 +190,15 @@ public static class PlayerRegistry
         return evt.Parameters.TryGetValue(5, out var v) && ToLong(v) >= 1000;
     }
 
+    /// <summary>Formato do NewMob: [1] índice numérico (não texto), [7] posição em lista, [14] vida máxima &gt; 0.</summary>
+    public static bool EhNovoMob(PhotonEvent evt)
+    {
+        var p = evt.Parameters;
+        return p.TryGetValue(1, out var idx) && ToLong(idx) is long i && i >= 0
+            && p.TryGetValue(7, out var pos) && pos is Array { Length: 2 }
+            && p.TryGetValue(14, out var hp) && PhotonParam.ToDouble(hp) is double max && max > 0;
+    }
+
     private static void MarcarNoGrupo(string nome)
     {
         var agora = DateTime.UtcNow;
@@ -214,12 +223,15 @@ public static class PlayerRegistry
         }
         if (evt.EventCode == GameEventCodes.NewMob)
         {
-            // Desligado: sem tag de confirmação (só "[0]=ObjectId"), e o próprio dump de
-            // calibração mostra esse código repetindo tipo sync de posição/vida — bem
-            // provável que dispare pra QUALQUER entidade próxima, jogador incluso. Isso
-            // marcava jogadores como mob por engano e cortava o dano deles do medidor no
-            // meio da luta (bug relatado: "o dano aparece e depois some"). MobSpeak (74)
-            // e MobKilled (166) já cobrem mob com tag verificada (`@MOB_...`) — mantidos.
+            // Ficou desligado até 18/10/2026: a suspeita era que disparava pra QUALQUER
+            // entidade, jogador incluso, e marcava gente como mob (o dano dela sumia do
+            // medidor). O pacote real de 12/10 mostra o formato de mob do SAT
+            // (NewMobEvent): [0]=ObjectId [1]=índice do mob [7]/[8]=posição
+            // [13]=vida [14]=vida máxima — e jogador nunca vem nesse evento, vem no
+            // NewCharacter (29), com nome em texto no [1]. Por isso agora liga, mas só
+            // com o formato inteiro: índice numérico, posição em lista e vida máxima.
+            if (EhNovoMob(evt) && evt.Parameters.TryGetValue(0, out var nm) && ToLong(nm) is long mobId)
+                RegisterMob(mobId);
             return;
         }
         if (evt.EventCode == GameEventCodes.MobSpeak)
@@ -392,7 +404,8 @@ public static class PlayerRegistry
     {
         null => "null",
         byte[] b => $"byte[{b.Length}]={Convert.ToHexString(b)}",
-        object?[] a => $"arr[{a.Length}]={{{string.Join(",", a.Select(x => x?.ToString() ?? "null"))}}}",
+        object?[] a => $"arr[{a.Length}]={{{string.Join(",", a.Select(x => x is string s ? DiagPrivacidade.Texto(s) : x?.ToString() ?? "null"))}}}",
+        string s => DiagPrivacidade.Texto(s),
         _ => v.ToString() ?? ""
     };
 

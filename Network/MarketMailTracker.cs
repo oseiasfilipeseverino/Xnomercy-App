@@ -33,6 +33,14 @@ public sealed class MarketMailTracker
     private readonly Dictionary<long, Anuncio> _anuncios = new();
     private long _proximoIdInstantaneo = -1;
 
+    // Negócio na hora esperando a resposta do jogo: (código da operação, ID interno,
+    // quando). A compra entra na tela no PEDIDO, e sai se a resposta da MESMA operação
+    // vier com erro (o item já tinha sido vendido, faltou prata...). Sem resposta em
+    // EsperaResposta, fica valendo. Até 18/10/2026 todo pedido virava compra — o SAT
+    // tem o mesmo problema (AuctionBuyOfferRequestHandler registra no pedido).
+    private readonly List<(int Op, long Id, System.DateTime Quando)> _aguardando = new();
+    private static readonly System.TimeSpan EsperaResposta = System.TimeSpan.FromSeconds(15);
+
     private const long FixPoint = 10000L;
     private static readonly long TicksMin = new System.DateTime(2017, 1, 1).Ticks;
     private static readonly long TicksMax = new System.DateTime(2100, 1, 1).Ticks;
@@ -52,8 +60,41 @@ public sealed class MarketMailTracker
         _ => null
     };
 
-    public void HandleOpResponse(PhotonOperationResponse op) => Handle(op.Parameters);
-    public void HandleOpRequest(PhotonOperationRequest op) { if (HandleRequest(op.Parameters) != null) Mudou?.Invoke(); }
+    public void HandleOpResponse(PhotonOperationResponse op)
+    {
+        if (op.Parameters.TryGetValue(253, out var c) && PhotonParam.ToLong(c) is long codigo
+            && ConfirmarResposta((int)codigo, op.ReturnCode) == "recusada")
+            Mudou?.Invoke();
+        if (Handle(op.Parameters) != null) CaptureHealth.Marcar("Vendas");
+    }
+
+    public void HandleOpRequest(PhotonOperationRequest op)
+    {
+        if (HandleRequest(op.Parameters) == null) return;
+        CaptureHealth.Marcar("Vendas");
+        Mudou?.Invoke();
+    }
+
+    /// <summary>
+    /// Resposta do jogo a uma operação. Se havia negócio na hora esperando ESSA
+    /// operação: código 0 confirma ("confirmada"), qualquer outro desfaz ("recusada").
+    /// null quando não havia nada esperando.
+    /// </summary>
+    public string? ConfirmarResposta(int operacao, short codigoRetorno)
+    {
+        lock (_lock)
+        {
+            var agora = System.DateTime.UtcNow;
+            _aguardando.RemoveAll(x => agora - x.Quando > EsperaResposta);   // sem resposta: fica valendo
+            int i = _aguardando.FindIndex(x => x.Op == operacao);
+            if (i < 0) return null;
+            var (_, id, _) = _aguardando[i];
+            _aguardando.RemoveAt(i);
+            if (codigoRetorno == 0) return "confirmada";
+            _negocios.Remove(id);
+            return "recusada";
+        }
+    }
 
     /// <summary>"lista", "carta" ou null.</summary>
     public string? Handle(IReadOnlyDictionary<byte, object?> p)
@@ -138,24 +179,32 @@ public sealed class MarketMailTracker
                 && _anuncios.TryGetValue(idOferta, out var oferta) && !oferta.Compra
                 && p.TryGetValue(1, out var q1) && PhotonParam.ToLong(q1) is long qtdC && qtdC > 0 && qtdC <= oferta.Quantidade)
             {
-                Registrar(Tipo.Compra, oferta, (int)qtdC);
+                Aguardar(p, Registrar(Tipo.Compra, oferta, (int)qtdC));
                 return "compra";
             }
             if (p.TryGetValue(1, out var a1) && PhotonParam.ToLong(a1) is long idOrdem
                 && _anuncios.TryGetValue(idOrdem, out var ordem) && ordem.Compra
                 && p.TryGetValue(4, out var q4) && PhotonParam.ToLong(q4) is long qtdV && qtdV > 0 && qtdV <= ordem.Quantidade)
             {
-                Registrar(Tipo.Venda, ordem, (int)qtdV);
+                Aguardar(p, Registrar(Tipo.Venda, ordem, (int)qtdV));
                 return "venda";
             }
         }
         return null;
     }
 
-    private void Registrar(Tipo tipo, Anuncio a, int qtd)
+    private long Registrar(Tipo tipo, Anuncio a, int qtd)
     {
         long id = _proximoIdInstantaneo--;
         _negocios[id] = new Negocio(id, tipo, a.Item, qtd, a.PrecoUnitario * qtd / FixPoint, System.DateTime.UtcNow, Instantanea: true);
+        return id;
+    }
+
+    /// <summary>Guarda o negócio esperando a resposta da operação [253] do pedido. Chamar com o _lock.</summary>
+    private void Aguardar(IReadOnlyDictionary<byte, object?> pedido, long id)
+    {
+        if (pedido.TryGetValue(253, out var c) && PhotonParam.ToLong(c) is long op)
+            _aguardando.Add(((int)op, id, System.DateTime.UtcNow));
     }
 
     public List<Negocio> Negocios() { lock (_lock) return _negocios.Values.OrderByDescending(x => x.QuandoUtc).ToList(); }
@@ -167,7 +216,7 @@ public sealed class MarketMailTracker
         lock (_lock) return _cartas.Keys.Count(k => !_negocios.ContainsKey(k) && _cartas[k].tipo is Tipo.Venda or Tipo.Compra);
     }
 
-    public void Reset() { lock (_lock) { _cartas.Clear(); _negocios.Clear(); _anuncios.Clear(); } Mudou?.Invoke(); }
+    public void Reset() { lock (_lock) { _cartas.Clear(); _negocios.Clear(); _anuncios.Clear(); _aguardando.Clear(); } Mudou?.Invoke(); }
 
     private static List<long>? Longs(object? v) => v switch
     {

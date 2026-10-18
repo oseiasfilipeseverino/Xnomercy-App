@@ -7,7 +7,18 @@ public sealed class DamageMeterEntry
     // guild no momento atual, NÃO é chave de agrupamento (ver comentário da classe).
     public long LastObjectId { get; set; }
     public long Damage { get; set; }
+    // Cura EFETIVA: o que de fato subiu a vida de alguém. A cura que caiu em quem já
+    // estava com a vida cheia vai pra Overheal (ver DamageMeterTracker.CuraEfetiva).
     public long Healing { get; set; }
+    public long Overheal { get; set; }
+    // Dano que este jogador RECEBEU (de jogador ou de mob).
+    public long Taken { get; set; }
+
+    // Tempo em combate, pra DPS: soma dos intervalos entre golpes seguidos que
+    // ficaram a até JanelaCombate um do outro. Golpe isolado conta 1 segundo.
+    public double ActiveSeconds { get; set; }
+    public DateTime? LastHitUtc { get; set; }
+    public double Dps => Damage / Math.Max(ActiveSeconds, 1);
 
     // Dano por habilidade (CausingSpellIndex, param [7] do HealthUpdate) — alimenta a
     // quebra por skill (estilo Albion Battle Analytics). Chave -1 = sem índice de
@@ -18,6 +29,10 @@ public sealed class DamageMeterEntry
     {
         Damage += outra.Damage;
         Healing += outra.Healing;
+        Overheal += outra.Overheal;
+        Taken += outra.Taken;
+        ActiveSeconds += outra.ActiveSeconds;
+        if (outra.LastHitUtc is DateTime u && (LastHitUtc is null || u > LastHitUtc)) LastHitUtc = u;
         foreach (var kv in outra.DamageBySpell)
             DamageBySpell[kv.Key] = DamageBySpell.GetValueOrDefault(kv.Key) + kv.Value;
     }
@@ -32,9 +47,26 @@ public sealed class DamageBySpellEntry
 
 /// <summary>
 /// Ranking de dano/cura por jogador durante a sessão atual. O Albion não tem um
-/// evento dedicado de "dano" — tudo é derivado de HealthUpdate (code 6): toda vez
-/// que a vida de alguém muda, vem junto quem causou a mudança (CauserId) e o
-/// objeto afetado (AffectedObjectId). Negativo = dano, positivo = cura.
+/// evento dedicado de "dano" — tudo é derivado da variação de vida: toda vez que a
+/// vida de alguém muda, vem junto quem causou a mudança (CauserId) e o objeto
+/// afetado (AffectedObjectId). Negativo = dano, positivo = cura.
+///
+/// ── DOIS EVENTOS, NÃO UM (corrigido em 18/10/2026) ───────────────────────────
+///
+///   6  HealthUpdate   um golpe:          [0]=afetado [2]=variação [3]=vida nova
+///                                        [6]=causador [7]=habilidade
+///   7  HealthUpdates  VÁRIOS golpes no   [0]=afetado e, nos mesmos índices,
+///                     mesmo pacote       LISTAS: [2] variações [3] vidas novas
+///                                        [6] causadores [7] habilidades
+///
+/// Até a 1.0.66 só o 6 era lido. O 7 é o jeito que o servidor junta golpes que
+/// caem no mesmo alvo quase juntos — e todo esse dano sumia. Nos pacotes reais de
+/// 12/10 (diag_samples.txt) o medidor somou 88 de 531: o resto veio num 7. Nomes
+/// e índices: HealthUpdatesEvent do SAT (Triky313, GPL-3.0), conferidos no pacote.
+///
+/// Também desde 18/10: dano em si mesmo não conta (o SAT descarta igual), a cura
+/// que só "enche" quem já estava cheio vai pra Overheal, e cada jogador acumula o
+/// dano que RECEBEU e o tempo em combate (DPS).
 ///
 /// Guardamos por NOME resolvido NO MOMENTO do evento (PlayerRegistry.NameOf), não
 /// por ObjectId. O Albion recicla ObjectIds pequenos por zona/sala (dungeon, ilha
@@ -50,12 +82,6 @@ public sealed class DamageBySpellEntry
 /// dano ia pra uma linha chamada "#12345". Quando o nome chegava, os hits SEGUINTES
 /// iam pra linha "Fulano", mas os anteriores ficavam presos na "#12345" pra sempre.
 /// E a "#12345" é ESCONDIDA por padrão ("Mostrar sem nome" desmarcado).
-///
-/// Resultado: o começo da luta sumia do ranking. Justamente onde entra mais dano —
-/// e justamente quando alguém abre o app com a luta já rolando. Valia pra VOCÊ
-/// também: antes de o app descobrir seu SelfObjectId, seu dano ia pra "#seuId", e o
-/// histórico da sessão (MainWindow.Historico, que lê a linha "Você") salvava um
-/// número menor que o real. "O medidor está meio bugado" é, em boa parte, isso.
 ///
 /// Agora dano de causador sem nome fica PENDENTE, guardado por ObjectId, e é
 /// incorporado à linha certa assim que o nome resolve. A proteção contra reciclagem
@@ -74,6 +100,19 @@ public sealed class DamageMeterTracker
 
     // Dano de causador ainda sem nome, por (ObjectId, época). Ver o comentário da classe.
     private readonly Dictionary<(long Id, int Epoca), DamageMeterEntry> _pendentes = new();
+
+    // Última vida conhecida de cada objeto, pra separar cura efetiva de overheal.
+    // Vem do [3] (vida depois da mudança) de todo HealthUpdate e dos eventos de
+    // regeneração (91/96, [2]=vida [3]=vida máxima) — esses chegam quando a
+    // regeneração para, ou seja, quando o alvo encheu a vida sozinho.
+    private readonly Dictionary<long, (double Vida, DateTime Quando, int Epoca)> _vida = new();
+    private static readonly TimeSpan VidaValidaPor = TimeSpan.FromSeconds(30);
+    private const int MaxVidas = 5000;
+
+    // Golpes a até 5s um do outro contam como o mesmo trecho de combate. Ataque
+    // básico sai a cada ~1s e habilidade com recarga raramente deixa buraco maior;
+    // quem fica 5s sem bater (kitando, correndo) para de somar tempo.
+    public static readonly TimeSpan JanelaCombate = TimeSpan.FromSeconds(5);
 
     private readonly object _lock = new();
 
@@ -136,7 +175,11 @@ public sealed class DamageMeterTracker
 
     private static DamageMeterEntry Copiar(DamageMeterEntry e, string nome)
     {
-        var copy = new DamageMeterEntry { Name = nome, LastObjectId = e.LastObjectId, Damage = e.Damage, Healing = e.Healing };
+        var copy = new DamageMeterEntry
+        {
+            Name = nome, LastObjectId = e.LastObjectId, Damage = e.Damage, Healing = e.Healing,
+            Overheal = e.Overheal, Taken = e.Taken, ActiveSeconds = e.ActiveSeconds, LastHitUtc = e.LastHitUtc,
+        };
         foreach (var kv in e.DamageBySpell) copy.DamageBySpell[kv.Key] = kv.Value;
         return copy;
     }
@@ -172,56 +215,114 @@ public sealed class DamageMeterTracker
         }
     }
 
-    public void HandleEvent(PhotonEvent evt)
+    public void HandleEvent(PhotonEvent evt) => HandleEvent(evt, DateTime.UtcNow);
+
+    /// <summary>Mesmo que HandleEvent(evt), com o relógio injetado (o teste usa pra DPS).</summary>
+    public void HandleEvent(PhotonEvent evt, DateTime agoraUtc)
     {
-        if (evt.EventCode != GameEventCodes.HealthUpdate) return;
-        if (!evt.Parameters.TryGetValue(2, out var changeObj)) return;
-        if (!evt.Parameters.TryGetValue(6, out var causerObj)) return;
+        var p = evt.Parameters;
+        bool mudou = false;
 
-        // PhotonParam cobre byte/short/int/long/float/double — sem isso, um hit/heal
-        // pequeno (comum, ObjectIds e deltas baixos aparecem cedo na sessão/zona) caía
-        // no default e era silenciosamente descartado, sem log nem erro.
-        double change = PhotonParam.ToDouble(changeObj) ?? 0;
-        if (change == 0) return;
+        if (evt.EventCode == GameEventCodes.HealthUpdate)
+        {
+            if (!p.TryGetValue(2, out var changeObj) || !p.TryGetValue(6, out var causerObj)) return;
+            long? afetado = p.TryGetValue(0, out var a0) ? PhotonParam.ToLong(a0) : null;
+            double? vidaNova = p.TryGetValue(3, out var v3) ? PhotonParam.ToDouble(v3) : null;
+            int skill = p.TryGetValue(7, out var s7) && PhotonParam.ToLong(s7) is long si ? (int)si : -1;
+            mudou = Registrar(afetado, PhotonParam.ToLong(causerObj), PhotonParam.ToDouble(changeObj) ?? 0,
+                              vidaNova, skill, agoraUtc);
+        }
+        else if (evt.EventCode == GameEventCodes.HealthUpdates)
+        {
+            // Listas paralelas: o golpe i é ([2][i], [3][i], [6][i], [7][i]).
+            if (!p.TryGetValue(2, out var mudancas) || mudancas is not Array lista) return;
+            long? afetado = p.TryGetValue(0, out var a0) ? PhotonParam.ToLong(a0) : null;
+            p.TryGetValue(3, out var vidas);
+            p.TryGetValue(6, out var causadores);
+            p.TryGetValue(7, out var skills);
+            for (int i = 0; i < lista.Length; i++)
+            {
+                long? causador = Item(causadores, i) is double c ? (long)c : null;
+                int skill = Item(skills, i) is double s ? (int)s : -1;
+                mudou |= Registrar(afetado, causador, Item(mudancas, i) ?? 0, Item(vidas, i), skill, agoraUtc);
+            }
+        }
+        else if (evt.EventCode == GameEventCodes.RegenerationHealthChanged
+                 || evt.EventCode == GameEventCodes.RegenerationPlayerCombo)
+        {
+            // RegenerationHealthChanged (91) / RegenerationPlayerComboChanged (96):
+            // [0]=objeto [2]=vida [3]=vida máxima. Conferido nos pacotes reais de
+            // 12/10 (2279/2279, 3109/3109 — alvo de vida cheia). Só guarda a vida.
+            if (p.TryGetValue(0, out var o) && PhotonParam.ToLong(o) is long obj
+                && p.TryGetValue(2, out var a) && PhotonParam.ToDouble(a) is double vida
+                && p.TryGetValue(3, out var b) && PhotonParam.ToDouble(b) is double max
+                && vida >= 0 && max > 0 && vida <= max)
+            {
+                lock (_lock) GuardarVida(obj, vida, agoraUtc, EpocaAtual());
+            }
+            return;
+        }
+        else return;
 
-        long? causerId = PhotonParam.ToLong(causerObj);
-        if (causerId is null) return;
-        if (PlayerRegistry.IsMob(causerId.Value)) return;   // desconsidera dano de mob
+        if (mudou) Updated?.Invoke();
+    }
+
+    /// <summary>Elemento i de uma lista do Photon (float[], short[], object[]...) como número.</summary>
+    private static double? Item(object? lista, int i) =>
+        lista is Array a && i < a.Length ? PhotonParam.ToDouble(a.GetValue(i)) : null;
+
+    /// <summary>Um golpe ou uma cura. Devolve true se mudou algo no ranking.</summary>
+    private bool Registrar(long? afetado, long? causerId, double change, double? vidaNova, int spellIndex, DateTime agoraUtc)
+    {
+        if (change == 0 || causerId is null) return false;
+
+        // Dano em si mesmo (habilidade que custa vida, por exemplo) não é dano
+        // causado nem recebido de ninguém — o SAT descarta igual.
+        if (change < 0 && afetado == causerId) return false;
 
         // Resolvido AGORA — ver comentário da classe sobre por que isso importa mais
         // do que parece (reciclagem de ObjectId entre zonas).
-        string name = PlayerRegistry.NameOf(causerId.Value);
-
-        // CausingSpellIndex: índice (no spells.xml) da habilidade que causou esse hit —
-        // ver SpellCatalog.cs. -1 = sem efeito de spell (ataque básico de arma).
-        int spellIndex = evt.Parameters.TryGetValue(7, out var spellObj)
-            ? (PhotonParam.ToLong(spellObj) is long si ? (int)si : -1)
-            : -1;
+        string causador = PlayerRegistry.NameOf(causerId.Value);
+        string? alvo = afetado is long af ? PlayerRegistry.NameOf(af) : null;
+        bool causadorEhMob = PlayerRegistry.IsMob(causerId.Value);
 
         lock (_lock)
         {
             int epoca = EpocaAtual();
-            DamageMeterEntry entry;
 
-            if (name.StartsWith('#'))
+            double? vidaAntes = null;
+            if (afetado is long idAfetado)
+            {
+                if (_vida.TryGetValue(idAfetado, out var v) && v.Epoca == epoca && agoraUtc - v.Quando <= VidaValidaPor)
+                    vidaAntes = v.Vida;
+                if (vidaNova is double vn) GuardarVida(idAfetado, vn, agoraUtc, epoca);
+            }
+
+            // Dano RECEBIDO: vale pra jogador com nome (inclusive você), não importa
+            // se quem bateu foi mob ou jogador.
+            if (change < 0 && alvo != null && !alvo.StartsWith('#'))
+            {
+                var recebeu = Entrada(alvo, afetado!.Value);
+                recebeu.Taken += (long)Math.Round(-change);
+            }
+
+            if (causadorEhMob) return true;   // dano/cura de mob não entra no ranking de quem causa
+
+            DamageMeterEntry entry;
+            if (causador.StartsWith('#'))
             {
                 // Sem nome ainda: pendente, por ObjectId e época.
                 var chave = (causerId.Value, epoca);
                 if (!_pendentes.TryGetValue(chave, out entry!))
                 {
                     if (_pendentes.Count >= MaxPendentes) TrimPendentes();
-                    entry = new DamageMeterEntry { Name = name };
+                    entry = new DamageMeterEntry { Name = causador };
                     _pendentes[chave] = entry;
                 }
             }
             else
             {
-                if (!_entries.TryGetValue(name, out entry!))
-                {
-                    if (_entries.Count >= MaxEntries) TrimLowest();
-                    entry = new DamageMeterEntry { Name = name };
-                    _entries[name] = entry;
-                }
+                entry = Entrada(causador, causerId.Value);
                 // O nome acabou de resolver pra este ObjectId: traz o que ele causou
                 // antes, NESTA zona, pra linha certa.
                 if (_pendentes.Remove((causerId.Value, epoca), out var pendente))
@@ -234,10 +335,63 @@ public sealed class DamageMeterTracker
                 long dmg = (long)Math.Round(-change);
                 entry.Damage += dmg;
                 entry.DamageBySpell[spellIndex] = entry.DamageBySpell.GetValueOrDefault(spellIndex) + dmg;
+                // Tempo em combate pro DPS.
+                if (entry.LastHitUtc is DateTime ult && agoraUtc - ult <= JanelaCombate && agoraUtc >= ult)
+                    entry.ActiveSeconds += (agoraUtc - ult).TotalSeconds;
+                else
+                    entry.ActiveSeconds += 1;
+                entry.LastHitUtc = agoraUtc;
             }
-            else entry.Healing += (long)Math.Round(change);
+            else
+            {
+                double efetiva = CuraEfetiva(change, vidaAntes, vidaNova);
+                entry.Healing += (long)Math.Round(efetiva);
+                entry.Overheal += (long)Math.Round(change - efetiva);
+            }
         }
-        Updated?.Invoke();
+        return true;
+    }
+
+    /// <summary>
+    /// Quanto da cura subiu a vida de verdade.
+    ///
+    /// Com a vida de antes e a de depois conhecidas, a cura efetiva é a diferença,
+    /// limitada ao valor curado: cura em quem já estava cheio dá 0 e vira overheal.
+    /// É um teto, nunca um piso — a regeneração entre um evento e outro sobe a vida
+    /// sem avisar, então a vida "de antes" que temos pode ser menor que a real, e o
+    /// erro é sempre pra contar cura a MAIS, nunca a menos. Sem uma das duas vidas,
+    /// conta a cura inteira (comportamento antigo).
+    /// </summary>
+    public static double CuraEfetiva(double cura, double? vidaAntes, double? vidaDepois)
+    {
+        if (cura <= 0) return 0;
+        if (vidaAntes is not double antes || vidaDepois is not double depois) return cura;
+        return Math.Clamp(depois - antes, 0, cura);
+    }
+
+    /// <summary>Chamar só com o _lock tomado.</summary>
+    private DamageMeterEntry Entrada(string nome, long objectId)
+    {
+        if (!_entries.TryGetValue(nome, out var entry))
+        {
+            if (_entries.Count >= MaxEntries) TrimLowest();
+            entry = new DamageMeterEntry { Name = nome, LastObjectId = objectId };
+            _entries[nome] = entry;
+        }
+        return entry;
+    }
+
+    /// <summary>Chamar só com o _lock tomado.</summary>
+    private void GuardarVida(long obj, double vida, DateTime agoraUtc, int epoca)
+    {
+        if (_vida.Count >= MaxVidas && !_vida.ContainsKey(obj))
+        {
+            foreach (var k in _vida.Where(kv => agoraUtc - kv.Value.Quando > VidaValidaPor || kv.Value.Epoca != epoca)
+                                   .Select(kv => kv.Key).ToList())
+                _vida.Remove(k);
+            if (_vida.Count >= MaxVidas) _vida.Clear();
+        }
+        _vida[obj] = (vida, agoraUtc, epoca);
     }
 
     /// <summary>Incorpora pendentes da época atual cujo nome já resolveu.
@@ -251,12 +405,7 @@ public sealed class DamageMeterTracker
             if (kv.Key.Epoca != epoca) continue;   // zona anterior: ObjectId pode ser outra pessoa
             string nome = PlayerRegistry.NameOf(kv.Key.Id);
             if (nome.StartsWith('#')) continue;
-            if (!_entries.TryGetValue(nome, out var alvo))
-            {
-                alvo = new DamageMeterEntry { Name = nome, LastObjectId = kv.Key.Id };
-                _entries[nome] = alvo;
-            }
-            alvo.Absorver(kv.Value);
+            Entrada(nome, kv.Key.Id).Absorver(kv.Value);
             (feitos ??= new()).Add(kv.Key);
         }
         if (feitos != null) foreach (var k in feitos) _pendentes.Remove(k);
@@ -268,7 +417,7 @@ public sealed class DamageMeterTracker
     private void TrimLowest()
     {
         foreach (var key in _entries.Values
-                     .OrderBy(e => e.Damage + e.Healing)
+                     .OrderBy(e => e.Damage + e.Healing + e.Taken)
                      .Take(Math.Max(1, MaxEntries / 4))
                      .Select(e => e.Name)
                      .ToList())
@@ -294,6 +443,7 @@ public sealed class DamageMeterTracker
         {
             _entries.Clear();
             _pendentes.Clear();
+            _vida.Clear();
         }
         Updated?.Invoke();
     }

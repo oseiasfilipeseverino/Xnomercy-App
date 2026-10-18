@@ -4,13 +4,16 @@ namespace XnomercyApp.Network;
 /// Acumula fama e prata ganhas na sessão atual. Códigos e parâmetros confirmados via
 /// diagnóstico com dados reais:
 ///
-/// UpdateFame (82): [1]=fama total ×10000, [2]=fama GANHA neste evento ×10000.
-///   Usamos a diferença do total — robusto mesmo se algum evento do meio for perdido
-///   na captura (somar [2] subcontava quando faltava um). O baseline é o total ANTES
-///   do primeiro ganho ([1]-[2]), então o primeiro evento também conta.
+/// UpdateFame (82): [2]=fama ganha com o bônus da zona ×10000, [5]=Premium,
+///   [10]=fama da bolsa. Mesma fórmula do UpdateFameEvent do SAT: [2] × 1,5 se
+///   Premium + [10]. O [17] (bônus de evento de fama) NÃO multiplica: o SAT lê, mas
+///   volta o fator pra 1 quando o bônus está ativo — o jogo já manda o [2] com ele.
 ///
-/// TakeSilver (62): [3]=prata ganha neste evento ×10000 (mesmo valor do popup do jogo).
-///   Somamos [3] direto — é o ganho bruto por evento, sem perder o primeiro.
+/// TakeSilver (62): [3]=prata ANTES das taxas ×10000, [4]=taxa da zona,
+///   [5]=taxa da guild, [6]=penalidade de aliança (todas ×10000).
+///   Desde 18/10/2026 soma o LÍQUIDO ([3] − [4] − [5] − [6]), que é o que entra na
+///   carteira. Antes somava o [3] bruto: a tela mostrava mais prata do que a pessoa
+///   tinha ganho de verdade. Nomes e índices: TakeSilverEvent do SAT.
 /// </summary>
 public sealed class FameSilverTracker
 {
@@ -68,9 +71,10 @@ public sealed class FameSilverTracker
             }
             Updated?.Invoke();
         }
-        else if (evt.EventCode == GameEventCodes.SilverTaken && TryGetParam(evt, 3, out long silverAmt))
+        else if (evt.EventCode == GameEventCodes.SilverTaken && TryGetParam(evt, 3, out long silverBruto))
         {
-            if (silverAmt < 0) return;
+            if (silverBruto < 0) return;
+            long silverAmt = PrataLiquida(evt, silverBruto);
             lock (_lock)
             {
                 _silverRaw += silverAmt;
@@ -78,6 +82,15 @@ public sealed class FameSilverTracker
             }
             Updated?.Invoke();
         }
+    }
+
+    /// <summary>[3] − taxa da zona [4] − taxa da guild [5] − penalidade de aliança [6], nunca negativo.</summary>
+    public static long PrataLiquida(PhotonEvent evt, long bruto)
+    {
+        long taxas = 0;
+        foreach (byte k in new byte[] { 4, 5, 6 })
+            if (TryGetParam(evt, k, out long t) && t > 0) taxas += t;
+        return Math.Max(0, bruto - taxas);
     }
 
     public void Reset()

@@ -34,8 +34,15 @@ public static class EnetPacketParser
         public long UpdatedAtTicks;
     }
 
-    // Chave: canal + sequência inicial (o par que identifica a mensagem picada).
-    private static readonly ConcurrentDictionary<(byte Channel, int StartSeq), Reassembly> _pending = new();
+    // Chave: CONEXÃO (peer + challenge do cabeçalho) + canal + sequência inicial.
+    //
+    // Até 18/10/2026 era só canal + sequência. A sequência recomeça a cada conexão,
+    // e o app vê mais de uma (cliente→servidor e servidor→cliente, e a conexão nova
+    // de cada troca de zona): um pedaço de uma conexão podia completar a mensagem de
+    // outra com o mesmo número, e saía um evento com bytes misturados — um nome ou
+    // guild errados no NewCharacter, por exemplo. O SAT usa a mesma chave
+    // (PhotonFragmentKey: PeerId, Challenge, ChannelId, StartSequenceNumber).
+    private static readonly ConcurrentDictionary<(short Peer, int Challenge, byte Channel, int StartSeq), Reassembly> _pending = new();
     // Teto de memória: mensagem incompleta que nunca fecha (fragmento perdido na rede)
     // não pode ficar acumulando pra sempre.
     private const int MaxPendingReassemblies = 512;
@@ -63,11 +70,11 @@ public static class EnetPacketParser
             yield break;
 
         var r = new PhotonReader(udpData);
-        r.Skip(2);                    // PeerId
+        short peerId = r.ReadInt16(); // PeerId
         r.Skip(1);                    // Flags
         byte commandCount = r.ReadByte();
         r.Skip(4);                    // Timestamp
-        r.Skip(4);                    // Challenge
+        int challenge = r.ReadInt32(); // Challenge (identifica a conexão)
 
         for (int i = 0; i < commandCount && r.HasMore; i++)
         {
@@ -125,7 +132,8 @@ public static class EnetPacketParser
                 long now = DateTime.UtcNow.Ticks;
                 PrunePending(now);
 
-                var entry = _pending.GetOrAdd((channelId, startSeq), _ => new Reassembly
+                var chave = (peerId, challenge, channelId, startSeq);
+                var entry = _pending.GetOrAdd(chave, _ => new Reassembly
                 {
                     Buffer = new byte[totalLength],
                     Received = new bool[fragmentCount],
@@ -152,7 +160,7 @@ public static class EnetPacketParser
                     if (entry.RemainingParts == 0)
                     {
                         completo = entry.Buffer;
-                        _pending.TryRemove((channelId, startSeq), out _);
+                        _pending.TryRemove(chave, out _);
                     }
                 }
 

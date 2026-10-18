@@ -109,6 +109,9 @@ public partial class MainWindow
             row.DamagePct = pct.ToString("0.0") + "%";
             row.DamagePctValue = pct;
             row.Healing = e.Healing;
+            row.Overheal = e.Overheal;
+            row.Taken = e.Taken;
+            row.Dps = (long)Math.Round(e.Dps);
             row.WeaponIcon = icon;
 
             // Reordena só quando a posição realmente mudou (Move preserva a seleção,
@@ -207,6 +210,39 @@ public partial class MainWindow
             if (!manter.Contains(_damageBySkillRows[i].Name)) _damageBySkillRows.RemoveAt(i);
     }
 
+    // Exporta a luta como está na tela (com os filtros), pra revisar a CTA depois ou
+    // abrir no Excel. Pedido da revisão de 18/10/2026: o SAT guarda as lutas; aqui
+    // vira um CSV com o horário no nome.
+    private void BtnDamageExport_Click(object sender, RoutedEventArgs e)
+    {
+        if (_damageRows.Count == 0)
+        {
+            TxtCaptureStatus.Text = "Medidor vazio: nada pra exportar.";
+            return;
+        }
+        var dlg = new Microsoft.Win32.SaveFileDialog
+        {
+            FileName = $"luta_{DateTime.Now:yyyyMMdd_HHmm}.csv",
+            Filter = "CSV (*.csv)|*.csv",
+            DefaultExt = ".csv",
+        };
+        if (dlg.ShowDialog() != true) return;
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("Posicao;Jogador;Dano;% Dano;DPS;Cura efetiva;Overheal;Dano recebido");
+        int pos = 1;
+        foreach (var r in _damageRows)
+            sb.AppendLine($"{pos++};{Csv(r.Player)};{r.Damage};{r.DamagePct};{r.Dps};{r.Healing};{r.Overheal};{r.Taken}");
+        try
+        {
+            System.IO.File.WriteAllText(dlg.FileName, sb.ToString(), System.Text.Encoding.UTF8);
+            TxtCaptureStatus.Text = $"Luta exportada: {System.IO.Path.GetFileName(dlg.FileName)}";
+        }
+        catch (Exception ex)
+        {
+            TxtCaptureStatus.Text = $"Falha ao exportar: {ex.Message}";
+        }
+    }
+
     // Liga/desliga "ocultar sem nome" — só redesenha (o filtro é aplicado no refresh).
     private void DamageFilter_Changed(object sender, RoutedEventArgs e) => RefreshDamagePanel();
 
@@ -219,7 +255,9 @@ public partial class MainWindow
         int pos = 1;
         foreach (var r in _damageRows)
             sb.AppendLine($"{pos++}. {r.Player} — {r.Damage:N0} ({r.DamagePct})" +
-                          (r.Healing > 0 ? $" | cura {r.Healing:N0}" : ""));
+                          (r.Dps > 0 ? $" | DPS {r.Dps:N0}" : "") +
+                          (r.Healing > 0 ? $" | cura {r.Healing:N0}" : "") +
+                          (r.Taken > 0 ? $" | recebeu {r.Taken:N0}" : ""));
         // Antes, falha (clipboard ocupado por outro app) era engolida em silêncio — o
         // usuário clicava e nada visível acontecia, parecia que o botão não funcionou.
         var original = BtnDamageCopy.Content;

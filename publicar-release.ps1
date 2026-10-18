@@ -2,6 +2,12 @@
 #
 #   .\publicar-release.ps1 1.0.52
 #   .\publicar-release.ps1 1.0.52 -SoGerar     # monta o pacote e NAO publica
+#   .\publicar-release.ps1 1.0.52 -SemTestes   # pula a suite (so em emergencia)
+#
+# Desde 18/10/2026 a suite (testes\rodar.ps1) roda ANTES de compilar e a release
+# para se algum teste reprovar. Antes ela dependia de alguem lembrar de rodar: uma
+# release vai direto pra todo mundo pelo auto-update, e teste que nao roda nao
+# protege nada.
 #
 # A checagem de tamanho no meio existe por um motivo: sem --self-contained o
 # dotnet gera um build que depende do .NET instalado na maquina. Ele compila,
@@ -11,7 +17,8 @@
 
 param(
     [Parameter(Mandatory = $true)][string]$Versao,
-    [switch]$SoGerar
+    [switch]$SoGerar,
+    [switch]$SemTestes
 )
 
 $ErrorActionPreference = 'Stop'
@@ -33,6 +40,15 @@ $vpk  = Join-Path $env:USERPROFILE '.dotnet\tools\vpk.exe'
 
 if (-not (Test-Path $vpk)) {
     throw "vpk nao encontrado em $vpk. Instale com: dotnet tool install -g vpk"
+}
+
+if (-not $SemTestes) {
+    Write-Host "`n=== 0/4  Testes (testes\rodar.ps1) ===" -ForegroundColor Cyan
+    # Em outro processo: o rodar.ps1 termina com exit, e aqui so interessa o codigo.
+    powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $proj 'testes\rodar.ps1')
+    if ($LASTEXITCODE -ne 0) { throw 'testes reprovaram - release NAO publicada' }
+} else {
+    Write-Host "`n*** testes PULADOS (-SemTestes) ***" -ForegroundColor Yellow
 }
 
 Write-Host "`n=== 1/4  Compilando $Versao (self-contained) ===" -ForegroundColor Cyan

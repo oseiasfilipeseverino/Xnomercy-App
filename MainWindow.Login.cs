@@ -70,18 +70,21 @@ public partial class MainWindow
 
             if (_loggedIn) return;
             var url = WebView.Source?.ToString() ?? "";
-            if (!url.StartsWith(SiteUrl, StringComparison.OrdinalIgnoreCase)) return; // discord etc
+            if (!SiteConfig.EhDoSite(url)) return; // discord etc
             if (url.Contains("/login", StringComparison.OrdinalIgnoreCase)) return;   // ainda na tela de login
 
-            // Pergunta ao site se está logado e se pode acessar o Craft. /api/me pode não
-            // existir ainda (site antigo sem o sistema de login novo) — nesse caso (erro/
-            // resposta vazia) assume logado com Craft liberado, já que chegamos numa página
-            // que não é /login. Quando a rota existir, confiamos no campo logged_in de
-            // verdade — importante pro botão "Sair" funcionar (depois de deslogar, a home
-            // não é /login, mas logged_in vem false e não deve reabrir a sidebar).
-            bool loggedIn = true;
-            bool canCraft = true;
-            bool canTracker = true;
+            // Pergunta ao site se está logado e o que pode acessar (/api/me). Confiamos no
+            // campo logged_in — importante pro botão "Sair" funcionar (depois de deslogar,
+            // a home não é /login, mas logged_in vem false e não deve reabrir a sidebar).
+            //
+            // SEM RESPOSTA não libera nada (desde 18/10/2026). Antes, erro ou demora
+            // virava "logado, com tudo liberado" — herança de quando o site ainda não
+            // tinha o /api/me. Bastava o site estar reiniciando (deploy) pra qualquer um
+            // que chegasse numa página fora do /login ganhar acesso. Agora o app avisa e
+            // tenta de novo sozinho.
+            bool? loggedIn = null;
+            bool canCraft = false;
+            bool canTracker = false;
             try
             {
                 // Era XHR SÍNCRONO (3º argumento 'false' do .open) sem timeout algum — se
@@ -108,9 +111,16 @@ public partial class MainWindow
                     if (root.TryGetProperty("can_tracker", out var ct)) canTracker = ct.GetBoolean();
                 }
             }
-            catch { /* /api/me ainda não existe no site ou deu erro — segue com loggedIn=true */ }
+            catch { /* resposta fora do formato: tratada como "sem resposta" logo abaixo */ }
 
-            if (!loggedIn)
+            if (loggedIn is null)
+            {
+                await TentarLoginDeNovoAsync();
+                return;
+            }
+            _falhasLogin = 0;
+
+            if (loggedIn == false)
             {
                 // De verdade deslogado (ex: acabou de clicar "Sair") — manda pra tela de
                 // login em vez de reabrir a sidebar.
@@ -122,6 +132,29 @@ public partial class MainWindow
             OnLoggedIn(canTracker, canCraft);
         };
         WebView.CoreWebView2.Navigate(SiteUrl + "/login");
+    }
+
+    private int _falhasLogin;
+
+    /// <summary>
+    /// O site não respondeu se a pessoa está logada: avisa e recarrega a página depois
+    /// de um tempo, o que roda a conferência de novo. As 3 primeiras tentativas são
+    /// rápidas (site reiniciando num deploy leva segundos); depois, a cada 15s.
+    /// </summary>
+    private async Task TentarLoginDeNovoAsync()
+    {
+        _falhasLogin++;
+        bool rapido = _falhasLogin <= 3;
+        // O WebView é uma janela por cima de tudo (airspace): escondido, o aviso aparece.
+        WebView.Visibility = Visibility.Collapsed;
+        LoginLoading.Visibility = Visibility.Visible;
+        TxtLoginLoadingStatus.Text = rapido
+            ? $"Conferindo seu login com o site... (tentativa {_falhasLogin})"
+            : "O site não respondeu. Tentando de novo a cada 15 segundos — confira sua internet.";
+        await Task.Delay(rapido ? 3000 : 15000);
+        if (_loggedIn) return;
+        WebView.Visibility = Visibility.Visible;
+        try { WebView.CoreWebView2?.Reload(); } catch { /* WebView fechando junto com o app */ }
     }
 
     // Login concluído: mostra o menu lateral. Os 4 botões ficam sempre visíveis —

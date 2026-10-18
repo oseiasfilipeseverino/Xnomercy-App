@@ -198,8 +198,12 @@
                             ToolTip="Mini painel flutuante com fama/prata por hora, sempre visível por cima do jogo"/>
                     <Button x:Name="BtnNetDiag" Content="Diagnóstico de rede" Click="BtnNetDiag_Click"
                             Padding="0,7" Background="#2e2e2e" Foreground="#c9a227" BorderThickness="0" Cursor="Hand"
-                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,0,12"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,0,8"
                             ToolTip="Escuta 20s sem filtro de porta e mostra onde o tráfego do jogo realmente está. Use quando a captura não pegar nada (ex: com acelerador de rota tipo ExitLag). Pare a captura antes."/>
+                    <Button x:Name="BtnSaudeCaptura" Content="Saúde da captura" Click="BtnSaudeCaptura_Click"
+                            Padding="0,7" Background="#2e2e2e" Foreground="#c9a227" BorderThickness="0" Cursor="Hand"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,0,12"
+                            ToolTip="Mostra, parte por parte (dano, loot, grupo, fama...), quando o app reconheceu cada evento pela última vez — e avisa se o jogo mudou algo num patch."/>
                     <Border Height="1" Margin="-6,0,-6,12">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
@@ -409,12 +413,15 @@
                 <StackPanel Grid.Row="0" Margin="16,12,16,8">
                     <TextBlock Text="Medidor de Dano — sessão atual" Foreground="#c9a227" FontFamily="{StaticResource FontHead}" FontSize="28" FontWeight="SemiBold"/>
                     <TextBlock Foreground="#8CFFFFFF" FontSize="12" Margin="0,4,0,8" TextWrapping="Wrap"
-                               Text="Ranking de dano e cura por jogador, do que mais deu dano para o que menos deu. O nome é resolvido pra todo jogador por perto (até quem já estava na cena); o que sobrar como #número costuma ser mob ou invocação."/>
+                               Text="Ranking de dano e cura por jogador, do que mais deu dano para o que menos deu. DPS conta só o tempo em que a pessoa estava batendo. A cura é a efetiva (passe o mouse para ver o overheal). O que sobrar como #número costuma ser mob ou invocação."/>
                     <StackPanel Orientation="Horizontal">
                         <Button x:Name="BtnDamageReset" Content="Reiniciar sessão" Click="BtnDamageReset_Click"
                                 Padding="14,6" Background="#2e2e2e" Foreground="White" BorderThickness="0" Cursor="Hand"/>
                         <Button x:Name="BtnDamageCopy" Content="Copiar medidor" Click="BtnDamageCopy_Click"
                                 Padding="14,6" Background="#242424" Foreground="White" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"/>
+                        <Button x:Name="BtnDamageExport" Content="Exportar luta (CSV)" Click="BtnDamageExport_Click"
+                                Padding="14,6" Background="#242424" Foreground="White" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"
+                                ToolTip="Salva o medidor como está na tela (dano, DPS, cura, recebido) num arquivo pra revisar a luta depois"/>
                         <CheckBox x:Name="ChkShowUnnamed" Content="Mostrar sem nome (#número)" IsChecked="False" Click="DamageFilter_Changed"
                                   Foreground="#DEFFFFFF" VerticalAlignment="Center" Margin="16,0,0,0"/>
                         <CheckBox x:Name="ChkGuildOnlyDamage" Content="Só minha guild" IsChecked="False" Click="DamageFilter_Changed"
@@ -468,7 +475,27 @@
                                         </DataTemplate>
                                     </GridViewColumn.CellTemplate>
                                 </GridViewColumn>
-                                <GridViewColumn Header="Cura" Width="100" DisplayMemberBinding="{Binding Healing}"/>
+                                <GridViewColumn Header="DPS" Width="80">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Dps, StringFormat=N0}" Foreground="#DEFFFFFF" VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="Cura" Width="100">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Healing, StringFormat=N0}" ToolTip="{Binding HealingTip}" Foreground="#86efac" VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="Recebido" Width="100">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Taken, StringFormat=N0}" Foreground="#f87171" VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
                             </GridView>
                         </ListView.View>
                     </ListView>

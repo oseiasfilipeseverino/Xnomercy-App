@@ -103,6 +103,30 @@ public sealed class DamageRowDisplay : System.ComponentModel.INotifyPropertyChan
         set { if (_healing != value) { _healing = value; Notify(nameof(Healing)); } }
     }
 
+    // Desde 18/10/2026: cura que caiu em quem já estava cheio (fica na dica da coluna
+    // Cura), dano recebido e DPS pelo tempo em combate. Ver DamageMeterTracker.
+    private long _overheal;
+    public long Overheal
+    {
+        get => _overheal;
+        set { if (_overheal != value) { _overheal = value; Notify(nameof(Overheal)); Notify(nameof(HealingTip)); } }
+    }
+    public string HealingTip => _overheal > 0 ? $"Cura efetiva. Mais {_overheal:N0} de overheal (em quem já estava com a vida cheia)." : "Cura efetiva.";
+
+    private long _taken;
+    public long Taken
+    {
+        get => _taken;
+        set { if (_taken != value) { _taken = value; Notify(nameof(Taken)); } }
+    }
+
+    private long _dps;
+    public long Dps
+    {
+        get => _dps;
+        set { if (_dps != value) { _dps = value; Notify(nameof(Dps)); } }
+    }
+
     private string? _weaponIcon;   // URL do render oficial do item
     public string? WeaponIcon
     {
@@ -208,6 +232,7 @@ public partial class MainWindow : Window
     private volatile bool _damageDirty;
     private volatile bool _advancedVisible;   // só processa a lista crua quando o modo avançado está à vista
     private bool _loggedIn;
+    private string? _avisoCaptura;   // aviso que fica no lugar dos contadores (ver diagTimer)
     private bool _canTracker = true;   // Loot Log + Medidor de Dano + Fama & Prata (vêm juntos)
     private bool _canCraft = true;
 
@@ -396,7 +421,10 @@ public partial class MainWindow : Window
         // Calibração automática da numeração de eventos (ver Network/EventOffset.cs): avisa
         // quando um patch do jogo desloca os códigos, em vez de o app ficar mudo.
         EventOffset.Mudou += d => Dispatcher.BeginInvoke(() =>
-            TxtCaptureStatus.Text = $"O jogo mudou a numeração de eventos — ajustado sozinho ({d:+0;-0;0}).");
+            _avisoCaptura = $"O jogo mudou a numeração de eventos — ajustado sozinho ({d:+0;-0;0}).");
+        CaptureHealth.Alertou += recurso => Dispatcher.BeginInvoke(() =>
+            _avisoCaptura = $"Atenção: \"{recurso}\" começou a chegar num formato diferente — o jogo pode ter " +
+                            "mudado num patch. Veja \"Saúde da captura\" no menu.");
         TxtCaptureStatus.ToolTip = "";
         TxtCaptureStatus.ToolTipOpening += (_, _) => TxtCaptureStatus.ToolTip =
             $"Numeração de eventos: SAT {EventOffset.Delta:+0;-0;0} — " +
@@ -417,7 +445,9 @@ public partial class MainWindow : Window
         uiTimer.Tick += (_, _) =>
         {
             if (_fameDirty) { _fameDirty = false; RefreshFamePanel(); }
-            if (_damageDirty) { _damageDirty = false; RefreshDamagePanel(); }
+            // Só redesenha com a aba à vista (o dado continua sendo somado no tracker;
+            // ao abrir a aba, ShowPanel redesenha). Antes rodava 3x/s com a aba escondida.
+            if (_damageDirty && PanelDamage.Visibility == Visibility.Visible) { _damageDirty = false; RefreshDamagePanel(); }
             AtualizarRotuloDoGrupo();
         };
         uiTimer.Start();
@@ -445,6 +475,10 @@ public partial class MainWindow : Window
                     "\"Diagnóstico de rede\" e mande o resultado pra liderança.";
                 return;
             }
+
+            // Aviso importante (numeração mudou, formato estranho) fica na tela no lugar
+            // dos contadores — antes o timer o apagava no segundo seguinte.
+            if (_avisoCaptura != null) { TxtCaptureStatus.Text = _avisoCaptura; return; }
 
             var learned = _capture.LearnedPorts;
             string extra = learned.Count > 0

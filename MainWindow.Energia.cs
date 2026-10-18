@@ -48,7 +48,7 @@ public partial class MainWindow
     {
         if (_enviandoEnergia || _energiaPendente.Count == 0) return;
         var url = WebView.Source?.ToString() ?? "";
-        if (WebView.CoreWebView2 == null || !url.StartsWith(SiteUrl, System.StringComparison.OrdinalIgnoreCase))
+        if (WebView.CoreWebView2 == null || !SiteConfig.EhDoSite(url))
         {
             TxtEnergiaBanner.Text = "Abra o site no app (com login da gestão) e clique em Enviar de novo.";
             return;

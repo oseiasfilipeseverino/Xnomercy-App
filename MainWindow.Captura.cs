@@ -94,6 +94,69 @@ public partial class MainWindow
         }
     }
 
+    // Saúde da captura: uma linha por parte do app, com quando o evento dela foi
+    // reconhecido pela última vez. Janela simples, atualizada a cada segundo enquanto
+    // aberta. Ver Network/CaptureHealth.cs.
+    private Window? _janelaSaude;
+
+    private void BtnSaudeCaptura_Click(object sender, RoutedEventArgs e)
+    {
+        if (_janelaSaude is { IsVisible: true }) { _janelaSaude.Activate(); return; }
+
+        var lista = new StackPanel { Margin = new Thickness(18) };
+        var janela = new Window
+        {
+            Title = "Saúde da captura",
+            Width = 760,
+            Height = 560,
+            Owner = this,
+            Background = B("#1a1a1a"),
+            Content = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = lista },
+        };
+
+        void Desenhar()
+        {
+            lista.Children.Clear();
+            lista.Children.Add(new TextBlock
+            {
+                Text = _capturing
+                    ? (_paused ? "Captura PAUSADA — nada é contado até despausar." : "Captura ligada. Cada linha diz quando o app reconheceu aquela parte pela última vez.")
+                    : "Captura parada — ligue a captura para ver os eventos chegando.",
+                Foreground = B("#DEFFFFFF"), FontSize = 13, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 6),
+            });
+            lista.Children.Add(new TextBlock
+            {
+                Text = $"Numeração de eventos: SAT {EventOffset.Delta:+0;-0;0} " +
+                       (EventOffset.ConfirmadoEm is DateTime c ? $"(conferida no jogo às {c:HH:mm})" : "(ainda não conferida nesta sessão)"),
+                Foreground = B("#8CFFFFFF"), FontSize = 12, Margin = new Thickness(0, 0, 0, 14),
+            });
+            foreach (var l in CaptureHealth.Linhas())
+            {
+                var linha = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+                linha.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(170) });
+                linha.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                var nome = new TextBlock { Text = l.Recurso, Foreground = B("#c9a227"), FontWeight = FontWeights.SemiBold, FontSize = 14 };
+                var sit = new TextBlock
+                {
+                    Text = l.Situacao, TextWrapping = TextWrapping.Wrap, FontSize = 13,
+                    Foreground = l.Alerta ? B("#f87171") : l.UltimoUtc != null || l.Vistos > 0 ? B("#86efac") : B("#8CFFFFFF"),
+                };
+                Grid.SetColumn(sit, 1);
+                linha.Children.Add(nome);
+                linha.Children.Add(sit);
+                lista.Children.Add(linha);
+            }
+        }
+
+        var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        timer.Tick += (_, _) => Desenhar();
+        janela.Closed += (_, _) => timer.Stop();
+        Desenhar();
+        timer.Start();
+        _janelaSaude = janela;
+        janela.Show();
+    }
+
     // ── Loot Log (Fase 2) ────────────────────────────────────────────────────
     private void BtnAdvancedMode_Click(object sender, RoutedEventArgs e)
     {
@@ -111,8 +174,9 @@ public partial class MainWindow
         if (_paused) return;
         OnPhotonEvent(evt);
         EventOffset.Observe(evt);          // calibração automática da numeração (antes de quem usa os códigos)
-        PartyTracker.Handle(evt);          // grupo exato (eventos de grupo do jogo)
-        if (_gatherTracker.HandleEvent(evt)) _coletaDirty = true;   // aba Coleta
+        CaptureHealth.Observar(evt);       // saúde da captura: número fixo chegou no formato esperado?
+        if (PartyTracker.Handle(evt) != null) CaptureHealth.Marcar("Grupo");   // grupo exato (eventos de grupo do jogo)
+        if (_gatherTracker.HandleEvent(evt)) { _coletaDirty = true; CaptureHealth.Marcar("Coleta"); }   // aba Coleta
         PlayerRegistry.HandleEvent(evt);
         _fameTracker.HandleEvent(evt);
         _damageTracker.HandleEvent(evt);
@@ -191,6 +255,8 @@ public partial class MainWindow
                 // já nascia sem cota por causa da primeira.
                 PartyCalibrationLog.IniciarSessao();
                 ReiniciarDiagNomeados();
+                CaptureHealth.Reset();   // a saúde vale pra esta captura
+                _avisoCaptura = null;
             }
             BtnCaptureToggle.Content = _capturing ? "Parar captura" : "Iniciar captura";
         }
@@ -387,7 +453,7 @@ public partial class MainWindow
     [System.Diagnostics.Conditional("BETA")]
     private static void DiagLogBigEvent(PhotonEvent evt)
     {
-        if (evt.EventCode < 0 || _diagCount >= 800) return;
+        if (evt.EventCode < 0 || _diagCount >= 800 || DiagPrivacidade.EhChat(evt.EventCode)) return;
         bool hasBig = evt.Parameters.Values.Any(v =>
             (v is long l && Math.Abs(l) > 100000) || (v is int i && Math.Abs(i) > 100000));
         if (!hasBig) return;
@@ -414,6 +480,7 @@ public partial class MainWindow
         null => "null",
         byte[] b => $"byte[{b.Length}]",
         System.Array a => $"arr[{a.Length}]",
+        string s => DiagPrivacidade.Texto(s),   // ver DiagPrivacidade: nada de chat no diagnóstico
         _ => v.ToString() ?? ""
     };
 
@@ -443,7 +510,8 @@ public partial class MainWindow
         // Pula 29 (NewCharacter) e 30 (Move) — já calibrados e de alto volume; entupiam
         // o log e escondiam códigos raros (ex: o evento de party que ainda procuramos).
         if (evt.EventCode < 0 || evt.EventCode == GameEventCodes.NewCharacter
-            || evt.EventCode == GameEventCodes.Move || _diagNamedCount >= 500) return;
+            || evt.EventCode == GameEventCodes.Move || _diagNamedCount >= 500
+            || DiagPrivacidade.EhChat(evt.EventCode)) return;
         bool hasText = evt.Parameters.Values.Any(v => v is string s && s.Length > 1 && !s.All(c => char.IsDigit(c) || c == ',' || c == '.' || c == '-'));
         if (!hasText) return;
         lock (_diagNamedLock)

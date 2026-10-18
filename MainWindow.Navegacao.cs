@@ -60,7 +60,7 @@ public partial class MainWindow
         switch (tag)
         {
             case "loot":     PanelLoot.Visibility = Visibility.Visible; break;
-            case "damage":   PanelDamage.Visibility = Visibility.Visible; break;
+            case "damage":   PanelDamage.Visibility = Visibility.Visible; RefreshDamagePanel(); break;
             case "fame":     PanelFame.Visibility = Visibility.Visible; RedrawSessionChart(); break;
             case "sessions": PanelSessions.Visibility = Visibility.Visible; break;
             case "gathering": PanelGathering.Visibility = Visibility.Visible; RefreshColeta(); break;

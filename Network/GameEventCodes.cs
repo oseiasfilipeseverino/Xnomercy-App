@@ -101,11 +101,10 @@ public static class GameEventCodes
     // Usado pra resolver ObjectId -> nome no medidor de dano e filtrar loot por guild.
     public static int NewCharacter { get; set; } = 29;
 
-    // NewMob: [0]=ObjectId. DESLIGADO em PlayerRegistry.HandleEvent (código 53-59):
-    // sem tag de confirmação, repete tipo sync de posição/vida várias vezes por segundo —
-    // provavelmente dispara pra QUALQUER entidade próxima, jogador incluso, o que marcava
-    // gente como mob por engano e sumia com o dano dela no meio da luta. Mantido mapeado
-    // aqui só de referência; MobSpeak (74) e MobKilled (166) cobrem mob com tag verificada.
+    // NewMob: [0]=ObjectId [1]=índice do mob [7]/[8]=posição [13]=vida [14]=vida máxima.
+    // Esteve desligado (suspeita de pegar jogador). O pacote real de 12/10 mostrou o
+    // formato de mob do SAT, e desde 18/10/2026 liga em PlayerRegistry — só quando o
+    // formato inteiro bate (PlayerRegistry.EhNovoMob).
     public static int NewMob { get; set; } = 123;
 
     // MobSpeak (mob solta uma fala/provocação, ex: ao puxar agro): [0]=tipo do mob em
@@ -124,6 +123,18 @@ public static class GameEventCodes
     // positivo=cura) [6]=ObjectId de quem causou. Não existe evento dedicado de
     // "dano" no Albion — é tudo derivado daqui.
     public static int HealthUpdate { get; set; } = 6;
+
+    // HealthUpdates: o MESMO conteúdo do HealthUpdate, mas em LISTAS — vários golpes
+    // num pacote só. [0]=afetado [2]=variações [3]=vidas novas [6]=causadores
+    // [7]=habilidades. Até a 1.0.66 o app ignorava e o dano dele sumia do medidor.
+    // Conferido nos pacotes reais de 12/10: [2]=Single[]{-370,-73} [6]=Int16[]{4962,4962}.
+    public static int HealthUpdates { get; set; } = 7;
+
+    // Regeneração: [0]=objeto [2]=vida [3]=vida máxima. Chegam quando a regeneração
+    // muda (inclusive quando para porque a vida encheu). O medidor usa só pra saber
+    // a vida atual do alvo e separar cura efetiva de overheal.
+    public static int RegenerationHealthChanged { get; set; } = 91;
+    public static int RegenerationPlayerCombo { get; set; } = 96;
 
     // PartyInviteAccepted: NÃO CALIBRADO.
     //

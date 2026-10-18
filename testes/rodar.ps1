@@ -56,6 +56,11 @@ Write-Host "`n--- harness_vendas (aba Vendas) ---"
 dotnet run --project "$PSScriptRoot\harness_vendas\harness_vendas.csproj" -c Release --nologo
 if ($LASTEXITCODE -ne 0) { $falhou++ }
 
+# -- Correcoes da revisao de 18/10/2026 (prata liquida, fragmentos, saude, privacidade...)
+Write-Host "`n--- harness_revisao (correcoes da revisao) ---"
+dotnet run --project "$PSScriptRoot\harness_revisao\harness_revisao.csproj" -c Release --nologo
+if ($LASTEXITCODE -ne 0) { $falhou++ }
+
 if ($falhou -gt 0) {
     Write-Host "`n$falhou teste(s) reprovaram" -ForegroundColor Red
     exit 1

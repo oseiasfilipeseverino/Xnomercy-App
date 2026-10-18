@@ -483,7 +483,7 @@ public sealed class PacketCaptureService : IDisposable
 
     private void OnPacketArrival(object sender, PacketCapture e)
     {
-        DiagRawPackets++;
+        Interlocked.Increment(ref DiagRawPackets);   // uma thread por adaptador: ++ perdia contagem
         try
         {
             var raw = e.GetPacket();
@@ -493,6 +493,11 @@ public sealed class PacketCaptureService : IDisposable
 
             int srcPort = udp.SourcePort, dstPort = udp.DestinationPort;
             bool known = IsKnownGamePort(srcPort, dstPort);
+
+            // Porta desconhecida que já esgotou as tentativas (Discord, torrent, vídeo):
+            // sai ANTES de calcular o hash do dedup. Antes todo UDP da máquina passava
+            // pelo hash do pacote inteiro, sob lock, só pra ser descartado logo depois.
+            if (!known && !ShouldTryDiscovery(srcPort, dstPort)) return;
 
             if (IsDuplicatePayload(udp.PayloadData)) return;
 
@@ -509,8 +514,7 @@ public sealed class PacketCaptureService : IDisposable
             // o Photon pode não começar no byte 0. Só quando um deslocamento entrega um
             // evento de jogo de verdade é que ele é fixado e a porta aprendida; assim
             // nenhum lixo entra nos painéis enquanto o formato é desconhecido.
-            if (!ShouldTryDiscovery(srcPort, dstPort)) return;
-
+            // (A cota de tentativas desta porta já foi conferida lá em cima.)
             foreach (int off in CandidateOffsets)
             {
                 if (!TryDecodeAt(udp.PayloadData, off, raise: false)) continue;
@@ -629,7 +633,8 @@ public sealed class PacketCaptureService : IDisposable
         // membros do grupo. Arrays maiores ficam só com o tamanho pra não explodir o log.
         byte[] b when b.Length <= 16 => $"byte[{b.Length}]={Convert.ToHexString(b)}",
         byte[] b => $"byte[{b.Length}]",
-        object?[] a => $"arr[{a.Length}]={{{string.Join(",", a.Select(x => x?.ToString() ?? "null"))}}}",
+        object?[] a => $"arr[{a.Length}]={{{string.Join(",", a.Select(x => x is string s ? DiagPrivacidade.Texto(s) : x?.ToString() ?? "null"))}}}",
+        string s => DiagPrivacidade.Texto(s),   // chat e sussurro do próprio jogador: ver DiagPrivacidade
         _ => v.ToString() ?? ""
     };
 

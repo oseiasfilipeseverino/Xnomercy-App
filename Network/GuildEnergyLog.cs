@@ -31,7 +31,9 @@ public static class GuildEnergyLog
     public static void HandleOpResponse(PhotonOperationResponse op)
     {
         var lista = Ler(op.Parameters);
-        if (lista != null) Lido?.Invoke(lista);
+        if (lista == null) return;
+        CaptureHealth.Marcar("Energia da guild");
+        Lido?.Invoke(lista);
     }
 
     public static List<Entrada>? Ler(IReadOnlyDictionary<byte, object?> p)

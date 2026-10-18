@@ -119,7 +119,7 @@ public static class PartyCalibrationLog
     public static void LogEvent(PhotonEvent evt)
     {
         int code = evt.EventCode;
-        if (code < 0 || IgnoredEventCodes.Contains(code)) return;
+        if (code < 0 || IgnoredEventCodes.Contains(code) || DiagPrivacidade.EhChat(code)) return;
         Write($"evt:{code}", $"code={code} {Dump(evt.Parameters)}",
               prioridade: PrioridadeEventos.Contains(code));
     }
@@ -185,12 +185,12 @@ public static class PartyCalibrationLog
     private static string Val(object? v) => v switch
     {
         null => "null",
-        string s => $"\"{s}\"",
+        string s => $"\"{DiagPrivacidade.Texto(s)}\"",
         byte[] b when b.Length <= 16 => $"byte[{b.Length}]={Convert.ToHexString(b)}",
         byte[] b => $"byte[{b.Length}]",
         // Listas de string sao o alvo principal: roster de grupo tende a vir assim.
-        string[] a => $"str[{a.Length}]={{{string.Join(',', a)}}}",
-        object?[] a => $"arr[{a.Length}]={{{string.Join(',', a.Select(x => x?.ToString() ?? "null"))}}}",
+        string?[] a => $"str[{a.Length}]={{{string.Join(',', a.Select(x => x == null ? "" : DiagPrivacidade.Texto(x)))}}}",
+        object?[] a => $"arr[{a.Length}]={{{string.Join(',', a.Select(x => x is string s ? DiagPrivacidade.Texto(s) : x?.ToString() ?? "null"))}}}",
         Array a => $"{a.GetType().GetElementType()?.Name}[{a.Length}]={{{string.Join(',', a.Cast<object?>().Select(x => x?.ToString() ?? "null"))}}}",
         System.Collections.IDictionary d => $"dict[{d.Count}]",
         _ => v.ToString() ?? "",
