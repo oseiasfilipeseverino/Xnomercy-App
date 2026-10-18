@@ -87,22 +87,11 @@ public partial class MainWindow
             bool canTracker = false;
             try
             {
-                // Era XHR SÍNCRONO (3º argumento 'false' do .open) sem timeout algum — se
-                // o site demorasse a responder (ex: cold start no Railway), travava a
-                // navegação do WebView por tempo indefinido. Troca por fetch assíncrono
-                // com AbortController (8s) + timeout de novo no lado do C# (10s) como
-                // backstop, igual o padrão de timeout já usado no resto do app.
-                var scriptTask = WebView.CoreWebView2.ExecuteScriptAsync(
-                    "(function(){return (async function(){try{" +
-                    "var ac=new AbortController();var tm=setTimeout(function(){ac.abort();},8000);" +
-                    "var r=await fetch('/api/me',{signal:ac.signal});clearTimeout(tm);" +
-                    "if(r.status!==200)return '';return await r.text();" +
-                    "}catch(e){return '';}})();})()");
-                var raw = await Task.WhenAny(scriptTask, Task.Delay(10000)) == scriptTask
-                    ? await scriptTask
-                    : "\"\"";
-                var inner = System.Text.Json.JsonSerializer.Deserialize<string>(raw) ?? "";
-                if (!string.IsNullOrEmpty(inner))
+                // Pelo C#, com os cookies do WebView — ver MainWindow.Site.cs. (O script
+                // assíncrono que rodava aqui nunca devolveu a resposta: o
+                // ExecuteScriptAsync não espera promessa.)
+                var (status, inner) = await ChamarSiteAsync(System.Net.Http.HttpMethod.Get, "/api/me");
+                if (status == 200 && !string.IsNullOrEmpty(inner))
                 {
                     using var doc = System.Text.Json.JsonDocument.Parse(inner);
                     var root = doc.RootElement;

@@ -64,6 +64,13 @@ public sealed class GatheringTracker
     /// <summary>true se o evento era uma coleta sua e foi contado.</summary>
     public bool HandleEvent(PhotonEvent evt, long? self = null, System.DateTime? agoraUtc = null)
     {
+        bool contou = Contar(evt, self, agoraUtc);
+        if (contou) CaptureHealth.Marcar("Coleta");
+        return contou;
+    }
+
+    private bool Contar(PhotonEvent evt, long? self, System.DateTime? agoraUtc)
+    {
         if (evt.EventCode == EventOffset.Live(SatRewardGranted))
         {
             var r = evt.Parameters;

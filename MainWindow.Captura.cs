@@ -179,8 +179,8 @@ public partial class MainWindow
         GroupGear.HandleEvent(evt);        // equipamento de quem está por perto (painel do grupo)
         _faccao.HandleEvent(evt);          // pontos de facção e Might & Favor
         _baus.HandleEvent(evt);            // conteúdo de baú e banco
-        if (PartyTracker.Handle(evt) != null) CaptureHealth.Marcar("Grupo");   // grupo exato (eventos de grupo do jogo)
-        if (_gatherTracker.HandleEvent(evt)) { _coletaDirty = true; CaptureHealth.Marcar("Coleta"); }   // aba Coleta
+        PartyTracker.Handle(evt);          // grupo exato (eventos de grupo do jogo)
+        if (_gatherTracker.HandleEvent(evt)) _coletaDirty = true;   // aba Coleta
         PlayerRegistry.HandleEvent(evt);
         _fameTracker.HandleEvent(evt);
         _damageTracker.HandleEvent(evt);

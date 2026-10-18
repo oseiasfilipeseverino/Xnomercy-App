@@ -59,17 +59,22 @@ public partial class MainWindow
         try
         {
             var corpo = GuildEnergyLog.ParaJson(_energiaPendente.Values);
-            // Mesma origem do site (a sessão de login é a dele): pega o token CSRF e posta.
-            var js = "(function(){return (async function(){try{" +
-                     "var t=await fetch('/api/app/csrf');if(t.status!==200)return JSON.stringify({erro:'login'});" +
-                     "var tk=(await t.json()).token;" +
-                     "var r=await fetch('/api/app/energia',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':tk},body:" +
-                     System.Text.Json.JsonSerializer.Serialize(corpo) + "});" +
-                     "var d=await r.json().catch(function(){return {};});d.status=r.status;return JSON.stringify(d);" +
-                     "}catch(e){return JSON.stringify({erro:String(e)});}})();})()";
-            var tarefa = WebView.CoreWebView2.ExecuteScriptAsync(js);
-            var bruto = await Task.WhenAny(tarefa, Task.Delay(60000)) == tarefa ? await tarefa : "\"\"";
-            var texto = System.Text.Json.JsonSerializer.Deserialize<string>(bruto) ?? "";
+            // Com a sessão do login do WebView, pelo C# (ver MainWindow.Site.cs): pega o
+            // token CSRF e posta. O script assíncrono de antes nunca devolvia a resposta.
+            string texto;
+            var (stCsrf, csrfJson) = await ChamarSiteAsync(System.Net.Http.HttpMethod.Get, "/api/app/csrf");
+            if (stCsrf == 0) texto = "";
+            else if (stCsrf != 200) texto = "{\"erro\":\"login\"}";
+            else
+            {
+                string? token = null;
+                try { using var d = System.Text.Json.JsonDocument.Parse(csrfJson); token = d.RootElement.GetProperty("token").GetString(); }
+                catch { }
+                var (st, resp) = await ChamarSiteAsync(System.Net.Http.HttpMethod.Post, "/api/app/energia", corpo, token);
+                var obj = st == 0 ? null : (TryParseObj(resp) ?? new System.Text.Json.Nodes.JsonObject());
+                if (obj != null) obj["status"] = st;
+                texto = obj?.ToJsonString() ?? "";
+            }
             TxtEnergiaBanner.Text = ResumoEnvioEnergia(texto, out var ok);
             if (ok) _energiaPendente.Clear();
         }
@@ -83,6 +88,11 @@ public partial class MainWindow
             BtnEnergiaEnviar.IsEnabled = _energiaPendente.Count > 0;
             BtnEnergiaEnviar.Content = _energiaPendente.Count > 0 ? "Tentar de novo" : "Enviado";
         }
+    }
+
+    private static System.Text.Json.Nodes.JsonObject? TryParseObj(string s)
+    {
+        try { return System.Text.Json.Nodes.JsonNode.Parse(s) as System.Text.Json.Nodes.JsonObject; } catch { return null; }
     }
 
     public static string ResumoEnvioEnergia(string json, out bool ok)

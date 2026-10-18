@@ -58,6 +58,13 @@ public static class PartyTracker
     /// <summary>"entrou_no_grupo", "membro_entrou", "membro_saiu" ou null (não é evento de grupo).</summary>
     public static string? Handle(PhotonEvent evt)
     {
+        var r = Reconhecer(evt);
+        if (r != null) CaptureHealth.Marcar("Grupo");
+        return r;
+    }
+
+    private static string? Reconhecer(PhotonEvent evt)
+    {
         var p = evt.Parameters;
         int code = evt.EventCode;
         // Grupo desfeito: o SAT zera o grupo sem olhar campo nenhum. Aqui, por

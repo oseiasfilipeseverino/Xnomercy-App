@@ -100,6 +100,7 @@ public sealed class MapHistory
         string indice = m is string s ? s : PhotonParam.ToLong(m)?.ToString() ?? "";
         if (indice.Length == 0 || indice.Length > 200) return false;
         Entrou(indice, agoraUtc);
+        CaptureHealth.Marcar("Mapa");
         return true;
     }
 
