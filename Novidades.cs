@@ -16,6 +16,10 @@ public static class Novidades
 {
     public static readonly (string Versao, string[] Itens)[] Notas =
     {
+        ("1.1.5", new[]
+        {
+            "Filtro \"Só minha guild\" (Loot Log e Medidor de Dano): o app pega a sua guild direto do jogo ao entrar no mapa e não esconde mais o seu próprio loot.",
+        }),
         ("1.1.4", new[]
         {
             "Usa ExitLag, VPN ou acelerador? Na janela \"Saúde\" tem o \"Diagnóstico de rede\": rode com o acelerador ligado e mande o resultado pra liderança, pra gente fazer o app funcionar junto com ele.",

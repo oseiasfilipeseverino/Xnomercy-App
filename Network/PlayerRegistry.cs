@@ -452,6 +452,12 @@ public static class PlayerRegistry
             && op.Parameters.TryGetValue(0, out var sid) && ToLong(sid) is long self && self > 0)
         {
             SelfObjectId = self;
+            // A SUA guild vem no próprio Join, no [58] (conferido nos diagnósticos de
+            // setembro, "XNoMercy", e na sessão de 18/10/2026). Antes vinha só da API
+            // pública do Albion — lenta, às vezes fora do ar — e enquanto não respondia o
+            // filtro "Só minha guild" mostrava só você. A API continua de plano B.
+            if (op.Parameters.TryGetValue(58, out var g) && g is string guilda && guilda.Trim().Length > 0)
+                OwnGuild = guilda.Trim();
             if (op.Parameters.TryGetValue(2, out var n) && n is string name && name.Length > 0
                 && name != SelfName)
             {
@@ -501,7 +507,8 @@ public static class PlayerRegistry
             foreach (var p in players.EnumerateArray())
             {
                 if (!p.TryGetProperty("Name", out var pn) || pn.GetString() != name) continue;
-                if (p.TryGetProperty("GuildName", out var gn)) OwnGuild = gn.GetString() ?? "";
+                // Plano B: só preenche se o Join ainda não trouxe a guild.
+                if (OwnGuild.Length == 0 && p.TryGetProperty("GuildName", out var gn)) OwnGuild = gn.GetString() ?? "";
                 if (p.TryGetProperty("Id", out var idProp) && idProp.GetString() is string playerId)
                     await ResolveOwnWeaponAsync(playerId).ConfigureAwait(false);
                 break;
@@ -550,6 +557,13 @@ public static class PlayerRegistry
 
     // Usado pelo Loot Log, que só tem o nome de texto do evento 277 (sem ObjectId).
     public static string GuildOfName(string name) => _nameToGuild.TryGetValue(name, out var g) ? g : "";
+
+    /// <summary>Esse jogador é da SUA guild? Sem diferenciar maiúscula; sem guild conhecida, não.</summary>
+    public static bool MesmaGuild(string name)
+    {
+        string minha = OwnGuild;
+        return minha.Length > 0 && string.Equals(GuildOfName(name).Trim(), minha, StringComparison.OrdinalIgnoreCase);
+    }
 
     public static string NameOf(long objectId)
     {

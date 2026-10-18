@@ -51,7 +51,7 @@ public partial class MainWindow
             // "" com guild vazia de quem não tem guild).
             .Where(x => !guildOnly || x.Name == "Você"
                         || (PlayerRegistry.OwnGuild.Length > 0
-                            && PlayerRegistry.GuildOfName(x.Name) == PlayerRegistry.OwnGuild))
+                            && PlayerRegistry.MesmaGuild(x.Name)))
             // "Só meu grupo": roster vem do rateio de fama (code 279 no formato de
             // rateio, calibrado em 01/09), com expiração de 120s medida sobre 928
             // intervalos reais — ver GameEventCodes.PartyFameShare e

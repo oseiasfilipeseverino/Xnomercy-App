@@ -106,8 +106,10 @@ public partial class MainWindow
         // "Só minha guild": opcional — mostra só pickups feitos por gente da sua guild
         // (resolvida em background via PlayerRegistry.OwnGuild). Padrão é desmarcado
         // (mostra todo mundo por perto, igual sempre foi).
-        if (ChkGuildOnlyLoot.IsChecked == true && r.Looter != PlayerRegistry.SelfName
-            && (PlayerRegistry.OwnGuild.Length == 0 || PlayerRegistry.GuildOfName(r.Looter) != PlayerRegistry.OwnGuild))
+        // "Você" é o seu loot visto pela sua própria ação (SelfLootDetector) — antes o
+        // filtro o escondia, porque "Você" não é o nome do personagem (18/10/2026).
+        if (ChkGuildOnlyLoot.IsChecked == true && r.Looter != "Você" && r.Looter != PlayerRegistry.SelfName
+            && !PlayerRegistry.MesmaGuild(r.Looter))
             return false;
         // "Só meu grupo": idem, mas usando o rastreamento de grupo (229/240/182).
         // Com o roster vazio isto esconde TUDO. Ver AtualizarRotuloDoGrupo: o

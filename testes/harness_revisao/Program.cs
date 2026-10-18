@@ -141,5 +141,13 @@ f3.HandleEvent(Ev(84, new() { [0] = new long[5], [1] = 1L, [2] = 600000L }));   
 f3.HandleEvent(Ev(61, new() { [0] = 1L, [1] = 639234671876950609L, [2] = 639234671884009375L, [3] = 48916L, [4] = 1015, [5] = 1, [6] = 0, [7] = 1, [8] = 26 }));   // coleta
 Checar(f3.TotalFame == 0 && f3.TotalSilver == 0, "vizinhos (81 prata total, 84 fama amarela, 61 coleta) nao viram fama/prata");
 
+Console.WriteLine("\n-- 10. filtro 'So minha guild': a sua guild vem do Join [58]");
+PlayerRegistry.HandleOpResponse(new PhotonOperationResponse(1, 0, null, new() { [0] = 15280L, [2] = "LKMAJOR", [8] = "1313", [58] = "XNoMercy", [253] = (short)2 }));
+Checar(PlayerRegistry.OwnGuild == "XNoMercy", $"guild do proprio jogador lida do jogo, sem API ({PlayerRegistry.OwnGuild})");
+PlayerRegistry.HandleEvent(Ev(29, new() { [0] = 9001L, [1] = "Aliado", [8] = "xnomercy", [40] = new short[10] }));
+PlayerRegistry.HandleEvent(Ev(29, new() { [0] = 9002L, [1] = "Inimigo", [8] = "Black Order", [40] = new short[10] }));
+Checar(PlayerRegistry.MesmaGuild("Aliado"), "mesma guild mesmo com maiusculas diferentes");
+Checar(!PlayerRegistry.MesmaGuild("Inimigo") && !PlayerRegistry.MesmaGuild("Desconhecido"), "outra guild e guild desconhecida: fora do filtro");
+
 Console.WriteLine(falhas == 0 ? "\nOK: correcoes da revisao" : $"\nFALHOU: {falhas}");
 return falhas == 0 ? 0 : 1;
