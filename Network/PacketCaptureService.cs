@@ -476,7 +476,7 @@ public sealed class PacketCaptureService : IDisposable
                 if (_devices.Any(x => x.Name == d.Name)) continue;
                 sb.AppendLine($"  fora:  {(string.IsNullOrWhiteSpace(d.Description) ? d.Name : d.Description)}");
             }
-            System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "ops_diag.txt"), sb.ToString());
+            System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "adaptadores.log"), sb.ToString());
         }
         catch { /* diagnostico nunca derruba a captura */ }
     }

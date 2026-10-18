@@ -25,7 +25,11 @@
        silenciosamente e permanentemente a telemetria de calibração desse build,
        sem nenhum aviso em runtime de que isso aconteceu. A flag existe só pra um
        teste local pontual, não pra decisão de release. -->
-  <PropertyGroup Condition="'$(EnableBeta)'!='false'">
+  <!-- 18/10/2026: DESLIGADO por padrão. Os logs de calibração iam sozinhos pro
+       Discord e ninguém lia; a calibração hoje é automática (EventOffset), a Saúde da
+       captura avisa quando algo muda e o "Exportar sessão p/ análise" grava o formato
+       dos eventos quando precisar. Pra ligar num build de teste: -p:EnableBeta=true. -->
+  <PropertyGroup Condition="'$(EnableBeta)'=='true'">
     <DefineConstants>$(DefineConstants);BETA</DefineConstants>
   </PropertyGroup>
 

@@ -49,9 +49,7 @@ public partial class MainWindow
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp");
                 System.IO.Directory.CreateDirectory(dir);
                 System.IO.File.WriteAllText(System.IO.Path.Combine(dir, "net_diag.txt"), report);
-                // Vai junto com os outros diagnósticos pro Discord (se consentido),
-                // pra liderança conseguir ajudar sem pedir print de nada.
-                DiagReporter.Report("net_diag", report);
+                // Fica no PC; vai junto quando o player usar "Enviar erro p/ liderança".
             }
             catch { /* salvar/enviar é best-effort */ }
 
@@ -321,10 +319,6 @@ public partial class MainWindow
             BtnPauseToggle.Content = "Pausar";
             TxtCaptureStatus.Text = "Parado";
             SaveSessionToHistory();
-            // Com a captura parada, os arquivos de diagnóstico não estão mais sendo
-            // escritos — momento seguro pra enviar pro Discord (com consentimento).
-            // Assim o tester não precisa fechar e reabrir o app pra mandar os dados.
-            DiagReporter.ReportDiagFiles();
         }
         UpdateCaptureIndicator();
     }

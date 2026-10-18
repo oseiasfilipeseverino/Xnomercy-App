@@ -43,12 +43,17 @@ Checar(!g.HandleEvent(Recompensa(51, 1), agoraUtc: t0.AddSeconds(301)), "trocou 
 
 Console.WriteLine("\n-- 2. faccao e Might & Favor");
 var f = new FactionTracker();
-Checar(f.HandleEvent(Ev(85, new() { [2] = (byte)3, [3] = 1_500_000L, [4] = 2_000_000L, [9] = 99_000_000L })), "UpdateCurrency (85)");
+Checar(f.HandleEvent(Ev(85, new() { [2] = (byte)3, [3] = 1_500_000L, [4] = 2_000_000L, [9] = 99_000_000L })), "UpdateCurrency (85) com [4]");
+Checar(f.HandleEvent(Ev(85, new() { [0] = 3L, [2] = 7L, [3] = 500_000L, [5] = 0L, [9] = 121_055_585L })), "UpdateCurrency no formato REAL, sem [4] (conta o [3])");
 Checar(f.HandleEvent(Ev(86, new() { [0] = (byte)3, [1] = 4_000_000L, [3] = 1L })), "UpdateFactionStanding (86)");
-Checar(f.HandleEvent(Ev(497, new() { [1] = 300_000L, [4] = 120_000L, [7] = 9_000_000L })), "Might & Favor (SAT 496 + 1)");
+// Formato REAL (diagnosticos de 01/09): [1] Might [3] [4] Favor [6] [7] total [9] e dois dicionarios [10]/[11]
+var dic = new Dictionary<object, object?>();
+Checar(f.HandleEvent(Ev(497, new() { [0] = 0L, [1] = 300_000L, [3] = 1L, [4] = 120_000L, [6] = 1L, [7] = 9_000_000L, [9] = 0L, [10] = dic, [11] = dic })),
+       "Might & Favor no formato real (SAT 496 + 1)");
+Checar(!f.HandleEvent(Ev(497, new() { [1] = 300_000L, [4] = 120_000L, [7] = 9_000_000L })), "sem os dicionarios [10]/[11]: nao e' Might & Favor");
 var tot = f.Totais();
-Checar(tot.Pontos == 200 && tot.Moedas == 150 && tot.Bandeira == 400 && tot.Might == 30 && tot.Favor == 12,
-       $"pontos 200, moedas 150, bandeira 400, Might 30, Favor 12 ({tot})");
+Checar(tot.Pontos == 250 && tot.Moedas == 150 && tot.Bandeira == 400 && tot.Might == 30 && tot.Favor == 12,
+       $"pontos 200 + 50, moedas 150, bandeira 400, Might 30, Favor 12 ({tot})");
 Checar(!f.HandleEvent(Ev(85, new() { [2] = "texto", [3] = 1L, [4] = 1L })), "85 com texto no lugar da cidade: nao e' faccao");
 f.Reset();
 Checar(f.Totais().Pontos == 0, "reiniciar zera");
@@ -57,7 +62,8 @@ Console.WriteLine("\n-- 3. bau e banco");
 var arq = Path.Combine(Path.GetTempPath(), $"baus_teste_{Guid.NewGuid():N}.json");
 var s = new StorageTracker(arq);
 byte[] G(int n) { var b = new byte[16]; b[0] = (byte)n; return b; }
-s.HandleEvent(Ev(414, new() { [0] = 7L, [1] = "abc@3008", [2] = G(1).Concat(G(2)).ToArray(), [3] = new[] { "Recursos", "Armas" } }));   // BankVaultInfo SAT 413 + 1
+s.HandleEvent(Ev(414, new() { [0] = 7L, [1] = "abc@3008", [2] = G(1).Concat(G(2)).ToArray(), [3] = new[] { "Recursos", "Armas" },
+    [4] = new[] { "icon_tag_coins", "icon_tag_sword" }, [5] = new[] { 1, 2 } }));   // BankVaultInfo SAT 413 + 1, formato real
 s.HandleEvent(Ev(32, new() { [0] = 1001L, [1] = 52, [2] = 999 }));
 s.HandleEvent(Ev(30, new() { [0] = 1002L, [1] = 53, [2] = 1 }));
 s.HandleEvent(Ev(32, new() { [0] = 1003L, [1] = 52, [2] = 1 }));

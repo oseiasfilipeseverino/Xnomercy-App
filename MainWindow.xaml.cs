@@ -489,6 +489,7 @@ public partial class MainWindow : Window
         // Em vez de atualizar a UI a cada evento (em combate são centenas/seg, o que
         // travava a thread de captura e fazia perder pacotes), os trackers só marcam
         // "sujo" e um timer redesenha no máximo ~3x/seg, na thread da UI.
+        DiagReporter.LimparArquivosAntigos();   // logs de calibração das versões antigas (iam pro Discord)
         ItemValues.Carregar();   // valores que o jogo já mostrou em sessões anteriores
         ItemValues.Mudou += () => _valoresMudaram = true;
         _fameTracker.Updated += () => _fameDirty = true;

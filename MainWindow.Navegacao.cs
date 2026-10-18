@@ -116,7 +116,7 @@ public partial class MainWindow
         // Sair pela bandeja matava o processo direto, sem esperar o diagnóstico
         // (fire-and-forget) terminar de enviar — perdia os dados de calibração de quem
         // fechava o app em vez de clicar "Parar captura". Espera até 5s pelo envio.
-        await Task.WhenAny(DiagReporter.ReportDiagFilesAsync(), Task.Delay(5000));
+        await Task.CompletedTask;   // nada mais é enviado ao sair (ver DiagReporter)
         _exitRequested = true;
         DesassinarEventosEstaticos();
         _capture.Dispose();

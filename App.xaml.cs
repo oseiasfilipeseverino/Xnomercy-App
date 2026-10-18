@@ -49,7 +49,7 @@ public partial class App : Application
         }
         catch { /* não há o que fazer se nem o log grava */ }
 
-        // Manda pra liderança via Discord (só com consentimento — ver PanelConsent).
-        Network.DiagReporter.Report("crash", ex.ToString());
+        // Não vai sozinho pra lugar nenhum (desde 18/10/2026): fica no errors.log e o
+        // player manda pelo botão "Enviar erro p/ liderança" se quiser.
     }
 }

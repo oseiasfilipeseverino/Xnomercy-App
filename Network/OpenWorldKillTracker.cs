@@ -36,7 +36,11 @@ public sealed class OpenWorldKillTracker
         string? selfName = PlayerRegistry.SelfName;
         if (string.IsNullOrEmpty(selfName) || killerName != selfName) return;   // não é você quem matou
 
-        string tag = evt.Parameters.TryGetValue(3, out var t) && t is string ts ? ts : "Desconhecido";
+        // Só MOB. Nos diagnósticos de 27/08 a 12/09, 121 de 536 eventos 166 traziam
+        // NOME DE JOGADOR no [3] (jogador derrubado), e eles entravam aqui como "mob
+        // morto" com o nome da pessoa (corrigido em 18/10/2026).
+        if (!evt.Parameters.TryGetValue(3, out var t) || t is not string tag
+            || !tag.StartsWith("@MOB_", StringComparison.OrdinalIgnoreCase)) return;
         string displayName = FriendlyMobName(tag);
 
         lock (_lock)

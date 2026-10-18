@@ -16,6 +16,13 @@ public static class Novidades
 {
     public static readonly (string Versao, string[] Itens)[] Notas =
     {
+        ("1.0.71", new[]
+        {
+            "O app não manda mais nada sozinho pro Discord. Se a liderança pedir, use \"Exportar sessão p/ análise\" no menu e mande o arquivo.",
+            "Saiu o aviso de envio automático de dados.",
+            "Mobs mortos: derrubar um jogador não conta mais como mob.",
+            "Corrigidos com dados reais do jogo: pontos de facção, Might & Favor, grupo desfeito e abas do banco.",
+        }),
         ("1.0.70", new[]
         {
             "Botão \"Exportar sessão p/ análise\" no menu: salva o formato dos eventos do jogo (sem nomes nem chat) pra liderança conferir o que o app reconhece.",

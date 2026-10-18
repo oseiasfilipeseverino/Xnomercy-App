@@ -69,8 +69,12 @@ public static class PartyTracker
         int code = evt.EventCode;
         // Grupo desfeito: o SAT zera o grupo sem olhar campo nenhum. Aqui, por
         // segurança, só se o evento não trouxer membro (GUID/nome/lista).
+        // Nos diagnósticos reais o 232 chega com [1] NUMÉRICO (ex.: 81901). Exigir que
+        // não houvesse [1] fazia o "desfeito" nunca ser reconhecido. Continua fora
+        // quem traz GUID (byte[]) ou nome — isso seria entrada/saída de membro.
         if (code == EventOffset.Live(SatDisbanded)
-            && !p.ContainsKey(1) && !p.ContainsKey(2) && !p.ContainsKey(8) && !p.ContainsKey(9))
+            && !(p.TryGetValue(1, out var d1) && d1 is not null && PhotonParam.ToLong(d1) == null)
+            && !p.ContainsKey(2) && !p.ContainsKey(8) && !p.ContainsKey(9))
         {
             lock (_lock) _membros.Clear();
             return UltimoReconhecido = "grupo_desfeito";

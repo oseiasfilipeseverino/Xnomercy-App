@@ -34,15 +34,26 @@ public sealed class FactionTracker
 
         // Cidade: número pequeno (o SAT converte qualquer número; não exigir byte).
         bool Cidade(byte k) => p.TryGetValue(k, out var v) && PhotonParam.ToLong(v) is long x && x is >= 0 and <= 20;
-        if (c == GameEventCodes.UpdateCurrency && Cidade(2) && Num(3) && Num(4))
+        // O 85 dos diagnósticos reais (27/08 a 12/09) vem com [0] [2] [3] [5] [9] — SEM
+        // o [4] que o SAT descreve. Exigir o [4] fazia a facção nunca contar. Pontos =
+        // [4] quando vier; senão o [3] (o que foi ganho neste evento).
+        if (c == GameEventCodes.UpdateCurrency && Cidade(2) && Num(3))
         {
-            lock (_lock) { _moedas += V(3); _pontos += V(4); }
+            lock (_lock)
+            {
+                if (Num(4)) { _moedas += V(3); _pontos += V(4); }
+                else _pontos += V(3);
+            }
         }
         else if (c == GameEventCodes.UpdateFactionStanding && Cidade(0) && Num(1))
         {
             lock (_lock) _bandeira += V(1);
         }
-        else if (c == EventOffset.Live(SatMightAndFavor) && Num(1) && Num(4) && Num(7))
+        // Might & Favor pelo FORMATO, numa faixa: nos diagnósticos ele era 496 até
+        // 30/08 e 497 desde 01/09 (um patch mexeu só nessa faixa). Formato: [1] Might,
+        // [4] Favor, [7] Favor total e dois campos finais [10]/[11] (dicionários).
+        else if (Math.Abs(c - EventOffset.Live(SatMightAndFavor)) <= 3 && Num(1) && Num(7)
+                 && p.ContainsKey(10) && p.ContainsKey(11))
         {
             lock (_lock) { _might += V(1); _favor += V(4); }
         }

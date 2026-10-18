@@ -20,7 +20,9 @@ namespace XnomercyApp.Network;
 /// </summary>
 public static class DungeonTimerTracker
 {
-    private const int OpChangeCluster = 36;
+    // 41, conferido nos diagnósticos reais (resposta [0]="5003"). O 36 do comentário
+    // do SAT estava errado; o timer funcionava por causa da Join.
+    private const int OpChangeCluster = 41;
     private const int OpJoin = 2;
     private const int DungeonClosesAfterSeconds = 90;
 

@@ -83,7 +83,11 @@ public sealed class StorageTracker
                 _objetos[obj] = ((int)idx, qtd);
             }
         }
-        else if (c == EventOffset.Live(SatBankVaultInfo) || c == EventOffset.Live(SatGuildVaultInfo))
+        // Pelo FORMATO, numa faixa perto de 412/413 (o Might & Favor mostrou que um patch
+        // pode mexer só numa faixa): [3] nomes das abas e [4] ícones "icon_tag_...".
+        // Diagnósticos reais: 413 = banco da guild (no esconderijo), 414 = banco.
+        else if (c >= EventOffset.Live(SatGuildVaultInfo) - 2 && c <= EventOffset.Live(SatBankVaultInfo) + 2
+                 && p.TryGetValue(4, out var icones) && icones is string?[] ic && ic.Any(x => x != null && x.StartsWith("icon_tag")))
             LerAbas(p, guild: c == EventOffset.Live(SatGuildVaultInfo));
         else if (c == GameEventCodes.AttachItemContainer)
             Abriu(p);
@@ -94,8 +98,10 @@ public sealed class StorageTracker
         if (!p.TryGetValue(1, out var l) || l?.ToString() is not string lugar) return;
         if (!p.TryGetValue(2, out var g) || Guids(g) is not { Count: > 0 } guids) return;
         var nomes = p.TryGetValue(3, out var n) ? Textos(n) : new List<string>();
+        // "guid@0006" (banco da cidade) ou "guid@guid@@HIDEOUT@4317@guid" (esconderijo).
+        string tipoLugar = MapCatalog.Tipo(lugar);
         int arroba = lugar.LastIndexOf('@');
-        string nomeLugar = MapCatalog.Nome(arroba >= 0 ? lugar[(arroba + 1)..] : lugar);
+        string nomeLugar = tipoLugar.Length > 0 ? tipoLugar : MapCatalog.Nome(arroba >= 0 ? lugar[(arroba + 1)..] : lugar);
         lock (_lock)
             for (int i = 0; i < guids.Count; i++)
                 _abas[guids[i]] = (i < nomes.Count && nomes[i].Length > 0 ? nomes[i] : $"Aba {i + 1}", nomeLugar, guild);

@@ -91,6 +91,11 @@ public static class GameEventCodes
     // ObjectId -> nome: diferente do NewCharacter (29, só dispara quando o jogador
     // entra na tela), o Move resolve o nome de quem já estava na cena, acabando com os
     // "#12345" no medidor de dano. Confirmado na calibração (232 amostras, todas com nome).
+    // ATENÇÃO (18/10/2026): nos diagnósticos reais de 27/08 a 12/09, o 30 é o
+    // NewEquipmentItem do SAT — [1]=item [2]=qtd [4]=valor [5]=valor no Mercado Negro
+    // [6]=nome de quem FABRICOU [7]=qualidade. O [5] é número, então a leitura de nome
+    // em PlayerRegistry.HandleMoveName (que exige texto no [5]) não dispara. Fica o nome
+    // por compatibilidade; quem usa o 30 de verdade é o ItemValues (valor do item).
     public static int Move { get; set; } = 30;
     public static int FameGain { get; set; } = 82;          // UpdateFame (fama vermelha/combate)
     public static int YellowFame { get; set; } = 84;        // UpdateReSpecPoints (jogo mostra como "🟡", [2]=ganho)

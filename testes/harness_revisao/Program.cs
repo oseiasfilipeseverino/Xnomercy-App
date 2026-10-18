@@ -122,5 +122,13 @@ var falso = Ev(123, new() { [0] = 777L, [1] = "Fulano", [7] = new float[] { 1, 2
 PlayerRegistry.HandleEvent(falso);
 Checar(!PlayerRegistry.IsMob(777), "123 com NOME no [1] (formato de jogador) nao marca mob");
 
+Console.WriteLine("\n-- 8. mob morto (dados reais de 27/08 a 12/09)");
+typeof(PlayerRegistry).GetProperty("SelfName")!.GetSetMethod(true)!.Invoke(null, new object?[] { "LKMAJOR" });
+var kills = new OpenWorldKillTracker();
+kills.HandleEvent(Ev(166, new() { [0] = 5802L, [1] = 11462549L, [2] = 5750L, [3] = "@MOB_UNDEAD_SOLDIER_CHAMPION", [4] = 5802L, [5] = "LKMAJOR" }));
+kills.HandleEvent(Ev(166, new() { [0] = 1008680L, [1] = 46283685L, [2] = 1008680L, [3] = "xXPreedoXx", [4] = 1008680L, [5] = "LKMAJOR" }));
+Checar(kills.TotalKills == 1 && kills.Snapshot().Single().Name == "Undead Soldier Champion",
+       $"o mob conta; o JOGADOR derrubado (nome no [3]) nao conta ({kills.TotalKills})");
+
 Console.WriteLine(falhas == 0 ? "\nOK: correcoes da revisao" : $"\nFALHOU: {falhas}");
 return falhas == 0 ? 0 : 1;

@@ -156,41 +156,10 @@ public partial class MainWindow
         SidebarCol.Width = new GridLength(210);
         Sidebar.Visibility = Visibility.Visible;
 
-        if (!ConsentStore.HasAsked)
-        {
-            // Esconde o WebView: ele é um HWND do Chromium e renderiza POR CIMA de
-            // qualquer painel WPF (airspace), escondendo a tela de consentimento se
-            // ficar visível. Os outros painéis já fazem isso via ShowPanel.
-            WebView.Visibility = Visibility.Collapsed;
-            PanelConsent.Visibility = Visibility.Visible;
-            return;   // segue pro Loot Log depois que responder (ver BtnConsentYes/No)
-        }
-        // Já respondeu antes: se aceitou, manda o que foi coletado na sessão passada
-        // (seguro aqui — a captura ainda não começou, é manual).
-        DiagReporter.ReportDiagFiles();
         SetActiveNav(NavFame);
         ShowPanel("fame");
         // Depois do painel aberto (o WebView já escondido): novidades da atualização.
         Dispatcher.BeginInvoke(() => Novidades.MostrarSeHouver(this), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
-    }
-
-    // Pergunta de consentimento pro diagnóstico (ver PanelConsent no XAML) — uma vez só,
-    // fica salvo em disco (ConsentStore) e nunca mais pergunta de novo.
-    private void BtnConsentYes_Click(object sender, RoutedEventArgs e)
-    {
-        ConsentStore.SetConsent(true);
-        DiagReporter.ReportDiagFiles();   // manda o que já tiver de sessões anteriores
-        PanelConsent.Visibility = Visibility.Collapsed;
-        SetActiveNav(NavFame);
-        ShowPanel("fame");
-    }
-
-    private void BtnConsentNo_Click(object sender, RoutedEventArgs e)
-    {
-        ConsentStore.SetConsent(false);
-        PanelConsent.Visibility = Visibility.Collapsed;
-        SetActiveNav(NavFame);
-        ShowPanel("fame");
     }
 
     // Desloga: limpa a sessão do site (cookie) e volta pra tela de login, sem

@@ -46,6 +46,12 @@ public static class GuildEnergyLog
             object?[] o when o.All(x => x is string) => o.Select(x => (string)x!).ToList(),
             _ => null
         };
+        // Nos diagnósticos reais (op 159) o [3] chega como byte[] — um byte por linha,
+        // 0 a 255 — e o [1] como um bloco de 4 bytes por linha. O SAT lê o [3] como
+        // quantidade, e com byte isso dá ~0: o app mandaria energia ZERO pro site.
+        // Até decifrar o [1] com uma sessão exportada (bytes inteiros), byte[] no [3]
+        // não é aceito como quantidade.
+        if (q is byte[]) return null;
         var qtds = Longs(q);
         var ticks = Longs(t);
         if (nomes == null || qtds == null || ticks == null) return null;
