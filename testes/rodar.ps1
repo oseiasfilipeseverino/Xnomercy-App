@@ -76,6 +76,11 @@ Write-Host "`n--- harness_ip (grupo e IP) ---"
 dotnet run --project "$PSScriptRoot\harness_ip\harness_ip.csproj" -c Release --nologo
 if ($LASTEXITCODE -ne 0) { $falhou++ }
 
+# -- Captura sem Npcap (raw socket, 18/10/2026)
+Write-Host "`n--- harness_semnpcap (captura sem Npcap) ---"
+dotnet run --project "$PSScriptRoot\harness_semnpcap\harness_semnpcap.csproj" -c Release --nologo
+if ($LASTEXITCODE -ne 0) { $falhou++ }
+
 if ($falhou -gt 0) {
     Write-Host "`n$falhou teste(s) reprovaram" -ForegroundColor Red
     exit 1

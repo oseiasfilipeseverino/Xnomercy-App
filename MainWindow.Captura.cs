@@ -234,20 +234,33 @@ public partial class MainWindow
             // Faltar o Npcap é situação normal (instalação nova, ou ele foi
             // removido por outro programa), não erro do app. Merece instrução, não
             // tela fechando.
+            // Sem o Npcap, tenta o modo alternativo (raw socket do Windows) antes de
+            // desistir: a captura funciona na conexão direta, e o aviso continua
+            // dizendo que o Npcap é o completo (com ExitLag, só ele pega).
+            bool semNpcap = false;
             try
             {
                 _capturing = _capture.Start();
             }
             catch (DllNotFoundException)
             {
-                AvisarNpcapFaltando();
-                return;
+                semNpcap = true;
             }
             catch (TypeInitializationException ex) when (ex.InnerException is DllNotFoundException)
             {
                 // O SharpPcap às vezes embrulha a falha na inicialização do tipo.
-                AvisarNpcapFaltando();
-                return;
+                semNpcap = true;
+            }
+            if (semNpcap)
+            {
+                _capturing = _capture.StartSemNpcap();
+                if (!_capturing)
+                {
+                    AvisarNpcapFaltando();
+                    return;
+                }
+                _avisoCaptura = "Capturando SEM o Npcap (modo alternativo). Funciona na conexão direta; com acelerador " +
+                                "de rota (ExitLag) não pega nada. Instale o Npcap (npcap.com) para o modo completo.";
             }
             if (_capturing)
             {
@@ -258,7 +271,7 @@ public partial class MainWindow
                 PartyCalibrationLog.IniciarSessao();
                 ReiniciarDiagNomeados();
                 CaptureHealth.Reset();   // a saúde vale pra esta captura
-                _avisoCaptura = null;
+                if (!_capture.ModoSemNpcap) _avisoCaptura = null;
             }
             BtnCaptureToggle.Content = _capturing ? "Parar captura" : "Iniciar captura";
         }

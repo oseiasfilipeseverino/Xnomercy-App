@@ -490,8 +490,25 @@ public sealed class PacketCaptureService : IDisposable
             var packet = Packet.ParsePacket(raw.LinkLayerType, raw.Data);
             var udp = packet.Extract<UdpPacket>();
             if (udp?.PayloadData is null || udp.PayloadData.Length == 0) return;
+            ProcessarUdp(udp.SourcePort, udp.DestinationPort, udp.PayloadData);
+        }
+        catch
+        {
+            // Pacote fora do padrão esperado (fragmento, ruído de rede, etc.) —
+            // descarta e segue capturando. Nunca deve derrubar o app.
+        }
+    }
 
-            int srcPort = udp.SourcePort, dstPort = udp.DestinationPort;
+    /// <summary>
+    /// Um datagrama UDP já separado, venha do Npcap ou do modo sem Npcap. Daqui pra
+    /// frente o caminho é o mesmo: porta conhecida decodifica direto; desconhecida
+    /// passa pela descoberta pelo conteúdo.
+    /// </summary>
+    public void ProcessarUdp(int srcPort, int dstPort, byte[] payload)
+    {
+        try
+        {
+            if (payload.Length == 0) return;
             bool known = IsKnownGamePort(srcPort, dstPort);
 
             // Porta desconhecida que já esgotou as tentativas (Discord, torrent, vídeo):
@@ -499,13 +516,13 @@ public sealed class PacketCaptureService : IDisposable
             // pelo hash do pacote inteiro, sob lock, só pra ser descartado logo depois.
             if (!known && !ShouldTryDiscovery(srcPort, dstPort)) return;
 
-            if (IsDuplicatePayload(udp.PayloadData)) return;
+            if (IsDuplicatePayload(payload)) return;
 
             if (known)
             {
                 // Rota rápida: porta já confirmada, decodifica direto no deslocamento
                 // que a descoberta encontrou (0 em conexão direta).
-                TryDecodeAt(udp.PayloadData, _payloadOffset, raise: true);
+                TryDecodeAt(payload, _payloadOffset, raise: true);
                 return;
             }
 
@@ -517,7 +534,7 @@ public sealed class PacketCaptureService : IDisposable
             // (A cota de tentativas desta porta já foi conferida lá em cima.)
             foreach (int off in CandidateOffsets)
             {
-                if (!TryDecodeAt(udp.PayloadData, off, raise: false)) continue;
+                if (!TryDecodeAt(payload, off, raise: false)) continue;
 
                 if (_payloadOffset != off)
                 {
@@ -528,15 +545,116 @@ public sealed class PacketCaptureService : IDisposable
                             "(acelerador de rota)");
                 }
                 NoteDiscovery(srcPort, dstPort);
-                TryDecodeAt(udp.PayloadData, off, raise: true);   // agora processa de verdade
+                TryDecodeAt(payload, off, raise: true);   // agora processa de verdade
                 break;
             }
         }
         catch
         {
-            // Pacote fora do padrão esperado (fragmento, ruído de rede, etc.) —
-            // descarta e segue capturando. Nunca deve derrubar o app.
+            // Pacote fora do padrão esperado: descarta e segue capturando.
         }
+    }
+
+    // ── Modo SEM Npcap (18/10/2026) ───────────────────────────────────────────
+    // Plano B quando o Npcap não está instalado — que foi a causa dos 14
+    // fechamentos do mesmo tester antes do aviso existir. O Windows deixa um
+    // programa com administrador (o app já se eleva) ler os pacotes IP de cada
+    // placa de rede por "raw socket" (SIO_RCVALL). É o SocketsPacketProvider do
+    // SAT. Limitações, ditas na tela:
+    //   - não vê o loopback: com acelerador de rota que passa o jogo pelo
+    //     127.0.0.1 (ExitLag), não pega nada — aí só o Npcap resolve;
+    //   - pacote IP fragmentado é descartado (o Photon quase nunca passa do MTU).
+    private readonly List<System.Net.Sockets.Socket> _rawSockets = new();
+    private volatile bool _rawParando;
+
+    /// <summary>true enquanto a captura roda pelo modo sem Npcap.</summary>
+    public bool ModoSemNpcap { get; private set; }
+
+    public bool StartSemNpcap()
+    {
+        if (_running) return true;
+        _rawParando = false;
+        foreach (var ip in EnderecosIpv4Locais())
+        {
+            // O próprio construtor recusa sem administrador (erro 10013) — por isso
+            // dentro do try. Fora dele, derrubava o clique de "Iniciar captura".
+            System.Net.Sockets.Socket? s = null;
+            try
+            {
+                s = new System.Net.Sockets.Socket(System.Net.Sockets.AddressFamily.InterNetwork,
+                                                  System.Net.Sockets.SocketType.Raw, System.Net.Sockets.ProtocolType.IP);
+                var sock = s;
+                s.Bind(new System.Net.IPEndPoint(ip, 0));
+                s.SetSocketOption(System.Net.Sockets.SocketOptionLevel.IP, System.Net.Sockets.SocketOptionName.HeaderIncluded, true);
+                s.IOControl(System.Net.Sockets.IOControlCode.ReceiveAll, new byte[] { 1, 0, 0, 0 }, new byte[4]);
+                _rawSockets.Add(s);
+                var t = new Thread(() => LoopRaw(sock)) { IsBackground = true, Name = $"captura-raw-{ip}" };
+                t.Start();
+            }
+            catch
+            {
+                try { s?.Close(); } catch { }
+            }
+        }
+        _running = ModoSemNpcap = _rawSockets.Count > 0;
+        StatusChanged?.Invoke(_running
+            ? $"Capturando SEM Npcap em {_rawSockets.Count} placa(s) de rede (modo alternativo)"
+            : "Não consegui capturar nem sem o Npcap (o app está como administrador?)");
+        return _running;
+    }
+
+    private void LoopRaw(System.Net.Sockets.Socket s)
+    {
+        var buffer = new byte[65535];
+        while (!_rawParando)
+        {
+            int n;
+            try { n = s.Receive(buffer); }
+            catch { break; }   // socket fechado no Stop
+            Interlocked.Increment(ref DiagRawPackets);
+            if (ExtrairUdpDeIpv4(buffer.AsSpan(0, n), out int src, out int dst, out var payload))
+                ProcessarUdp(src, dst, payload);
+        }
+    }
+
+    /// <summary>
+    /// Datagrama IPv4 cru → portas e conteúdo UDP. false se não for UDP, se estiver
+    /// truncado ou se for fragmento de IP. Público pro teste.
+    /// </summary>
+    public static bool ExtrairUdpDeIpv4(ReadOnlySpan<byte> ip, out int srcPort, out int dstPort, out byte[] payload)
+    {
+        srcPort = dstPort = 0;
+        payload = Array.Empty<byte>();
+        if (ip.Length < 20 || ip[0] >> 4 != 4) return false;
+        int ihl = (ip[0] & 0x0F) * 4;
+        if (ihl < 20 || ip.Length < ihl + 8 || ip[9] != 17) return false;   // 17 = UDP
+        int flagsFrag = (ip[6] << 8) | ip[7];
+        if ((flagsFrag & 0x2000) != 0 || (flagsFrag & 0x1FFF) != 0) return false;   // fragmento de IP
+        int totalIp = (ip[2] << 8) | ip[3];
+        var udp = ip[ihl..Math.Min(ip.Length, Math.Max(totalIp, ihl + 8))];
+        srcPort = (udp[0] << 8) | udp[1];
+        dstPort = (udp[2] << 8) | udp[3];
+        int udpLen = (udp[4] << 8) | udp[5];
+        int len = Math.Min(udp.Length, udpLen) - 8;
+        if (len <= 0) return false;
+        payload = udp.Slice(8, len).ToArray();
+        return true;
+    }
+
+    private static IEnumerable<System.Net.IPAddress> EnderecosIpv4Locais()
+    {
+        try
+        {
+            return System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
+                .Where(n => n.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up
+                            && n.NetworkInterfaceType != System.Net.NetworkInformation.NetworkInterfaceType.Loopback)
+                .SelectMany(n => n.GetIPProperties().UnicastAddresses)
+                .Select(u => u.Address)
+                .Where(a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                .Distinct()
+                .ToList();
+        }
+        catch { return Array.Empty<System.Net.IPAddress>(); }
     }
 
     // True se este payload UDP (byte a byte) já foi visto há menos de DedupWindowMs —
@@ -640,6 +758,10 @@ public sealed class PacketCaptureService : IDisposable
 
     public void Stop()
     {
+        _rawParando = true;
+        foreach (var s in _rawSockets) { try { s.Close(); } catch { } }
+        _rawSockets.Clear();
+        ModoSemNpcap = false;
         foreach (var device in _devices)
         {
             try
