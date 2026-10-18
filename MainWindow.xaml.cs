@@ -390,6 +390,7 @@ public partial class MainWindow : Window
         _capture.OpResponseReceived += DungeonTimerTracker.HandleOpResponse;
         _capture.OpResponseReceived += GuildEnergyLog.HandleOpResponse;   // registro de energia da guild
         _capture.OpResponseReceived += _vendas.HandleOpResponse;          // cartas do mercado (aba Vendas)
+        _capture.OpRequestReceived += _vendas.HandleOpRequest;            // compra/venda instantânea (aba Vendas)
         _vendas.Mudou += () => Dispatcher.BeginInvoke(() => { if (PanelVendas.Visibility == Visibility.Visible) RefreshVendas(); });
         GuildEnergyLog.Lido += OnEnergiaLida;
         // Calibração automática da numeração de eventos (ver Network/EventOffset.cs): avisa

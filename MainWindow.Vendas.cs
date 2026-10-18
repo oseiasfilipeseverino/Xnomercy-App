@@ -39,7 +39,7 @@ public partial class MainWindow
                 MarketMailTracker.Tipo.Compra => "comprado",
                 MarketMailTracker.Tipo.VendaExpirada => "ordem de venda expirou",
                 _ => "ordem de compra expirou",
-            } + $" · {n.QuandoUtc.ToLocalTime():dd/MM HH:mm}",
+            } + (n.Instantanea ? " na hora" : "") + $" · {n.QuandoUtc.ToLocalTime():dd/MM HH:mm}",
             Valor = n.Tipo is MarketMailTracker.Tipo.Venda or MarketMailTracker.Tipo.Compra ? Num(n.Prata) : "—",
             Cor = n.Tipo == MarketMailTracker.Tipo.Venda ? "#86efac" : n.Tipo == MarketMailTracker.Tipo.Compra ? "#f87171" : "#8CFFFFFF",
             Icone = $"https://render.albiononline.com/v1/item/{n.Item}.png?size=64",

@@ -49,5 +49,24 @@ Checar(velho.Handle(new Dictionary<byte, object?>
     [12] = new bool[] { false, false },
 }) == "lista" && velho.CartasSemValor() == 2, "lista no formato antigo tambem e' lida; 2 cartas ainda fechadas");
 
+Console.WriteLine("\n-- compra e venda NA HORA (nao gera carta)");
+var j = new MarketMailTracker();
+string Anuncio(long id, long unit, int qtd, string item, string tipo) =>
+    $"{{\"Id\":{id},\"UnitPriceSilver\":{unit},\"TotalPriceSilver\":{unit * qtd},\"Amount\":{qtd},\"AuctionType\":\"{tipo}\",\"ItemTypeId\":\"{item}\",\"QualityLevel\":1}}";
+Checar(j.Handle(new Dictionary<byte, object?> { [0] = new string?[] {
+        Anuncio(9001, 25_000_000, 10, "T6_PLANKS", "offer"), Anuncio(9002, 1_000_000_000, 1, "T8_MAIN_MACE@2", "offer") } }) == "anuncios",
+       "lista de anuncios do mercado (JSON) e' guardada");
+j.Handle(new Dictionary<byte, object?> { [0] = new string?[] { Anuncio(7001, 50_000_000, 40, "T5_LEATHER", "request") } });
+Checar(j.HandleRequest(new Dictionary<byte, object?> { [0] = 123L, [1] = 4, [2] = 9001L }) == "compra",
+       "compra direta: [1]=qtd [2]=ID do anuncio");
+Checar(j.HandleRequest(new Dictionary<byte, object?> { [0] = 123L, [1] = 7001L, [2] = 555, [4] = 20 }) == "venda",
+       "venda direta pra ordem de compra: [1]=ID da ordem [4]=qtd");
+Checar(j.Total(MarketMailTracker.Tipo.Compra) == 10_000 && j.Total(MarketMailTracker.Tipo.Venda) == 100_000,
+       $"precos: 4 x 2.500 = 10.000 comprado; 20 x 5.000 = 100.000 vendido ({j.Total(MarketMailTracker.Tipo.Compra)} / {j.Total(MarketMailTracker.Tipo.Venda)})");
+Checar(j.Negocios().All(n => n.Instantanea), "marcados como negociacao na hora");
+Checar(j.HandleRequest(new Dictionary<byte, object?> { [1] = 1, [2] = 424242L }) == null, "ID que nao estava na tela: ignora");
+Checar(j.HandleRequest(new Dictionary<byte, object?> { [1] = 5, [2] = 9002L }) == null, "quantidade maior que a anunciada: ignora");
+Checar(j.HandleRequest(new Dictionary<byte, object?> { [1] = 9001L, [4] = 2 }) == null, "vender pra um anuncio de VENDA nao existe: ignora");
+
 Console.WriteLine(falhas == 0 ? "\nOK: aba Vendas" : $"\nFALHOU: {falhas}");
 return falhas == 0 ? 0 : 1;

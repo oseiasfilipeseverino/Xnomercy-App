@@ -23,7 +23,15 @@ public sealed class MarketMailTracker
 {
     public enum Tipo { Venda, Compra, VendaExpirada, CompraExpirada }
 
-    public sealed record Negocio(long CartaId, Tipo Tipo, string Item, int Quantidade, long Prata, System.DateTime QuandoUtc);
+    /// <summary>CartaId: ID da carta, ou um ID interno negativo pra negociação instantânea.</summary>
+    public sealed record Negocio(long CartaId, Tipo Tipo, string Item, int Quantidade, long Prata, System.DateTime QuandoUtc, bool Instantanea = false);
+
+    // Anúncios e ordens vistos ao olhar o mercado (resposta do jogo com uma lista de
+    // JSON). Compra/venda INSTANTÂNEA não gera carta: o pedido só traz o ID do anúncio
+    // e a quantidade, e o preço sai daqui (mesmo método do MarketController do SAT).
+    private sealed record Anuncio(long Id, long PrecoUnitario, int Quantidade, string Item, bool Compra);
+    private readonly Dictionary<long, Anuncio> _anuncios = new();
+    private long _proximoIdInstantaneo = -1;
 
     private const long FixPoint = 10000L;
     private static readonly long TicksMin = new System.DateTime(2017, 1, 1).Ticks;
@@ -45,10 +53,12 @@ public sealed class MarketMailTracker
     };
 
     public void HandleOpResponse(PhotonOperationResponse op) => Handle(op.Parameters);
+    public void HandleOpRequest(PhotonOperationRequest op) { if (HandleRequest(op.Parameters) != null) Mudou?.Invoke(); }
 
     /// <summary>"lista", "carta" ou null.</summary>
     public string? Handle(IReadOnlyDictionary<byte, object?> p)
     {
+        if (LerAnuncios(p)) return "anuncios";
         if (LerLista(p)) { Mudou?.Invoke(); return "lista"; }
         if (LerCarta(p)) { Mudou?.Invoke(); return "carta"; }
         return null;
@@ -86,6 +96,68 @@ public sealed class MarketMailTracker
         return true;
     }
 
+    /// <summary>Lista do mercado aberta no jogo: [0] = textos JSON com Id, UnitPriceSilver, Amount, ItemTypeId, AuctionType.</summary>
+    private bool LerAnuncios(IReadOnlyDictionary<byte, object?> p)
+    {
+        if (!p.TryGetValue(0, out var v) || v is not string?[] textos || textos.Length == 0) return false;
+        if (!textos.Any(t => t != null && t.Contains("UnitPriceSilver") && t.Contains("ItemTypeId"))) return false;
+        int n = 0;
+        foreach (var t in textos)
+        {
+            if (t == null) continue;
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(t);
+                var r = doc.RootElement;
+                var tipo = r.TryGetProperty("AuctionType", out var at) ? at.GetString() ?? "" : "";
+                var a = new Anuncio(r.GetProperty("Id").GetInt64(), r.GetProperty("UnitPriceSilver").GetInt64(),
+                    r.TryGetProperty("Amount", out var am) ? am.GetInt32() : 0,
+                    r.TryGetProperty("ItemTypeId", out var it) ? it.GetString() ?? "" : "",
+                    tipo.Equals("request", System.StringComparison.OrdinalIgnoreCase));
+                lock (_lock)
+                {
+                    if (_anuncios.Count > 5000) _anuncios.Clear();   // teto: só importa o que está na tela agora
+                    _anuncios[a.Id] = a;
+                }
+                n++;
+            }
+            catch (System.Exception) { /* texto que não é anúncio: ignora */ }
+        }
+        return n > 0;
+    }
+
+    /// <summary>
+    /// Pedido de compra/venda instantânea: "compra" ([1]=qtd [2]=ID do anúncio de venda)
+    /// ou "venda" ([1]=ID da ordem de compra [4]=qtd). null se o ID não é de anúncio visto.
+    /// </summary>
+    public string? HandleRequest(IReadOnlyDictionary<byte, object?> p)
+    {
+        lock (_lock)
+        {
+            if (p.TryGetValue(2, out var a2) && PhotonParam.ToLong(a2) is long idOferta
+                && _anuncios.TryGetValue(idOferta, out var oferta) && !oferta.Compra
+                && p.TryGetValue(1, out var q1) && PhotonParam.ToLong(q1) is long qtdC && qtdC > 0 && qtdC <= oferta.Quantidade)
+            {
+                Registrar(Tipo.Compra, oferta, (int)qtdC);
+                return "compra";
+            }
+            if (p.TryGetValue(1, out var a1) && PhotonParam.ToLong(a1) is long idOrdem
+                && _anuncios.TryGetValue(idOrdem, out var ordem) && ordem.Compra
+                && p.TryGetValue(4, out var q4) && PhotonParam.ToLong(q4) is long qtdV && qtdV > 0 && qtdV <= ordem.Quantidade)
+            {
+                Registrar(Tipo.Venda, ordem, (int)qtdV);
+                return "venda";
+            }
+        }
+        return null;
+    }
+
+    private void Registrar(Tipo tipo, Anuncio a, int qtd)
+    {
+        long id = _proximoIdInstantaneo--;
+        _negocios[id] = new Negocio(id, tipo, a.Item, qtd, a.PrecoUnitario * qtd / FixPoint, System.DateTime.UtcNow, Instantanea: true);
+    }
+
     public List<Negocio> Negocios() { lock (_lock) return _negocios.Values.OrderByDescending(x => x.QuandoUtc).ToList(); }
 
     public long Total(Tipo tipo) { lock (_lock) return _negocios.Values.Where(x => x.Tipo == tipo).Sum(x => x.Prata); }
@@ -95,7 +167,7 @@ public sealed class MarketMailTracker
         lock (_lock) return _cartas.Keys.Count(k => !_negocios.ContainsKey(k) && _cartas[k].tipo is Tipo.Venda or Tipo.Compra);
     }
 
-    public void Reset() { lock (_lock) { _cartas.Clear(); _negocios.Clear(); } Mudou?.Invoke(); }
+    public void Reset() { lock (_lock) { _cartas.Clear(); _negocios.Clear(); _anuncios.Clear(); } Mudou?.Invoke(); }
 
     private static List<long>? Longs(object? v) => v switch
     {

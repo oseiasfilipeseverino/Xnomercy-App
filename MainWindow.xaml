@@ -657,7 +657,7 @@
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,40,0,20" Width="756">
                     <TextBlock Text="Vendas no mercado" Foreground="#c9a227" FontFamily="{StaticResource FontHead}" FontSize="32" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                     <TextBlock x:Name="TxtVendasDica" Foreground="#8CFFFFFF" FontSize="12" Margin="0,4,0,16" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="600"
-                               Text="Abra a caixa de correio no jogo e abra as cartas de venda e compra: cada uma aparece aqui."/>
+                               Text="Compras e vendas na hora entram sozinhas. As que concluem depois (suas ordens) chegam por carta: abra a caixa de correio e as cartas no jogo."/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <Border Background="#1b1b1b" CornerRadius="6" Padding="30,22" MinWidth="180" Margin="0,0,12,0">
                             <StackPanel>
