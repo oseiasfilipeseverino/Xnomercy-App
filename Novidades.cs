@@ -16,6 +16,10 @@ public static class Novidades
 {
     public static readonly (string Versao, string[] Itens)[] Notas =
     {
+        ("1.1.1", new[]
+        {
+            "Menu mais enxuto: Pausar e Overlay lado a lado, Saúde e Exportar lado a lado (passe o mouse para ver o que cada um faz).",
+        }),
         ("1.1.0", new[]
         {
             "O app não manda mais nada sozinho pro Discord. Se a liderança pedir, use \"Exportar sessão p/ análise\" no menu e mande o arquivo.",

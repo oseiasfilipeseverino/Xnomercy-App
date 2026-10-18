@@ -201,26 +201,34 @@
                     <Button x:Name="BtnCaptureToggle" Content="Iniciar captura" Click="BtnCaptureToggle_Click"
                             Padding="0,10" Background="#c9a227" Foreground="#111111" BorderThickness="0" Cursor="Hand"
                             HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" FontWeight="Bold" Margin="0,0,0,8"/>
-                    <Button x:Name="BtnPauseToggle" Content="Pausar" Click="BtnPauseToggle_Click"
-                            Padding="0,7" Background="#2e2e2e" Foreground="White" BorderThickness="0" Cursor="Hand"
-                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,0,8"/>
-                    <Button x:Name="BtnOverlayToggle" Content="Overlay" Click="BtnOverlayToggle_Click"
-                            Padding="0,7" Background="#2e2e2e" Foreground="White" BorderThickness="0" Cursor="Hand"
-                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,0,8"
-                            ToolTip="Mini painel flutuante com fama/prata por hora, sempre visível por cima do jogo"/>
-                    <Button x:Name="BtnNetDiag" Content="Diagnóstico de rede" Click="BtnNetDiag_Click"
+                    <!-- Redistribuído em 18/10/2026 pra sobrar espaço pras abas: os botões
+                         secundários andam em pares. O "Diagnóstico de rede" fica ESCONDIDO
+                         (Collapsed) mas continua no app: se a captura não pegar nada com
+                         acelerador de rota, é só voltar o Visibility pra Visible. -->
+                    <UniformGrid Columns="2" Margin="0,0,0,8">
+                        <Button x:Name="BtnPauseToggle" Content="Pausar" Click="BtnPauseToggle_Click"
+                                Padding="0,7" Background="#2e2e2e" Foreground="White" BorderThickness="0" Cursor="Hand"
+                                HorizontalContentAlignment="Center" Margin="0,0,4,0"/>
+                        <Button x:Name="BtnOverlayToggle" Content="Overlay" Click="BtnOverlayToggle_Click"
+                                Padding="0,7" Background="#2e2e2e" Foreground="White" BorderThickness="0" Cursor="Hand"
+                                HorizontalContentAlignment="Center" Margin="4,0,0,0"
+                                ToolTip="Mini painel flutuante com fama/prata por hora, sempre visível por cima do jogo"/>
+                    </UniformGrid>
+                    <UniformGrid Columns="2" Margin="0,0,0,12">
+                        <Button x:Name="BtnSaudeCaptura" Content="Saúde" Click="BtnSaudeCaptura_Click"
+                                Padding="0,7" Background="#2e2e2e" Foreground="#c9a227" BorderThickness="0" Cursor="Hand"
+                                HorizontalContentAlignment="Center" Margin="0,0,4,0"
+                                ToolTip="Saúde da captura: mostra, parte por parte (dano, loot, grupo, fama...), quando o app reconheceu cada evento pela última vez — e avisa se o jogo mudou algo num patch."/>
+                        <Button x:Name="BtnExportarSessao" Content="Exportar" Click="BtnExportarSessao_Click"
+                                Padding="0,7" Background="#2e2e2e" Foreground="#8CFFFFFF" BorderThickness="0" Cursor="Hand"
+                                HorizontalContentAlignment="Center" Margin="4,0,0,0"
+                                ToolTip="Exportar sessão p/ análise: salva o formato dos eventos desta captura num arquivo, sem nomes nem chat, pra liderança conferir o que o app reconhece no jogo."/>
+                    </UniformGrid>
+                    <Button x:Name="BtnNetDiag" Content="Diagnóstico de rede" Click="BtnNetDiag_Click" Visibility="Collapsed"
                             Padding="0,7" Background="#2e2e2e" Foreground="#c9a227" BorderThickness="0" Cursor="Hand"
                             HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,0,8"
                             ToolTip="Escuta 20s sem filtro de porta e mostra onde o tráfego do jogo realmente está. Use quando a captura não pegar nada (ex: com acelerador de rota tipo ExitLag). Pare a captura antes."/>
-                    <Button x:Name="BtnSaudeCaptura" Content="Saúde da captura" Click="BtnSaudeCaptura_Click"
-                            Padding="0,7" Background="#2e2e2e" Foreground="#c9a227" BorderThickness="0" Cursor="Hand"
-                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,0,8"
-                            ToolTip="Mostra, parte por parte (dano, loot, grupo, fama...), quando o app reconheceu cada evento pela última vez — e avisa se o jogo mudou algo num patch."/>
-                    <Button x:Name="BtnExportarSessao" Content="Exportar sessão p/ análise" Click="BtnExportarSessao_Click"
-                            Padding="0,7" Background="#2e2e2e" Foreground="#8CFFFFFF" BorderThickness="0" Cursor="Hand"
-                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,0,12"
-                            ToolTip="Salva o formato dos eventos desta captura num arquivo, sem nomes nem chat, pra liderança conferir o que o app reconhece no jogo."/>
-                    <Border Height="1" Margin="-6,0,-6,12">
+                    <Border Height="1" Margin="-6,0,-6,10">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                                 <GradientStop Color="#2b2b2b" Offset="0"/>
@@ -228,12 +236,15 @@
                             </LinearGradientBrush>
                         </Border.Background>
                     </Border>
-                    <Button x:Name="BtnLogout" Content="Sair" Click="BtnLogout_Click" HorizontalAlignment="Left"
-                            Padding="0" Margin="0,0,0,10" Background="Transparent" Foreground="#8CFFFFFF" FontSize="13" Cursor="Hand" BorderThickness="0"/>
-                    <StackPanel Orientation="Horizontal">
-                        <Ellipse x:Name="CaptureDot" Width="9" Height="9" Fill="#57FFFFFF" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="CaptureStateLabel" Text="Captura parada" Foreground="#8CFFFFFF" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center"/>
-                    </StackPanel>
+                    <DockPanel LastChildFill="True">
+                        <Button x:Name="BtnLogout" Content="Sair" Click="BtnLogout_Click" DockPanel.Dock="Right"
+                                Padding="0" Background="Transparent" Foreground="#8CFFFFFF" FontSize="13" Cursor="Hand" BorderThickness="0"
+                                VerticalAlignment="Center" ToolTip="Sair da conta do site"/>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Ellipse x:Name="CaptureDot" Width="9" Height="9" Fill="#57FFFFFF" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="CaptureStateLabel" Text="Captura parada" Foreground="#8CFFFFFF" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </DockPanel>
                     <TextBlock x:Name="TxtMapaAtual" Text="" Foreground="#8CFFFFFF" FontSize="12" Margin="17,4,0,0" TextTrimming="CharacterEllipsis"/>
 
                     <!-- Timer de fechamento de entrada de dungeon aleatória (90s) — visível
