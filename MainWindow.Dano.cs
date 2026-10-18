@@ -131,7 +131,94 @@ public partial class MainWindow
             RefreshDamageBySkillPanel(selected.Player);
     }
 
-    private void BtnDamageReset_Click(object sender, RoutedEventArgs e) => _damageTracker.Reset();
+    // "Reiniciar sessão" GUARDA a luta antes de zerar (até 18/10/2026 jogava fora).
+    private void BtnDamageReset_Click(object sender, RoutedEventArgs e)
+    {
+        var luta = SalvarLutaAtual();
+        _damageTracker.Reset();
+        if (luta != null) TxtCaptureStatus.Text = $"Luta guardada em \"Lutas salvas\" ({luta.Jogadores.Count} jogadores) e medidor zerado.";
+    }
+
+    private FightHistory.Luta? SalvarLutaAtual() =>
+        _lutas.Salvar(_damageTracker.Snapshot(), _damageTracker.PrimeiroGolpeUtc, _damageTracker.UltimoGolpeUtc, _mapas.MapaAtual);
+
+    private void BtnDamageSave_Click(object sender, RoutedEventArgs e)
+    {
+        var luta = SalvarLutaAtual();
+        TxtCaptureStatus.Text = luta == null
+            ? "Nada pra salvar: o medidor não tem dano de jogador com nome."
+            : $"Luta salva ({luta.Jogadores.Count} jogadores, {luta.DanoTotal:N0} de dano). Veja em \"Lutas salvas\".";
+    }
+
+    // Janela das lutas salvas: lista à esquerda, ranking da escolhida à direita.
+    private void BtnLutasSalvas_Click(object sender, RoutedEventArgs e)
+    {
+        var lista = new ListBox
+        {
+            Background = B("#161616"), Foreground = B("#DEFFFFFF"), BorderThickness = new Thickness(0), FontSize = 12,
+        };
+        var detalhe = new TextBox
+        {
+            IsReadOnly = true, TextWrapping = TextWrapping.NoWrap, FontFamily = new System.Windows.Media.FontFamily("Consolas"),
+            FontSize = 12, Background = B("#1b1b1b"), Foreground = B("#DEFFFFFF"), BorderThickness = new Thickness(0),
+            Padding = new Thickness(12), VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+        };
+        Button Botao(string texto) => new()
+        {
+            Content = texto, Padding = new Thickness(14, 6, 14, 6), Margin = new Thickness(0, 0, 8, 0),
+            Background = B("#2e2e2e"), Foreground = System.Windows.Media.Brushes.White, BorderThickness = new Thickness(0),
+        };
+        var copiar = Botao("Copiar"); var exportar = Botao("Exportar CSV"); var apagar = Botao("Apagar esta luta");
+        var botoes = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 10, 0, 0) };
+        botoes.Children.Add(copiar); botoes.Children.Add(exportar); botoes.Children.Add(apagar);
+
+        void Carregar()
+        {
+            var lutas = _lutas.Lutas();
+            lista.ItemsSource = lutas;
+            lista.DisplayMemberPath = nameof(FightHistory.Luta.Titulo);
+            if (lutas.Count > 0) lista.SelectedIndex = 0;
+            else detalhe.Text = "Nenhuma luta salva ainda.\n\nNo Medidor de Dano, \"Salvar luta\" guarda o que está na tela,\ne \"Reiniciar sessão\" guarda antes de zerar.";
+        }
+        lista.SelectionChanged += (_, _) => { if (lista.SelectedItem is FightHistory.Luta l) detalhe.Text = l.Texto(); };
+        copiar.Click += async (_, _) =>
+        {
+            if (lista.SelectedItem is not FightHistory.Luta l) return;
+            try { Clipboard.SetText(l.Texto()); copiar.Content = "Copiado!"; } catch { copiar.Content = "Falhou, tente de novo"; }
+            await Task.Delay(1500); copiar.Content = "Copiar";
+        };
+        exportar.Click += (_, _) =>
+        {
+            if (lista.SelectedItem is not FightHistory.Luta l) return;
+            var dlg = new Microsoft.Win32.SaveFileDialog { FileName = $"luta_{l.InicioUtc.ToLocalTime():yyyyMMdd_HHmm}.csv", Filter = "CSV (*.csv)|*.csv" };
+            if (dlg.ShowDialog() != true) return;
+            try { System.IO.File.WriteAllText(dlg.FileName, l.Csv(), System.Text.Encoding.UTF8); }
+            catch (Exception ex) { MessageBox.Show("Falha ao exportar: " + ex.Message); }
+        };
+        apagar.Click += (_, _) =>
+        {
+            if (lista.SelectedItem is not FightHistory.Luta l) return;
+            if (MessageBox.Show("Apagar esta luta?", "Lutas salvas", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+            _lutas.Apagar(l);
+            Carregar();
+        };
+
+        var grade = new Grid { Margin = new Thickness(14) };
+        grade.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(330) });
+        grade.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        var direita = new DockPanel { Margin = new Thickness(12, 0, 0, 0) };
+        DockPanel.SetDock(botoes, Dock.Bottom);
+        direita.Children.Add(botoes);
+        direita.Children.Add(detalhe);
+        Grid.SetColumn(direita, 1);
+        grade.Children.Add(lista);
+        grade.Children.Add(direita);
+        Carregar();
+        new Window
+        {
+            Title = "Lutas salvas", Width = 1000, Height = 600, Owner = this, Background = B("#1a1a1a"), Content = grade,
+        }.Show();
+    }
 
     // Quebra de dano por habilidade (estilo Albion Battle Analytics) do jogador
     // selecionado na lista principal — ver DamageMeterTracker.SnapshotBySpell e

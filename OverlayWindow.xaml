@@ -22,7 +22,7 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
-                    <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
+                    <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
                 </Grid.RowDefinitions>
                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Fama" Foreground="#8CFFFFFF" FontSize="12" Margin="0,1"/>
                 <TextBlock Grid.Row="0" Grid.Column="1" x:Name="TxtOvFame" Text="0 · 0/h" Foreground="#f87171" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,1"/>
@@ -30,6 +30,10 @@
                 <TextBlock Grid.Row="1" Grid.Column="1" x:Name="TxtOvSilver" Text="0 · 0/h" Foreground="#e2e8f0" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,1"/>
                 <TextBlock Grid.Row="2" Grid.Column="0" Text="Mobs" Foreground="#8CFFFFFF" FontSize="12" Margin="0,1"/>
                 <TextBlock Grid.Row="2" Grid.Column="1" x:Name="TxtOvMobs" Text="0 · 0/h" Foreground="#86efac" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,1"/>
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="Seu DPS" Foreground="#8CFFFFFF" FontSize="12" Margin="0,1"/>
+                <TextBlock Grid.Row="4" Grid.Column="1" x:Name="TxtOvDps" Text="—" Foreground="#fbbf24" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,1"/>
+                <TextBlock Grid.Row="5" Grid.Column="0" Text="Seu loot" Foreground="#8CFFFFFF" FontSize="12" Margin="0,1"/>
+                <TextBlock Grid.Row="5" Grid.Column="1" x:Name="TxtOvLoot" Text="—" Foreground="#c9a227" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,1"/>
                 <TextBlock Grid.Row="3" Grid.Column="0" Text="Sessão" Foreground="#8CFFFFFF" FontSize="12" Margin="0,1"/>
                 <TextBlock Grid.Row="3" Grid.Column="1" x:Name="TxtOvTime" Text="00:00:00" Foreground="#c9a227" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,1"/>
             </Grid>

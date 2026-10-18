@@ -68,7 +68,7 @@ public partial class MainWindow
             case "gathering": PanelGathering.Visibility = Visibility.Visible; RefreshColeta(); break;
             case "vendas":   PanelVendas.Visibility = Visibility.Visible; RefreshVendas(); break;
             case "mapas":    PanelMapas.Visibility = Visibility.Visible; RefreshMapas(); break;
-            case "grupo":    PanelGrupo.Visibility = Visibility.Visible; RefreshGrupo(); break;
+            case "grupo":    PanelGrupo.Visibility = Visibility.Visible; _ = ItemPowerCatalog.EnsureLoadedAsync(); RefreshGrupo(); break;
             case "craft":
                 // Craft = página de mercado do site embutida (reaproveita a calculadora pronta).
                 if (WebView.CoreWebView2 != null && !(WebView.Source?.ToString().Contains("/mercado") ?? false))

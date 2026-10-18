@@ -86,6 +86,11 @@ Write-Host "`n--- harness_calibracao (calibracao dos numeros baixos e Leave) ---
 dotnet run --project "$PSScriptRoot\harness_calibracao\harness_calibracao.csproj" -c Release --nologo
 if ($LASTEXITCODE -ne 0) { $falhou++ }
 
+# -- lutas salvas e sessoes
+Write-Host "`n--- harness_lutas (lutas salvas e sessoes) ---"
+dotnet run --project "$PSScriptRoot\harness_lutas\harness_lutas.csproj" -c Release --nologo
+if ($LASTEXITCODE -ne 0) { $falhou++ }
+
 if ($falhou -gt 0) {
     Write-Host "`n$falhou teste(s) reprovaram" -ForegroundColor Red
     exit 1

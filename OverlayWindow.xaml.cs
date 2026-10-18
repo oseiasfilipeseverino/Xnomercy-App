@@ -21,8 +21,10 @@ public partial class OverlayWindow : Window
     }
 
     public void UpdateStats(long fame, double famePerHour, long silver, double silverPerHour,
-                            int mobKills, double mobsPerHour, TimeSpan elapsed)
+                            int mobKills, double mobsPerHour, TimeSpan elapsed, long seuDps = 0, long lootValor = 0)
     {
+        TxtOvDps.Text = seuDps > 0 ? $"{seuDps:N0}" : "—";
+        TxtOvLoot.Text = lootValor > 0 ? $"≈ {lootValor:N0}" : "—";
         TxtOvFame.Text = $"{fame:N0} · {famePerHour:N0}/h";
         TxtOvSilver.Text = $"{silver:N0} · {silverPerHour:N0}/h";
         TxtOvMobs.Text = $"{mobKills:N0} · {mobsPerHour:0.0}/h";

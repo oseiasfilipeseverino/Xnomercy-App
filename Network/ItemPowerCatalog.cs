@@ -28,13 +28,19 @@ public static class ItemPowerCatalog
 
     public static bool Carregado => !_itens.IsEmpty;
 
-    public static async Task EnsureLoadedAsync()
+    /// <summary>
+    /// soCache = true: só carrega se o arquivo já estiver no PC (abertura do app).
+    /// O download de 17,5 MB fica pra quando a pessoa abre a aba Grupo — antes ele
+    /// acontecia na primeira abertura do app, pra todo mundo, mesmo quem nunca usa a aba.
+    /// </summary>
+    public static async Task EnsureLoadedAsync(bool soCache = false)
     {
+        var cache = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                                 "XnomercyApp", "items_raw_cache.json");
+        if (soCache && !File.Exists(cache)) return;
         if (Carregado || Interlocked.CompareExchange(ref _carregando, 1, 0) != 0) return;
         try
         {
-            var cache = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                                     "XnomercyApp", "items_raw_cache.json");
             var etagPath = cache + ".etag";
             string? json = null;
             try

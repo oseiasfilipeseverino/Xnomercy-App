@@ -207,6 +207,8 @@ public sealed class SessionHistoryRowDisplay
     public string Silver { get; init; } = "";
     public string Damage { get; init; } = "";
     public string LootItems { get; init; } = "";
+    public string LootValue { get; init; } = "";
+    public string Dps { get; init; } = "";
 }
 
 public partial class MainWindow : Window
@@ -251,6 +253,7 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<SessionHistoryRowDisplay> _sessionRows = new();
     private readonly DamageMeterTracker _damageTracker = new();
     private readonly MapHistory _mapas = new(MapHistory.CaminhoPadrao);
+    private readonly FightHistory _lutas = new(FightHistory.CaminhoPadrao);
     private volatile bool _mapasDirty = true;
     private bool _capturing;
     private bool _paused;
@@ -449,7 +452,7 @@ public partial class MainWindow : Window
         _killTracker.Matou += () => _mapas.Somar(mobs: 1);
         _ = MapCatalog.EnsureLoadedAsync();
         _capture.OpResponseReceived += op => { if (!_paused) GroupGear.HandleOpResponse(op); };   // inspeção: IP real
-        _ = ItemPowerCatalog.EnsureLoadedAsync();
+        _ = ItemPowerCatalog.EnsureLoadedAsync(soCache: true);   // baixa de verdade só ao abrir a aba Grupo
         _capture.OpResponseReceived += GuildEnergyLog.HandleOpResponse;   // registro de energia da guild
         _capture.OpResponseReceived += _vendas.HandleOpResponse;          // cartas do mercado (aba Vendas)
         _capture.OpRequestReceived += _vendas.HandleOpRequest;            // compra/venda instantânea (aba Vendas)
@@ -543,10 +546,14 @@ public partial class MainWindow : Window
             if (PanelFame.Visibility == Visibility.Visible) RefreshFamePanel();
             if (PanelGathering.Visibility == Visibility.Visible && _coletaDirty) RefreshColeta();
             if (_overlay?.IsVisible == true)
+            {
+                var eu = _damageTracker.Snapshot().FirstOrDefault(d => d.Name == "Você");
                 _overlay.UpdateStats(_fameTracker.TotalFame, _fameTracker.FamePerHour,
                                      _fameTracker.TotalSilver, _fameTracker.SilverPerHour,
                                      _killTracker.TotalKills, _killTracker.KillsPerHour,
-                                     DateTime.Now - _fameTracker.SessionStart);
+                                     DateTime.Now - _fameTracker.SessionStart,
+                                     eu == null ? 0 : (long)Math.Round(eu.Dps), SeuLoot().Valor);
+            }
         };
         famePanelTimer.Start();
     }

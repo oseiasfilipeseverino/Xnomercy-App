@@ -28,14 +28,13 @@ public partial class MainWindow
     {
         // DamageMeterTracker já resolve e agrupa por nome no momento do hit — a
         // entrada "Você" soma tudo que já foi atribuído a você durante a sessão.
-        long selfDamage = _damageTracker.Snapshot()
-            .FirstOrDefault(d => d.Name == "Você")?.Damage ?? 0;
+        var eu = _damageTracker.Snapshot().FirstOrDefault(d => d.Name == "Você");
+        long selfDamage = eu?.Damage ?? 0;
         // Só o SEU loot — o feed mostra pickups de todo mundo por perto, e contar
         // tudo inflava o número da sessão com itens que outros jogadores pegaram.
         // "Você" = linha inserida direto pelo SelfLootDetector; SelfName = seu nome
         // real quando o evento 279 do servidor confirma o pickup.
-        int lootItems = _lootFeed.Count(x => !x.IsSilver &&
-            (x.Looter == "Você" || (PlayerRegistry.SelfName is string sn && x.Looter == sn)));
+        var (lootItems, lootValue) = SeuLoot();
 
         // Sem isso, qualquer toque acidental em "Iniciar/Parar captura" gerava uma
         // linha vazia no histórico.
@@ -52,8 +51,24 @@ public partial class MainWindow
             Silver = _fameTracker.TotalSilver,
             Damage = selfDamage,
             LootItems = lootItems,
+            LootValue = lootValue,
+            Dps = eu == null ? 0 : (long)Math.Round(eu.Dps),
+            Taken = eu?.Taken ?? 0,
         });
         RefreshSessionHistory();
+    }
+
+    /// <summary>O SEU loot no feed: quantos itens e o valor estimado somado.</summary>
+    private (int Itens, long Valor) SeuLoot()
+    {
+        int itens = 0; long valor = 0;
+        foreach (var x in _lootFeed)
+            if (!x.IsSilver && (x.Looter == "Você" || (PlayerRegistry.SelfName is string sn && x.Looter == sn)))
+            {
+                itens++;
+                valor += x.Valor ?? 0;
+            }
+        return (itens, valor);
     }
 
     private void RefreshSessionHistory()
@@ -73,6 +88,8 @@ public partial class MainWindow
                 Silver = s.Silver.ToString("N0"),
                 Damage = s.Damage.ToString("N0"),
                 LootItems = s.LootItems.ToString("N0"),
+                LootValue = s.LootValue > 0 ? s.LootValue.ToString("N0") : "—",
+                Dps = s.Dps > 0 ? s.Dps.ToString("N0") : "—",
             });
         }
     }
@@ -101,11 +118,11 @@ public partial class MainWindow
         };
         if (dlg.ShowDialog() != true) return;
         var sb = new System.Text.StringBuilder();
-        sb.AppendLine("Início;Fim;Duração (min);Fama;Fama Amarela;Prata;Dano;Itens de Loot");
+        sb.AppendLine("Início;Fim;Duração (min);Fama;Fama Amarela;Prata;Dano;DPS;Dano recebido;Itens de Loot;Valor do loot");
         foreach (var s in sessions)
             sb.AppendLine($"{s.StartTime:dd/MM/yyyy HH:mm};{s.EndTime:dd/MM/yyyy HH:mm};" +
                           $"{(int)(s.EndTime - s.StartTime).TotalMinutes};" +
-                          $"{s.Fame};{s.YellowFame};{s.Silver};{s.Damage};{s.LootItems}");
+                          $"{s.Fame};{s.YellowFame};{s.Silver};{s.Damage};{s.Dps};{s.Taken};{s.LootItems};{s.LootValue}");
         try
         {
             System.IO.File.WriteAllText(dlg.FileName, sb.ToString(), System.Text.Encoding.UTF8);

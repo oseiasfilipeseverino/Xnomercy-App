@@ -146,6 +146,11 @@ public sealed class DamageMeterTracker
 
     public event Action? Updated;
 
+    // Primeiro e último golpe desde o último Reset — duração da luta salva (FightHistory).
+    private DateTime? _primeiroGolpe, _ultimoGolpe;
+    public DateTime? PrimeiroGolpeUtc { get { lock (_lock) return _primeiroGolpe; } }
+    public DateTime? UltimoGolpeUtc { get { lock (_lock) return _ultimoGolpe; } }
+
     /// <summary>Cópia imutável das entradas atuais — segura pra ler na thread da UI.</summary>
     public IReadOnlyList<DamageMeterEntry> Snapshot()
     {
@@ -341,6 +346,8 @@ public sealed class DamageMeterTracker
                 else
                     entry.ActiveSeconds += 1;
                 entry.LastHitUtc = agoraUtc;
+                _primeiroGolpe ??= agoraUtc;
+                _ultimoGolpe = agoraUtc;
             }
             else
             {
@@ -444,6 +451,7 @@ public sealed class DamageMeterTracker
             _entries.Clear();
             _pendentes.Clear();
             _vida.Clear();
+            _primeiroGolpe = _ultimoGolpe = null;
         }
         Updated?.Invoke();
     }

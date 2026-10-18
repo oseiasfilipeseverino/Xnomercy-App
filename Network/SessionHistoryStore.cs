@@ -12,6 +12,11 @@ public sealed class SessionHistoryEntry
     public long Silver { get; set; }
     public long Damage { get; set; }
     public int LootItems { get; set; }
+    // Desde 18/10/2026 (sessões antigas leem 0): valor estimado do SEU loot, seu DPS
+    // e o dano que você recebeu.
+    public long LootValue { get; set; }
+    public long Dps { get; set; }
+    public long Taken { get; set; }
 }
 
 /// <summary>
