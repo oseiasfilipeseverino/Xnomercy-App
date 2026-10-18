@@ -456,6 +456,8 @@ public partial class MainWindow : Window
             _gatherTracker.EncerrarPesca();   // trocou de zona: o inventário é reenviado, não é peixe novo
         };
         _capture.OpRequestReceived += op => { if (!_paused) _gatherTracker.HandleOpRequest(op.Parameters); };   // vara de pesca
+        _capture.OpRequestReceived += op => { if (!_paused) SessaoGravada.Pedido(op); };     // gravação pra análise
+        _capture.OpResponseReceived += op => { if (!_paused) SessaoGravada.Resposta(op); };
         _faccao.Mudou += () => _fameDirty = true;
         _baus.Mudou += () => _bausDirty = true;
         _mapas.Mudou += () => _mapasDirty = true;

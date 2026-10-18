@@ -157,6 +157,39 @@ public partial class MainWindow
         janela.Show();
     }
 
+    // Exporta o formato dos eventos desta captura, sem nada pessoal (ver
+    // Network/SessaoGravada.cs). É o arquivo que a liderança usa pra conferir no
+    // jogo o que o app reconhece — e que vira teste em testes/sessoes/.
+    private void BtnExportarSessao_Click(object sender, RoutedEventArgs e)
+    {
+        if (SessaoGravada.Amostras == 0)
+        {
+            MessageBox.Show("Ainda não há nada gravado. Ligue a captura, jogue um pouco e tente de novo.",
+                            "Exportar sessão", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        var dlg = new Microsoft.Win32.SaveFileDialog
+        {
+            FileName = $"sessao_xnomercy_{DateTime.Now:yyyyMMdd_HHmm}.json",
+            Filter = "Sessão (*.json)|*.json",
+            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+        };
+        if (dlg.ShowDialog() != true) return;
+        try
+        {
+            var versao = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "?";
+            int n = SessaoGravada.Exportar(dlg.FileName, versao);
+            MessageBox.Show($"Sessão salva ({n} amostras) em:\n{dlg.FileName}\n\n" +
+                            "O arquivo tem só o FORMATO dos eventos do jogo: nomes viram apelidos (Nome1, Nome2...), " +
+                            "frases e chat não entram. Pode mandar pra liderança.",
+                            "Exportar sessão", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("Falha ao salvar: " + ex.Message, "Exportar sessão", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
     // ── Loot Log (Fase 2) ────────────────────────────────────────────────────
     private void BtnAdvancedMode_Click(object sender, RoutedEventArgs e)
     {
@@ -172,6 +205,7 @@ public partial class MainWindow
     private void OnCaptureEvent(PhotonEvent evt)
     {
         if (_paused) return;
+        SessaoGravada.Evento(evt);         // formato do evento, anonimizado (Exportar sessão para análise)
         OnPhotonEvent(evt);
         EventOffset.Observe(evt);          // calibração automática da numeração (antes de quem usa os códigos)
         CaptureHealth.Observar(evt);       // saúde da captura: número fixo chegou no formato esperado?
@@ -273,6 +307,7 @@ public partial class MainWindow
                 PartyCalibrationLog.IniciarSessao();
                 ReiniciarDiagNomeados();
                 CaptureHealth.Reset();   // a saúde vale pra esta captura
+                SessaoGravada.Iniciar(); // e a gravação pra análise também
                 if (!_capture.ModoSemNpcap) _avisoCaptura = null;
             }
             BtnCaptureToggle.Content = _capturing ? "Parar captura" : "Iniciar captura";

@@ -170,6 +170,8 @@ public partial class MainWindow
         DiagReporter.ReportDiagFiles();
         SetActiveNav(NavFame);
         ShowPanel("fame");
+        // Depois do painel aberto (o WebView já escondido): novidades da atualização.
+        Dispatcher.BeginInvoke(() => Novidades.MostrarSeHouver(this), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
     }
 
     // Pergunta de consentimento pro diagnóstico (ver PanelConsent no XAML) — uma vez só,

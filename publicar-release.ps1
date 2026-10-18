@@ -42,6 +42,12 @@ if (-not (Test-Path $vpk)) {
     throw "vpk nao encontrado em $vpk. Instale com: dotnet tool install -g vpk"
 }
 
+# A janela "O que mudou" (Novidades.cs) precisa da nota desta versao — sem ela a
+# guild atualiza e nao fica sabendo de nada.
+if (-not (Select-String -Path (Join-Path $proj 'Novidades.cs') -SimpleMatch "(`"$Versao`"" -Quiet)) {
+    throw "Novidades.cs nao tem a nota da versao $Versao. Acrescente antes de publicar."
+}
+
 if (-not $SemTestes) {
     Write-Host "`n=== 0/4  Testes (testes\rodar.ps1) ===" -ForegroundColor Cyan
     # Em outro processo: o rodar.ps1 termina com exit, e aqui so interessa o codigo.

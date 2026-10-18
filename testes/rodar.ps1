@@ -96,6 +96,16 @@ Write-Host "`n--- harness_sat4 (pesca, faccao, bau e banco, perdas) ---"
 dotnet run --project "$PSScriptRoot\harness_sat4\harness_sat4.csproj" -c Release --nologo
 if ($LASTEXITCODE -ne 0) { $falhou++ }
 
+# -- sessoes gravadas (dado real)
+Write-Host "`n--- harness_sessoes (sessoes gravadas (dado real)) ---"
+dotnet run --project "$PSScriptRoot\harness_sessoes\harness_sessoes.csproj" -c Release --nologo
+if ($LASTEXITCODE -ne 0) { $falhou++ }
+
+# -- o que mudou
+Write-Host "`n--- harness_novidades (o que mudou) ---"
+dotnet run --project "$PSScriptRoot\harness_novidades\harness_novidades.csproj" -c Release --nologo
+if ($LASTEXITCODE -ne 0) { $falhou++ }
+
 if ($falhou -gt 0) {
     Write-Host "`n$falhou teste(s) reprovaram" -ForegroundColor Red
     exit 1

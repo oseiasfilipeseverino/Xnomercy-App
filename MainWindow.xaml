@@ -214,8 +214,12 @@
                             ToolTip="Escuta 20s sem filtro de porta e mostra onde o tráfego do jogo realmente está. Use quando a captura não pegar nada (ex: com acelerador de rota tipo ExitLag). Pare a captura antes."/>
                     <Button x:Name="BtnSaudeCaptura" Content="Saúde da captura" Click="BtnSaudeCaptura_Click"
                             Padding="0,7" Background="#2e2e2e" Foreground="#c9a227" BorderThickness="0" Cursor="Hand"
-                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,0,12"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,0,8"
                             ToolTip="Mostra, parte por parte (dano, loot, grupo, fama...), quando o app reconheceu cada evento pela última vez — e avisa se o jogo mudou algo num patch."/>
+                    <Button x:Name="BtnExportarSessao" Content="Exportar sessão p/ análise" Click="BtnExportarSessao_Click"
+                            Padding="0,7" Background="#2e2e2e" Foreground="#8CFFFFFF" BorderThickness="0" Cursor="Hand"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,0,12"
+                            ToolTip="Salva o formato dos eventos desta captura num arquivo, sem nomes nem chat, pra liderança conferir o que o app reconhece no jogo."/>
                     <Border Height="1" Margin="-6,0,-6,12">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
