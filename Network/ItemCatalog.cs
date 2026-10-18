@@ -108,4 +108,21 @@ public static class ItemCatalog
     public static string? GetName(int index) => _byIndex.TryGetValue(index, out var v) ? v.NamePt : null;
 
     public static string? GetUniqueName(int index) => _byIndex.TryGetValue(index, out var v) ? v.UniqueName : null;
+
+    // Nome pelo código do item (ex.: "T8_MAIN_MACE@2") — as cartas do mercado trazem o
+    // código, não o índice (aba Vendas, 18/10/2026). Índice reverso montado sob demanda
+    // e refeito se o catálogo crescer.
+    private static System.Collections.Generic.Dictionary<string, string>? _porCodigo;
+    private static int _porCodigoTamanho = -1;
+    public static string? GetNameByUnique(string uniqueName)
+    {
+        var mapa = _porCodigo;
+        if (mapa == null || _porCodigoTamanho != _byIndex.Count)
+        {
+            mapa = new System.Collections.Generic.Dictionary<string, string>(System.StringComparer.OrdinalIgnoreCase);
+            foreach (var v in _byIndex.Values) mapa.TryAdd(v.UniqueName, v.NamePt);
+            _porCodigo = mapa; _porCodigoTamanho = _byIndex.Count;
+        }
+        return mapa.TryGetValue(uniqueName, out var n) ? n : null;
+    }
 }

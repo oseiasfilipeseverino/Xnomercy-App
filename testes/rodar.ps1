@@ -51,6 +51,11 @@ Write-Host "`n--- harness_coleta (aba Coleta) ---"
 dotnet run --project "$PSScriptRoot\harness_coleta\harness_coleta.csproj" -c Release --nologo
 if ($LASTEXITCODE -ne 0) { $falhou++ }
 
+# -- Aba Vendas (cartas do mercado, 18/10/2026)
+Write-Host "`n--- harness_vendas (aba Vendas) ---"
+dotnet run --project "$PSScriptRoot\harness_vendas\harness_vendas.csproj" -c Release --nologo
+if ($LASTEXITCODE -ne 0) { $falhou++ }
+
 if ($falhou -gt 0) {
     Write-Host "`n$falhou teste(s) reprovaram" -ForegroundColor Red
     exit 1
