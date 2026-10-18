@@ -41,6 +41,11 @@ Write-Host "`n--- harness_grupo (grupo exato pelos eventos do jogo) ---"
 dotnet run --project "$PSScriptRoot\harness_grupo\harness_grupo.csproj" -c Release --nologo
 if ($LASTEXITCODE -ne 0) { $falhou++ }
 
+# -- Registro de energia da guild lido do jogo (18/10/2026)
+Write-Host "`n--- harness_energia (registro de energia da guild) ---"
+dotnet run --project "$PSScriptRoot\harness_energia\harness_energia.csproj" -c Release --nologo
+if ($LASTEXITCODE -ne 0) { $falhou++ }
+
 if ($falhou -gt 0) {
     Write-Host "`n$falhou teste(s) reprovaram" -ForegroundColor Red
     exit 1

@@ -388,6 +388,8 @@ public partial class MainWindow : Window
         SelfLootDetector.SelfLootDetected += OnSelfLootDetected;
         // Timer de fechamento de dungeon — ver DungeonTimerTracker.cs.
         _capture.OpResponseReceived += DungeonTimerTracker.HandleOpResponse;
+        _capture.OpResponseReceived += GuildEnergyLog.HandleOpResponse;   // registro de energia da guild
+        GuildEnergyLog.Lido += OnEnergiaLida;
         DungeonTimerTracker.EnteredDungeon += _onEnteredDungeon;
         DungeonTimerTracker.LeftDungeon += _onLeftDungeon;
         _capture.StatusChanged += status => Dispatcher.BeginInvoke(() => TxtCaptureStatus.Text = status);

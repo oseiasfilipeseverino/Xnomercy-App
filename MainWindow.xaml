@@ -225,6 +225,21 @@
         <Grid Grid.Column="1">
             <wv2:WebView2 x:Name="WebView" Visibility="Visible"/>
 
+            <!-- Registro de energia da guild lido do jogo (18/10/2026): o oficial confere e
+                 manda pro site com um clique. Ver MainWindow.Energia.cs. -->
+            <Border x:Name="EnergiaBanner" Visibility="Collapsed" Panel.ZIndex="50" VerticalAlignment="Top"
+                    HorizontalAlignment="Center" Margin="0,14,0,0" Padding="16,10" CornerRadius="8"
+                    Background="#F21b1b1b" BorderBrush="#c9a227" BorderThickness="1" MaxWidth="720">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock x:Name="TxtEnergiaBanner" Foreground="White" FontSize="13" TextWrapping="Wrap"
+                               VerticalAlignment="Center" MaxWidth="420" Margin="0,0,14,0"/>
+                    <Button x:Name="BtnEnergiaEnviar" Content="Enviar ao site" Click="BtnEnergiaEnviar_Click"
+                            Padding="14,6" Background="#c9a227" Foreground="Black" FontWeight="Bold" BorderThickness="0" Cursor="Hand"/>
+                    <Button x:Name="BtnEnergiaIgnorar" Content="Ignorar" Click="BtnEnergiaIgnorar_Click"
+                            Padding="12,6" Margin="8,0,0,0" Background="#2e2e2e" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                </StackPanel>
+            </Border>
+
             <!-- Marca enquanto a tela de login do site carrega (some no 1º carregamento) -->
             <Grid x:Name="LoginLoading" Background="{StaticResource FundoMalha}">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="420">
