@@ -392,6 +392,14 @@ public partial class MainWindow : Window
         _capture.OpResponseReceived += _vendas.HandleOpResponse;          // cartas do mercado (aba Vendas)
         _vendas.Mudou += () => Dispatcher.BeginInvoke(() => { if (PanelVendas.Visibility == Visibility.Visible) RefreshVendas(); });
         GuildEnergyLog.Lido += OnEnergiaLida;
+        // Calibração automática da numeração de eventos (ver Network/EventOffset.cs): avisa
+        // quando um patch do jogo desloca os códigos, em vez de o app ficar mudo.
+        EventOffset.Mudou += d => Dispatcher.BeginInvoke(() =>
+            TxtCaptureStatus.Text = $"O jogo mudou a numeração de eventos — ajustado sozinho ({d:+0;-0;0}).");
+        TxtCaptureStatus.ToolTip = "";
+        TxtCaptureStatus.ToolTipOpening += (_, _) => TxtCaptureStatus.ToolTip =
+            $"Numeração de eventos: SAT {EventOffset.Delta:+0;-0;0} — " +
+            (EventOffset.ConfirmadoEm is DateTime c ? $"confirmada no jogo às {c:HH:mm} ({EventOffset.Fonte})" : $"ainda não conferida nesta sessão (base: {EventOffset.Fonte})");
         DungeonTimerTracker.EnteredDungeon += _onEnteredDungeon;
         DungeonTimerTracker.LeftDungeon += _onLeftDungeon;
         _capture.StatusChanged += status => Dispatcher.BeginInvoke(() => TxtCaptureStatus.Text = status);

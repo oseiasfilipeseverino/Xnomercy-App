@@ -15,10 +15,9 @@ namespace XnomercyApp.Network;
 ///   PartyPlayerJoined  [1]=GUID  [2]=nome                      — alguém entrou
 ///   PartyPlayerLeft    [1]=GUID                                — alguém saiu
 ///
-/// No SAT esses são 230, 232 e 234. A numeração dele bate com a nossa até ~123, mas
-/// do 278 em diante a nossa (calibrada no jogo) está +1 — o jogo ganhou um evento no
-/// meio. Então cada evento aceita SÓ os dois números possíveis (SAT e SAT+1) E tem
-/// que ter o formato exato. Os dois juntos: o número sozinho já errou duas vezes
+/// No SAT esses são 230, 232 e 234; no jogo valem SAT + EventOffset.Delta (+1 nos
+/// pacotes de 12/10: 231, 233, 235), conferido ao vivo pelo EventOffset. Além do
+/// número, o evento tem que ter o formato exato. Os dois juntos: o número sozinho já errou duas vezes
 /// neste projeto (o 104 era proximidade, o 182 era movimento — ver GameEventCodes),
 /// e o formato sozinho casaria com o CONVITE de grupo (228/229), que também traz
 /// GUID + nome — por isso o convite fica fora das faixas.
@@ -29,9 +28,13 @@ namespace XnomercyApp.Network;
 /// </summary>
 public static class PartyTracker
 {
-    private static readonly int[] JoinedCodes = { 230, 231 };
-    private static readonly int[] PlayerJoinedCodes = { 232, 233 };
-    private static readonly int[] PlayerLeftCodes = { 234, 235 };
+    // Números da lista do SAT; o código vivo é SAT + EventOffset.Delta (calibrado
+    // no jogo — ver EventOffset). Em 12/10 o deslocamento era +1: 231..235.
+    //
+    // Antes (1.0.63) cada evento aceitava os DOIS números (SAT e SAT+1). Com +1
+    // confirmado isso era perigoso: o 234 vira "grupo mudou de ordem" (tirava
+    // gente do grupo por engano) e o 232 vira "grupo desfeito", que nem era tratado.
+    public const int SatJoined = 230, SatDisbanded = 231, SatPlayerJoined = 232, SatPlayerLeft = 234;
     private const int MaxGrupo = 20;
 
     private static readonly object _lock = new();
@@ -56,7 +59,16 @@ public static class PartyTracker
     public static string? Handle(PhotonEvent evt)
     {
         var p = evt.Parameters;
-        if (JoinedCodes.Contains(evt.EventCode)
+        int code = evt.EventCode;
+        // Grupo desfeito: o SAT zera o grupo sem olhar campo nenhum. Aqui, por
+        // segurança, só se o evento não trouxer membro (GUID/nome/lista).
+        if (code == EventOffset.Live(SatDisbanded)
+            && !p.ContainsKey(1) && !p.ContainsKey(2) && !p.ContainsKey(8) && !p.ContainsKey(9))
+        {
+            lock (_lock) _membros.Clear();
+            return UltimoReconhecido = "grupo_desfeito";
+        }
+        if (code == EventOffset.Live(SatJoined)
             && p.TryGetValue(8, out var g) && p.TryGetValue(9, out var n))
         {
             var guids = Guids(g);
@@ -72,7 +84,7 @@ public static class PartyTracker
                 return UltimoReconhecido = "entrou_no_grupo";
             }
         }
-        if (PlayerJoinedCodes.Contains(evt.EventCode)
+        if (code == EventOffset.Live(SatPlayerJoined)
             && p.TryGetValue(1, out var g1) && Guid(g1) is string guid
             && p.TryGetValue(2, out var nm) && nm is string nome && nome.Length > 0)
         {
@@ -83,7 +95,7 @@ public static class PartyTracker
             }
             return UltimoReconhecido = "membro_entrou";
         }
-        if (PlayerLeftCodes.Contains(evt.EventCode)
+        if (code == EventOffset.Live(SatPlayerLeft)
             && p.TryGetValue(1, out var g2) && Guid(g2) is string saiu
             && !(p.TryGetValue(2, out var x2) && x2 is string))
         {

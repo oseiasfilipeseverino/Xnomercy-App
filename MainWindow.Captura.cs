@@ -110,6 +110,7 @@ public partial class MainWindow
     {
         if (_paused) return;
         OnPhotonEvent(evt);
+        EventOffset.Observe(evt);          // calibração automática da numeração (antes de quem usa os códigos)
         PartyTracker.Handle(evt);          // grupo exato (eventos de grupo do jogo)
         if (_gatherTracker.HandleEvent(evt)) _coletaDirty = true;   // aba Coleta
         PlayerRegistry.HandleEvent(evt);
