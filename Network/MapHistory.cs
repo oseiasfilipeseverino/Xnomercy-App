@@ -95,8 +95,13 @@ public sealed class MapHistory
 
     public bool HandleJoin(IReadOnlyDictionary<byte, object?> p, DateTime agoraUtc)
     {
-        if (!p.TryGetValue(253, out var c) || PhotonParam.ToLong(c) != 2) return false;
-        if (!p.TryGetValue(8, out var m) || m is null) return false;
+        // Join (op 2): mapa no [8]. Troca de mapa (op 41, conferida nos diagnósticos e
+        // na sessão de 18/10): mapa no [0] — chega antes da Join, e às vezes é a única.
+        if (!p.TryGetValue(253, out var c)) return false;
+        long op = PhotonParam.ToLong(c) ?? -1;
+        byte campo = op == 2 ? (byte)8 : op == 41 ? (byte)0 : (byte)255;
+        if (campo == 255 || !p.TryGetValue(campo, out var m) || m is null) return false;
+        if (op == 41 && m is not string) return false;
         string indice = m is string s ? s : PhotonParam.ToLong(m)?.ToString() ?? "";
         if (indice.Length == 0 || indice.Length > 200) return false;
         Entrou(indice, agoraUtc);

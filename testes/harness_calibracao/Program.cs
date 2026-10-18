@@ -75,6 +75,18 @@ PlayerRegistry.HandleEvent(Jogador(29, 701, "Fica"));
 PlayerRegistry.HandleEvent(Ev(1, new() { [0] = 701L, [1] = 5, [2] = 6, [3] = 7, [4] = 8 }));
 Checar(PlayerRegistry.NameOf(701) == "Fica", "evento 1 com muitos campos nao e' Leave");
 
+Console.WriteLine("\n-- 6. numeracao lembrada entre sessoes (patch de 18/10: +1 -> 0)");
+EventOffset.Reset();
+var arqN = Path.Combine(Path.GetTempPath(), $"numeracao_{Guid.NewGuid():N}.json");
+EventOffset.Arquivo = arqN;
+EventOffset.Observe(Ev(209, new() { [0] = 185L, [1] = 2, [4] = new string?[] { "@_Owner", "@_Guild", "@_Everyone" }, [5] = new string?[] { "a", "b", "c" } }));
+Checar(EventOffset.Delta == 0 && GameEventCodes.GrabbedLoot == 278 && File.Exists(arqN), "lista de acesso no 209 (sessao real de 18/10): deslocamento 0, gravado em disco");
+EventOffset.Reset();
+Checar(EventOffset.Delta == 1, "app reabre: comeca no padrao +1...");
+EventOffset.Carregar();
+Checar(EventOffset.Delta == 0 && GameEventCodes.GrabbedLoot == 278 && GameEventCodes.MobKilled == 165, "...e carrega o 0 conferido na ultima sessao (loot 278, mob morto 165)");
+EventOffset.Arquivo = null;
+File.Delete(arqN);
 EventOffset.Reset();
 Console.WriteLine(falhas == 0 ? "\nOK: calibracao dos numeros baixos e Leave" : $"\nFALHOU: {falhas}");
 return falhas == 0 ? 0 : 1;

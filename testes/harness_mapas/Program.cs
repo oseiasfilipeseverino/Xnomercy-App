@@ -71,5 +71,10 @@ Checar(entrou == 1, $"entrou na dungeon pela Join; a ChangeCluster junto nao dis
 DungeonTimerTracker.HandleOpResponse(new PhotonOperationResponse(1, 0, null, Join("4000")));
 Checar(saiu == 1, "saiu pela Join");
 
+Console.WriteLine("\n-- 6. troca de mapa (op 41) tambem conta");
+var h41 = new MapHistory(null);
+Checar(h41.HandleJoin(new Dictionary<byte, object?> { [0] = "1311", [253] = (short)41 }, t0), "op 41 com o mapa no [0] (sessao real de 18/10)");
+Checar(h41.MapaAtual == "Mapa 1311", $"mapa atual ({h41.MapaAtual})");
+Checar(!h41.HandleJoin(new Dictionary<byte, object?> { [0] = 340, [253] = (short)41 }, t0), "op 41 com numero no [0] (e' o PEDIDO, nao a resposta): ignora");
 Console.WriteLine(falhas == 0 ? "\nOK: mapas e dungeons" : $"\nFALHOU: {falhas}");
 return falhas == 0 ? 0 : 1;

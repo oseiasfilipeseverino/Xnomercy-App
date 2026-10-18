@@ -105,6 +105,7 @@ public static class EventOffset
         }
         if (!mudou) return null;
         GameEventCodes.AplicarDeltasBaixos(DeltaDano, DeltaNomes);
+        Salvar();
         Mudou?.Invoke(visto);
         return visto;
     }
@@ -143,12 +144,54 @@ public static class EventOffset
         }
         if (mudou)
         {
-            GameEventCodes.GrabbedLoot = AnchorOtherGrabbedLoot + d;
-            GameEventCodes.PartyFameShare = AnchorOtherGrabbedLoot + d;
-            GameEventCodes.MobKilled = AnchorMobKilled + d;
+            AplicarAlto(d);
+            Salvar();
             Mudou?.Invoke(d);
         }
         return d;
+    }
+
+    // ── Numeração lembrada entre sessões (18/10/2026) ─────────────────────────
+    // Em 18/10 um patch levou a faixa de cima de +1 pra 0 (a lista de acesso chegou
+    // no 209). A calibração viu e ajustou — mas cada abertura do app voltava a supor
+    // +1 até a âncora aparecer de novo, e nesse meio tempo loot e grupo ficavam nos
+    // números errados. Agora o último deslocamento CONFERIDO NO JOGO fica em disco.
+    /// <summary>Arquivo onde guardar; null (padrão, e nos testes) = não guarda.</summary>
+    public static string? Arquivo { get; set; }
+
+    public static void Carregar()
+    {
+        if (Arquivo == null || !System.IO.File.Exists(Arquivo)) return;
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(System.IO.File.ReadAllText(Arquivo));
+            var r = doc.RootElement;
+            int alto = r.GetProperty("alto").GetInt32(), dano = r.GetProperty("dano").GetInt32(), nomes = r.GetProperty("nomes").GetInt32();
+            if (System.Math.Abs(alto) > 3 || System.Math.Abs(dano) > 3 || System.Math.Abs(nomes) > 3) return;
+            lock (_lock) { _delta = alto; _deltaDano = dano; _deltaNomes = nomes; _fonte = "última sessão conferida"; }
+            AplicarAlto(alto);
+            GameEventCodes.AplicarDeltasBaixos(dano, nomes);
+        }
+        catch { /* arquivo estragado: segue com o padrão */ }
+    }
+
+    private static void Salvar()
+    {
+        if (Arquivo == null) return;
+        try
+        {
+            string json;
+            lock (_lock) json = $"{{\"alto\":{_delta},\"dano\":{_deltaDano},\"nomes\":{_deltaNomes}}}";
+            System.IO.File.WriteAllText(Arquivo, json);
+        }
+        catch { }
+    }
+
+    private static void AplicarAlto(int d)
+    {
+        GameEventCodes.GrabbedLoot = AnchorOtherGrabbedLoot + d;
+        GameEventCodes.PartyFameShare = AnchorOtherGrabbedLoot + d;
+        GameEventCodes.MobKilled = AnchorMobKilled + d;
     }
 
     /// <summary>Só pro teste: volta ao estado inicial.</summary>

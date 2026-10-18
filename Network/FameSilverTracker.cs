@@ -40,12 +40,41 @@ public sealed class FameSilverTracker
     /// <summary>Quanto entrou neste evento (fama vermelha, prata líquida) — pro histórico de mapas.</summary>
     public event Action<long, long>? Ganhou;
 
+    /// <summary>
+    /// UpdateFame pelo FORMATO perto do número esperado (patch pode mexer na faixa):
+    /// [0] você, [1] fama TOTAL (×10.000, sempre enorme), [2] ganho e [3]. O 84 (fama
+    /// amarela) tem lista no [0]; o 81 (prata total) não tem [2]; o 86 tem [1] pequeno.
+    /// </summary>
+    public static bool EhFama(PhotonEvent evt)
+    {
+        var p = evt.Parameters;
+        if (System.Math.Abs(evt.EventCode - GameEventCodes.FameGain) > 3) return false;
+        if (evt.EventCode == GameEventCodes.FameGain) return Num(p, 2);
+        return Num(p, 0) && p.TryGetValue(1, out var t) && PhotonParam.ToDouble(t) is double total && total >= 1e8
+               && Num(p, 2) && Num(p, 3);
+    }
+
+    /// <summary>
+    /// TakeSilver pelo FORMATO perto do número esperado: [0] quem, [1] hora curta (não
+    /// ticks), [2] alvo, [3] prata e [8] multiplicador. O 61 (coleta) tem ticks no [1].
+    /// </summary>
+    public static bool EhPrata(PhotonEvent evt)
+    {
+        var p = evt.Parameters;
+        if (System.Math.Abs(evt.EventCode - GameEventCodes.SilverTaken) > 3) return false;
+        if (evt.EventCode == GameEventCodes.SilverTaken) return Num(p, 3);
+        return Num(p, 0) && p.TryGetValue(1, out var h) && PhotonParam.ToDouble(h) is double hora && hora < 1e12
+               && Num(p, 2) && Num(p, 3) && Num(p, 8);
+    }
+
+    private static bool Num(IReadOnlyDictionary<byte, object?> p, byte k) => p.TryGetValue(k, out var v) && PhotonParam.ToDouble(v) != null;
+
     public void HandleEvent(PhotonEvent evt)
     {
         // Mesmo padrão de lock do DamageMeterTracker: a thread de captura escreve aqui
         // e a UI lê TotalFame/TotalYellowFame/TotalSilver ao mesmo tempo — sem isso, os
         // totais podiam corromper ou perder incrementos sob concorrência.
-        if (evt.EventCode == GameEventCodes.FameGain && TryGetParam(evt, 2, out long fameWithZoneRaw))
+        if (EhFama(evt) && TryGetParam(evt, 2, out long fameWithZoneRaw))
         {
             // Pacote malformado/corrompido podia mandar fama negativa aqui — um evento
             // de ganho de fama nunca é negativo de verdade, então descarta com segurança.
@@ -78,7 +107,7 @@ public sealed class FameSilverTracker
             }
             Updated?.Invoke();
         }
-        else if (evt.EventCode == GameEventCodes.SilverTaken && TryGetParam(evt, 3, out long silverBruto))
+        else if (EhPrata(evt) && TryGetParam(evt, 3, out long silverBruto))
         {
             if (silverBruto < 0) return;
             long silverAmt = PrataLiquida(evt, silverBruto);

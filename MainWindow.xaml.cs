@@ -490,6 +490,9 @@ public partial class MainWindow : Window
         // travava a thread de captura e fazia perder pacotes), os trackers só marcam
         // "sujo" e um timer redesenha no máximo ~3x/seg, na thread da UI.
         DiagReporter.LimparArquivosAntigos();   // logs de calibração das versões antigas (iam pro Discord)
+        EventOffset.Arquivo = System.IO.Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp", "numeracao.json");
+        EventOffset.Carregar();   // numeração conferida no jogo na última sessão (patch de 18/10: +1 -> 0)
         ItemValues.Carregar();   // valores que o jogo já mostrou em sessões anteriores
         ItemValues.Mudou += () => _valoresMudaram = true;
         _fameTracker.Updated += () => _fameDirty = true;
@@ -528,12 +531,24 @@ public partial class MainWindow : Window
             // conteúdo, porque acelerador de rota sorteia porta), então sempre chega
             // algum UDP da máquina e o contador bruto nunca fica em 0. O que importa
             // é se algo virou evento do Albion de verdade.
+            // Pouco evento com muito pacote: o jogo está passando por fora (acelerador de
+            // rota, VPN). Caso real de 18/10: 5 eventos em 34s com o jogo aberto, e o
+            // diagnóstico de rede sem nada nas portas do Albion. Antes só avisava com ZERO.
+            double minutos = (DateTime.Now - captureStartedAt).TotalMinutes;
+            if (minutos > 1.5 && _capture.DiagEventsDecoded > 0 && _capture.DiagEventsDecoded / minutos < 60
+                && _capture.DiagRawPackets > 3000)
+            {
+                TxtCaptureStatus.Text =
+                    $"⚠️ Pouca coisa do Albion chegando ({_capture.DiagEventsDecoded / minutos:0} eventos/min). Se você usa ExitLag, " +
+                    "VPN (TunnelBear...) ou outro acelerador, o app não consegue ler o jogo — desligue enquanto usa o app.";
+                return;
+            }
             if (_capture.DiagEventsDecoded == 0 && (DateTime.Now - captureStartedAt).TotalSeconds > 45)
             {
                 TxtCaptureStatus.Text =
                     $"⚠️ Capturando ({_capture.DiagRawPackets} pacotes vistos), mas nenhum evento do Albion foi " +
-                    "reconhecido ainda. Confira se o jogo está aberto e em partida. Se continuar assim, use " +
-                    "\"Diagnóstico de rede\" e mande o resultado pra liderança.";
+                    "reconhecido ainda. Confira se o jogo está aberto e em partida. Se continuar assim: " +
+                    "ExitLag, VPN (TunnelBear...) ou acelerador ligados impedem o app de ler o jogo.";
                 return;
             }
 

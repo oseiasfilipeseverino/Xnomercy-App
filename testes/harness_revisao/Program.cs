@@ -130,5 +130,16 @@ kills.HandleEvent(Ev(166, new() { [0] = 1008680L, [1] = 46283685L, [2] = 1008680
 Checar(kills.TotalKills == 1 && kills.Snapshot().Single().Name == "Undead Soldier Champion",
        $"o mob conta; o JOGADOR derrubado (nome no [3]) nao conta ({kills.TotalKills})");
 
+Console.WriteLine("\n-- 9. fama e prata pelo formato se um patch mexer no numero");
+var f2 = new FameSilverTracker();
+f2.HandleEvent(Ev(83, new() { [0] = 13080L, [1] = 12080356254972L, [2] = 101149216L, [3] = 16248000L, [4] = 68322840L }));
+f2.HandleEvent(Ev(63, new() { [0] = 68979L, [1] = 44551702, [2] = 69518L, [3] = 3855000L, [4] = 192750L, [5] = 366225L, [8] = 10000 }));
+Checar(f2.TotalFame == 10114 && f2.TotalSilver == 329, $"fama no 83 e prata no 63 (formato real) ainda contam ({f2.TotalFame}/{f2.TotalSilver})");
+var f3 = new FameSilverTracker();
+f3.HandleEvent(Ev(81, new() { [0] = 1L, [1] = 167961577008L }));                                     // prata total
+f3.HandleEvent(Ev(84, new() { [0] = new long[5], [1] = 1L, [2] = 600000L }));                       // fama amarela
+f3.HandleEvent(Ev(61, new() { [0] = 1L, [1] = 639234671876950609L, [2] = 639234671884009375L, [3] = 48916L, [4] = 1015, [5] = 1, [6] = 0, [7] = 1, [8] = 26 }));   // coleta
+Checar(f3.TotalFame == 0 && f3.TotalSilver == 0, "vizinhos (81 prata total, 84 fama amarela, 61 coleta) nao viram fama/prata");
+
 Console.WriteLine(falhas == 0 ? "\nOK: correcoes da revisao" : $"\nFALHOU: {falhas}");
 return falhas == 0 ? 0 : 1;

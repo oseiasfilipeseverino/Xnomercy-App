@@ -16,6 +16,12 @@ public static class Novidades
 {
     public static readonly (string Versao, string[] Itens)[] Notas =
     {
+        ("1.1.2", new[]
+        {
+            "O Albion teve um patch que mudou a numeração dos eventos. O app já se ajusta sozinho e agora lembra o ajuste entre uma sessão e outra.",
+            "Aviso na tela quando quase nada do jogo chega: ExitLag, VPN (TunnelBear) ou outro acelerador ligados impedem o app de ler o jogo.",
+            "Fama e prata mais resistentes a patch. Mapas também pela troca de mapa.",
+        }),
         ("1.1.1", new[]
         {
             "Menu mais enxuto: Pausar e Overlay lado a lado, Saúde e Exportar lado a lado (passe o mouse para ver o que cada um faz).",

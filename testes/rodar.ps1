@@ -106,6 +106,11 @@ Write-Host "`n--- harness_novidades (o que mudou) ---"
 dotnet run --project "$PSScriptRoot\harness_novidades\harness_novidades.csproj" -c Release --nologo
 if ($LASTEXITCODE -ne 0) { $falhou++ }
 
+# -- janela real recebe fama e prata
+Write-Host "`n--- harness_janela (janela real recebe fama e prata) ---"
+dotnet run --project "$PSScriptRoot\harness_janela\harness_janela.csproj" -c Release --nologo
+if ($LASTEXITCODE -ne 0) { $falhou++ }
+
 if ($falhou -gt 0) {
     Write-Host "`n$falhou teste(s) reprovaram" -ForegroundColor Red
     exit 1

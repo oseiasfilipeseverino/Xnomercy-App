@@ -98,10 +98,14 @@ public static class CaptureHealth
             Somar("Dano e cura", p.TryGetValue(2, out var l) && l is Array);
         else if (c == GameEventCodes.NewCharacter)
             Somar("Nomes de jogadores", Num(p, 0) && p.TryGetValue(1, out var n) && n is string { Length: > 0 });
+        else if (FameSilverTracker.EhFama(evt))
+            Somar("Fama", true);
         else if (c == GameEventCodes.FameGain)
-            Somar("Fama", Num(p, 2));
+            Somar("Fama", false);
+        else if (FameSilverTracker.EhPrata(evt))
+            Somar("Prata", true);
         else if (c == GameEventCodes.SilverTaken)
-            Somar("Prata", Num(p, 3));
+            Somar("Prata", false);
         else if (c == GameEventCodes.NewMob)
             Somar("Mobs", PlayerRegistry.EhNovoMob(evt));
         else if (c == GameEventCodes.GrabbedLoot)
