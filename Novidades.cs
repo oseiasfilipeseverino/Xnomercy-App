@@ -16,7 +16,7 @@ public static class Novidades
 {
     public static readonly (string Versao, string[] Itens)[] Notas =
     {
-        ("1.0.71", new[]
+        ("1.1.0", new[]
         {
             "O app não manda mais nada sozinho pro Discord. Se a liderança pedir, use \"Exportar sessão p/ análise\" no menu e mande o arquivo.",
             "Saiu o aviso de envio automático de dados.",
