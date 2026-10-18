@@ -134,6 +134,11 @@ public static class GameEventCodes
     // muda (inclusive quando para porque a vida encheu). O medidor usa só pra saber
     // a vida atual do alvo e separar cura efetiva de overheal.
     public static int RegenerationHealthChanged { get; set; } = 91;
+
+    // CharacterEquipmentChanged: [0]=ObjectId [2]=equipamento (índices de item, mesma
+    // ordem do [40] do NewCharacter). Alguém trocou de item. Pacote real de 12/10:
+    // [2]=Int16[10]. Usado no painel do grupo (GroupGear).
+    public static int CharacterEquipmentChanged { get; set; } = 90;
     public static int RegenerationPlayerCombo { get; set; } = 96;
 
     // PartyInviteAccepted: NÃO CALIBRADO.

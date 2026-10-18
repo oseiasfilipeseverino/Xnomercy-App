@@ -448,6 +448,8 @@ public partial class MainWindow : Window
         _fameTracker.Ganhou += (fama, prata) => _mapas.Somar(fama: fama, prata: prata);
         _killTracker.Matou += () => _mapas.Somar(mobs: 1);
         _ = MapCatalog.EnsureLoadedAsync();
+        _capture.OpResponseReceived += op => { if (!_paused) GroupGear.HandleOpResponse(op); };   // inspeção: IP real
+        _ = ItemPowerCatalog.EnsureLoadedAsync();
         _capture.OpResponseReceived += GuildEnergyLog.HandleOpResponse;   // registro de energia da guild
         _capture.OpResponseReceived += _vendas.HandleOpResponse;          // cartas do mercado (aba Vendas)
         _capture.OpRequestReceived += _vendas.HandleOpRequest;            // compra/venda instantânea (aba Vendas)
@@ -487,6 +489,7 @@ public partial class MainWindow : Window
             if (_damageDirty && PanelDamage.Visibility == Visibility.Visible) { _damageDirty = false; RefreshDamagePanel(); }
             AtualizarRotuloDoGrupo();
             if (_valoresMudaram) { _valoresMudaram = false; PreencherValoresDoLoot(); }
+            if (PanelGrupo.Visibility == Visibility.Visible) RefreshGrupo();
             if (_mapasDirty) { _mapasDirty = false; AtualizarMapaAtual(); if (PanelMapas.Visibility == Visibility.Visible) RefreshMapas(); }
             if (PanelLoot.Visibility == Visibility.Visible) AtualizarTotalDoLoot();
         };

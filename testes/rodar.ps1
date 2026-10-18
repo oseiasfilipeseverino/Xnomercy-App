@@ -71,6 +71,11 @@ Write-Host "`n--- harness_mapas (mapas e dungeons) ---"
 dotnet run --project "$PSScriptRoot\harness_mapas\harness_mapas.csproj" -c Release --nologo
 if ($LASTEXITCODE -ne 0) { $falhou++ }
 
+# -- Grupo e IP (GroupGear/ItemPowerCatalog, 18/10/2026)
+Write-Host "`n--- harness_ip (grupo e IP) ---"
+dotnet run --project "$PSScriptRoot\harness_ip\harness_ip.csproj" -c Release --nologo
+if ($LASTEXITCODE -ne 0) { $falhou++ }
+
 if ($falhou -gt 0) {
     Write-Host "`n$falhou teste(s) reprovaram" -ForegroundColor Red
     exit 1

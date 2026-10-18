@@ -508,6 +508,15 @@ public static class PlayerRegistry
             if (!resp.IsSuccessStatusCode) return;
             using var stream = await resp.Content.ReadAsStreamAsync().ConfigureAwait(false);
             using var doc = await JsonDocument.ParseAsync(stream).ConfigureAwait(false);
+            // O equipamento inteiro vai pro painel do grupo (GroupGear) — é a única
+            // fonte do SEU equipamento até você trocar algum item no jogo.
+            if (doc.RootElement.TryGetProperty("Equipment", out var todos) && todos.ValueKind == JsonValueKind.Object)
+            {
+                string? Tipo(string slot) => todos.TryGetProperty(slot, out var s) && s.ValueKind == JsonValueKind.Object
+                    && s.TryGetProperty("Type", out var t) ? t.GetString() : null;
+                GroupGear.DefinirMeuEquipamentoPelaApi(new[]
+                    { Tipo("MainHand"), Tipo("OffHand"), Tipo("Head"), Tipo("Armor"), Tipo("Shoes"), Tipo("Bag"), Tipo("Cape") });
+            }
             if (doc.RootElement.TryGetProperty("Equipment", out var eq)
                 && eq.TryGetProperty("MainHand", out var mainHand)
                 && mainHand.ValueKind == JsonValueKind.Object
@@ -564,6 +573,13 @@ public static class PlayerRegistry
     /// pelo servidor de novo, então o filtro fica vazio pra sempre naquela
     /// sessão. Sem esta contagem, isso é indistinguível de "não caiu loot".
     /// </remarks>
+    /// <summary>Quem o rateio de fama marcou como do grupo, dentro do prazo (plano B do grupo exato).</summary>
+    public static List<string> NomesNoGrupoPeloRateio()
+    {
+        var agora = DateTime.UtcNow;
+        return _partyMembers.Where(kv => agora - kv.Value < PartyMemberTimeout).Select(kv => kv.Key).ToList();
+    }
+
     public static int MembrosNoGrupo()
     {
         if (PartyTracker.Ativo)
