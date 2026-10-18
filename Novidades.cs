@@ -16,6 +16,10 @@ public static class Novidades
 {
     public static readonly (string Versao, string[] Itens)[] Notas =
     {
+        ("1.1.3", new[]
+        {
+            "Registro de energia da guild conferido com o jogo de verdade: só a aba de energia é enviada pro site (a de prata fica de fora).",
+        }),
         ("1.1.2", new[]
         {
             "O Albion teve um patch que mudou a numeração dos eventos. O app já se ajusta sozinho e agora lembra o ajuste entre uma sessão e outra.",

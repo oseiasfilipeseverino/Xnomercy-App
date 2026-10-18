@@ -60,6 +60,7 @@ public sealed class SessionReplay
         try
         {
             PlayerRegistry.HandleOpRequest(op);
+            GuildEnergyLog.HandleOpRequest(op);
             Vendas.HandleOpRequest(op);
             Coleta.HandleOpRequest(op.Parameters);
         }

@@ -28,8 +28,29 @@ public static class GuildEnergyLog
     /// <summary>Disparado quando chega um registro reconhecido.</summary>
     public static event System.Action<List<Entrada>>? Lido;
 
+    // ── Qual ABA do registro foi aberta (sessão real de 18/10/2026) ─────────────
+    // O pedido do registro (op 159) leva [1]=aba, [2]=a partir de qual linha (200,
+    // 300...) e [3]=101 linhas. A aba de ENERGIA é a 2: a resposta trouxe [3] com
+    // ±100000 (= ±10 de energia: saque negativo, depósito positivo), [1] com o tipo
+    // de cada linha (3 saque, 2 depósito) e [4] as horas. A aba de prata responde
+    // no mesmo formato — sem esta trava, prata seria oferecida pro site como energia.
+    public const int AbaEnergia = 2;
+    private static int? _ultimaAba;
+
+    public static void HandleOpRequest(PhotonOperationRequest op) => Pedido(op.Parameters);
+
+    public static void Pedido(IReadOnlyDictionary<byte, object?> p)
+    {
+        if (p.TryGetValue(253, out var c) && PhotonParam.ToLong(c) == 159
+            && p.TryGetValue(1, out var a) && PhotonParam.ToLong(a) is long aba)
+            _ultimaAba = (int)aba;
+    }
+
     public static void HandleOpResponse(PhotonOperationResponse op)
     {
+        // Resposta do registro de OUTRA aba (prata, itens...): não é energia.
+        if (op.Parameters.TryGetValue(253, out var c) && PhotonParam.ToLong(c) == 159
+            && _ultimaAba is int aba && aba != AbaEnergia) return;
         var lista = Ler(op.Parameters);
         if (lista == null) return;
         CaptureHealth.Marcar("Energia da guild");
@@ -46,11 +67,9 @@ public static class GuildEnergyLog
             object?[] o when o.All(x => x is string) => o.Select(x => (string)x!).ToList(),
             _ => null
         };
-        // Nos diagnósticos reais (op 159) o [3] chega como byte[] — um byte por linha,
-        // 0 a 255 — e o [1] como um bloco de 4 bytes por linha. O SAT lê o [3] como
-        // quantidade, e com byte isso dá ~0: o app mandaria energia ZERO pro site.
-        // Até decifrar o [1] com uma sessão exportada (bytes inteiros), byte[] no [3]
-        // não é aceito como quantidade.
+        // Nos diagnósticos de setembro o [3] vinha como byte[] (0 a 255): era OUTRA aba
+        // (pedido com [1]=0 ou 3). Na aba de energia (sessão de 18/10) o [3] é int[]
+        // com a quantidade em FixPoint. byte[] não é quantidade de energia.
         if (q is byte[]) return null;
         var qtds = Longs(q);
         var ticks = Longs(t);

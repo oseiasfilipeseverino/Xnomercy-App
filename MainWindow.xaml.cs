@@ -467,6 +467,7 @@ public partial class MainWindow : Window
         _capture.OpResponseReceived += op => { if (!_paused) GroupGear.HandleOpResponse(op); };   // inspeção: IP real
         _ = ItemPowerCatalog.EnsureLoadedAsync(soCache: true);   // baixa de verdade só ao abrir a aba Grupo
         _capture.OpResponseReceived += GuildEnergyLog.HandleOpResponse;   // registro de energia da guild
+        _capture.OpRequestReceived += GuildEnergyLog.HandleOpRequest;     // qual aba do registro foi aberta
         _capture.OpResponseReceived += _vendas.HandleOpResponse;          // cartas do mercado (aba Vendas)
         _capture.OpRequestReceived += _vendas.HandleOpRequest;            // compra/venda instantânea (aba Vendas)
         _vendas.Mudou += () => Dispatcher.BeginInvoke(() => { if (PanelVendas.Visibility == Visibility.Visible) RefreshVendas(); });
