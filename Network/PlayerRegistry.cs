@@ -526,8 +526,16 @@ public static class PlayerRegistry
     // só vale enquanto o último PartyMemberStatus (104) daquele jogador não passou do
     // timeout. É esse prazo que faz as vezes do evento de saída que não temos: quem sai
     // ou é expulso some da lista em até 60s, em vez de ficar preso nela pra sempre.
+    //
+    // Desde 18/10/2026: com o grupo EXATO ativo (PartyTracker, eventos de grupo do
+    // jogo), vale ele — inclusive pra quem SAIU, que sai na hora. O rateio de fama
+    // abaixo fica de plano B pra quando o app abriu com o grupo já formado e o jogo
+    // ainda não mandou a lista.
     public static bool IsInParty(string name) =>
-        name == SelfName || (_partyMembers.TryGetValue(name, out var last) && DateTime.UtcNow - last < PartyMemberTimeout);
+        name == SelfName
+        || (PartyTracker.Ativo
+            ? PartyTracker.Contem(name)
+            : _partyMembers.TryGetValue(name, out var last) && DateTime.UtcNow - last < PartyMemberTimeout);
 
     public static bool IsInPartyById(long objectId) => objectId == SelfObjectId || IsInParty(NameOf(objectId));
 
@@ -545,6 +553,8 @@ public static class PlayerRegistry
     /// </remarks>
     public static int MembrosNoGrupo()
     {
+        if (PartyTracker.Ativo)
+            return PartyTracker.Nomes().Count(n => !string.Equals(n, SelfName, StringComparison.OrdinalIgnoreCase));
         var agora = DateTime.UtcNow;
         int n = 0;
         foreach (var kv in _partyMembers)

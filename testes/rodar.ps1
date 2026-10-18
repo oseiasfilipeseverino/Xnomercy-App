@@ -36,6 +36,11 @@ if ($LASTEXITCODE -ne 0) {
     if ($LASTEXITCODE -ne 0) { $falhou++ }
 }
 
+# -- Grupo exato (eventos de grupo do jogo, 18/10/2026): roda o PartyTracker real
+Write-Host "`n--- harness_grupo (grupo exato pelos eventos do jogo) ---"
+dotnet run --project "$PSScriptRoot\harness_grupo\harness_grupo.csproj" -c Release --nologo
+if ($LASTEXITCODE -ne 0) { $falhou++ }
+
 if ($falhou -gt 0) {
     Write-Host "`n$falhou teste(s) reprovaram" -ForegroundColor Red
     exit 1
