@@ -109,7 +109,7 @@ public partial class MainWindow
             Height = 560,
             Owner = this,
             Background = B("#1a1a1a"),
-            Content = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = lista },
+            Content = MontarConteudoSaude(lista),
         };
 
         void Desenhar()
@@ -153,6 +153,33 @@ public partial class MainWindow
         timer.Start();
         _janelaSaude = janela;
         janela.Show();
+    }
+
+    // O "Diagnóstico de rede" saiu do menu (pedido do Oseias, 18/10/2026) e mora aqui,
+    // no rodapé da Saúde da captura: é a ferramenta pra quando o jogo passa por ExitLag,
+    // VPN ou acelerador e quase nada chega — escuta 20s e diz por onde o tráfego anda.
+    private UIElement MontarConteudoSaude(StackPanel lista)
+    {
+        var rodape = new StackPanel { Margin = new Thickness(18, 4, 18, 16) };
+        rodape.Children.Add(new TextBlock
+        {
+            Text = "Usa ExitLag, VPN ou acelerador e quase nada aparece? Pare a captura, deixe o Albion aberto e em jogo " +
+                   "(com o acelerador LIGADO) e rode o diagnóstico. Ele salva o net_diag.txt pra liderança analisar.",
+            Foreground = B("#8CFFFFFF"), FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8),
+        });
+        var botao = new Button
+        {
+            Content = "Diagnóstico de rede (ExitLag / VPN)", Padding = new Thickness(14, 6, 14, 6),
+            HorizontalAlignment = HorizontalAlignment.Left, Background = B("#2e2e2e"), Foreground = B("#c9a227"),
+            BorderThickness = new Thickness(0), Cursor = System.Windows.Input.Cursors.Hand,
+        };
+        botao.Click += (s, e) => BtnNetDiag_Click(s, e);
+        rodape.Children.Add(botao);
+        var painel = new DockPanel();
+        DockPanel.SetDock(rodape, Dock.Bottom);
+        painel.Children.Add(rodape);
+        painel.Children.Add(new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = lista });
+        return painel;
     }
 
     // Exporta o formato dos eventos desta captura, sem nada pessoal (ver

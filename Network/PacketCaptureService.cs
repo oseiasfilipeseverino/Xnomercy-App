@@ -336,7 +336,10 @@ public sealed class PacketCaptureService : IDisposable
         report.AppendLine();
         report.AppendLine("=== Analise de deslocamento (onde o Photon comeca) ===");
         bool achou = false;
-        foreach (var kv in rows.Take(6))
+        // Desde 18/10/2026: os 20 fluxos maiores (antes 6) e TODO deslocamento de 0 a 64
+        // (antes 16 fixos). Acelerador/VPN pode embrulhar o pacote com cabeçalho de
+        // tamanho que não está na lista; testar byte a byte é barato aqui (25 amostras).
+        foreach (var kv in rows.Take(20))
         {
             if (!samples.TryGetValue(kv.Key, out var list)) continue;
             List<byte[]> copy;
@@ -344,7 +347,7 @@ public sealed class PacketCaptureService : IDisposable
             if (copy.Count == 0) continue;
 
             var hits = new List<string>();
-            foreach (int off in CandidateOffsets)
+            foreach (int off in Enumerable.Range(0, 65))
             {
                 int ok = copy.Count(p => TryDecodeAt(p, off, raise: false));
                 if (ok > 0) hits.Add($"byte {off}: {ok}/{copy.Count}");

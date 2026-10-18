@@ -16,6 +16,10 @@ public static class Novidades
 {
     public static readonly (string Versao, string[] Itens)[] Notas =
     {
+        ("1.1.4", new[]
+        {
+            "Usa ExitLag, VPN ou acelerador? Na janela \"Saúde\" tem o \"Diagnóstico de rede\": rode com o acelerador ligado e mande o resultado pra liderança, pra gente fazer o app funcionar junto com ele.",
+        }),
         ("1.1.3", new[]
         {
             "Registro de energia da guild conferido com o jogo de verdade: só a aba de energia é enviada pro site (a de prata fica de fora).",
