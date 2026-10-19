@@ -16,6 +16,12 @@ public static class Novidades
 {
     public static readonly (string Versao, string[] Itens)[] Notas =
     {
+        ("1.1.8", new[]
+        {
+            "\"Só minha guild\" mostra qual guild o app está usando, ou avisa \"guild ainda não detectada\" (troque de mapa com a captura ligada).",
+            "Com o filtro ligado, a lista se atualiza sozinha quando o app descobre a guild de alguém — antes era preciso desmarcar e marcar a caixa.",
+            "\"Só meu grupo\" no Loot Log não esconde mais o seu próprio loot.",
+        }),
         ("1.1.7", new[]
         {
             "Exportar CSV e Exportar p/ Loot Logger seguem os filtros da tela: com \"Só minha guild\" marcado, o arquivo sai só com a sua guild. O CSV ganhou a coluna Guild.",

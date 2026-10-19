@@ -108,7 +108,8 @@ public partial class MainWindow
         // (mostra todo mundo por perto, igual sempre foi).
         // "Você" é o seu loot visto pela sua própria ação (SelfLootDetector) — antes o
         // filtro o escondia, porque "Você" não é o nome do personagem (18/10/2026).
-        if (ChkGuildOnlyLoot.IsChecked == true && r.Looter != "Você" && r.Looter != PlayerRegistry.SelfName
+        if (ChkGuildOnlyLoot.IsChecked == true && r.Looter != "Você"
+            && !string.Equals(r.Looter, PlayerRegistry.SelfName, StringComparison.OrdinalIgnoreCase)
             && !PlayerRegistry.MesmaGuild(r.Looter))
             return false;
         // "Só meu grupo": idem, mas usando o rastreamento de grupo (229/240/182).
@@ -161,6 +162,30 @@ public partial class MainWindow
     /// não é anunciado de novo. Este rótulo transforma um app "quebrado" numa
     /// instrução.
     /// </remarks>
+    private int _versaoGuildasVista = -1;
+
+    /// <summary>
+    /// "Só minha guild": mostra qual guild o app está usando, avisa quando ainda não
+    /// sabe (a lista ficava vazia sem explicação) e refiltra quando chega guild nova.
+    /// </summary>
+    private void AtualizarFiltroDeGuild()
+    {
+        string minha = PlayerRegistry.OwnGuild;
+        object alvo = minha.Length > 0 ? $"Só minha guild ({minha})" : "Só minha guild — guild ainda não detectada";
+        if (!Equals(ChkGuildOnlyLoot.Content, alvo)) ChkGuildOnlyLoot.Content = alvo;
+        if (!Equals(ChkGuildOnlyDamage.Content, alvo)) ChkGuildOnlyDamage.Content = alvo;
+        object? dica = minha.Length > 0 ? null
+            : "O app ainda não sabe a sua guild: ela vem do jogo quando você entra num mapa. "
+              + "Troque de mapa (ou entre/saia de uma casa) com a captura ligada.";
+        if (!Equals(ChkGuildOnlyLoot.ToolTip, dica)) { ChkGuildOnlyLoot.ToolTip = dica; ChkGuildOnlyDamage.ToolTip = dica; }
+
+        int v = PlayerRegistry.VersaoGuildas;
+        if (v == _versaoGuildasVista) return;
+        _versaoGuildasVista = v;
+        if (ChkGuildOnlyLoot.IsChecked == true) { _lootFeedView?.Refresh(); AtualizarTotalDoLoot(); }
+        if (ChkGuildOnlyDamage.IsChecked == true) _damageDirty = true;
+    }
+
     private void AtualizarRotuloDoGrupo()
     {
         int n = PlayerRegistry.MembrosNoGrupo();

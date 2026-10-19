@@ -34,7 +34,7 @@ public sealed class OpenWorldKillTracker
         if (!evt.Parameters.TryGetValue(5, out var killerObj) || killerObj is not string killerName) return;
 
         string? selfName = PlayerRegistry.SelfName;
-        if (string.IsNullOrEmpty(selfName) || killerName != selfName) return;   // não é você quem matou
+        if (string.IsNullOrEmpty(selfName) || !string.Equals(killerName, selfName, StringComparison.OrdinalIgnoreCase)) return;   // não é você quem matou
 
         // Só MOB. Nos diagnósticos de 27/08 a 12/09, 121 de 536 eventos 166 traziam
         // NOME DE JOGADOR no [3] (jogador derrubado), e eles entravam aqui como "mob

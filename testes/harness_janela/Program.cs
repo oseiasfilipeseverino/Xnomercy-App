@@ -32,14 +32,35 @@ var t = new Thread(() =>
     Checar(Txt("TxtFameTotal").Text.Replace(".", "").Replace(",", "") == "10114", "fama do evento real aparece na aba (10.114)");
     Checar(Txt("TxtSilverTotal").Text.Replace(".", "").Replace(",", "") == "329", "prata liquida do evento real aparece (385 - 19 - 36 = 329)");
 
-    // "So minha guild" no Loot Log: o CSV exportado sai so com a sua guild
+    // "So minha guild" no Loot Log, do jeito que aconteceu (18/10/2026): filtro LIGADO
+    // antes de o app saber as guilds. Quando elas chegam, a lista tem que se refazer sozinha.
+    var feed = (System.Collections.ObjectModel.ObservableCollection<LootFeedRow>)typeof(MainWindow)
+        .GetField("_lootFeed", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(w)!;
+    var view = System.Windows.Data.CollectionViewSource.GetDefaultView(feed);
+    int Visiveis() => view.Cast<object>().Count();
+    var tick = typeof(MainWindow).GetMethod("AtualizarFiltroDeGuild", BindingFlags.NonPublic | BindingFlags.Instance)!;
+    var chkGuild = (CheckBox)w.FindName("ChkGuildOnlyLoot");
+    chkGuild.IsChecked = true;
+    view.Refresh();
+    foreach (var (quem, item) in new[] { ("Aliado", "Bolsa"), ("Inimigo", "Capa"), ("Você", "Espada") })
+        feed.Add(new LootFeedRow { Time = "12:00:00", Timestamp = DateTime.Now, Looter = quem, Item = item, From = "Morto", ItemUniqueName = "T4_BAG", ItemPlainName = item, Quantity = 1 });
+    tick.Invoke(w, null);
+    Checar(Visiveis() == 1 && ((string)chkGuild.Content).Contains("não detectada"),
+           $"guild desconhecida: so o seu loot e a caixa AVISA que a guild nao foi detectada ({Visiveis()}, '{chkGuild.Content}')");
     PlayerRegistry.HandleOpResponse(new PhotonOperationResponse(1, 0, null, new() { [0] = 64284L, [2] = "Dono", [8] = "1313", [58] = "XNoMercy", [253] = (short)2 }));
     on.Invoke(w, new object[] { Ev(29, new() { [0] = 9001L, [1] = "Aliado", [8] = "xnomercy", [40] = new short[10] }) });
     on.Invoke(w, new object[] { Ev(29, new() { [0] = 9002L, [1] = "Inimigo", [8] = "Black Order", [40] = new short[10] }) });
-    var feed = (System.Collections.ObjectModel.ObservableCollection<LootFeedRow>)typeof(MainWindow)
-        .GetField("_lootFeed", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(w)!;
-    foreach (var (quem, item) in new[] { ("Aliado", "Bolsa"), ("Inimigo", "Capa"), ("Você", "Espada") })
-        feed.Add(new LootFeedRow { Time = "12:00:00", Timestamp = DateTime.Now, Looter = quem, Item = item, From = "Morto", ItemUniqueName = "T4_BAG", ItemPlainName = item, Quantity = 1 });
+    tick.Invoke(w, null);                                   // o timer da tela faz isso 3x/s
+    Checar(Visiveis() == 2 && (string)chkGuild.Content == "Só minha guild (XNoMercy)",
+           $"guild chegou DEPOIS: a lista se refaz sozinha, sem desmarcar a caixa ({Visiveis()}, '{chkGuild.Content}')");
+    chkGuild.IsChecked = false;
+    var chkGrupo = (CheckBox)w.FindName("ChkPartyOnlyLoot");
+    chkGrupo.IsChecked = true;
+    view.Refresh();
+    Checar(view.Cast<LootFeedRow>().Any(r => r.Looter == "Você"), "'So meu grupo': o SEU loot continua aparecendo");
+    chkGrupo.IsChecked = false;
+    view.Refresh();
+
     var csv = typeof(MainWindow).GetMethod("MontarCsvLoot", BindingFlags.NonPublic | BindingFlags.Instance)!;
     ((CheckBox)w.FindName("ChkGuildOnlyLoot")).IsChecked = false;
     object[] a0 = { 0 };

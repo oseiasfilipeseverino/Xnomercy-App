@@ -94,8 +94,14 @@ public static class PlayerRegistry
     public static string OwnGuild
     {
         get { lock (_selfLock) return _ownGuild; }
-        private set { lock (_selfLock) _ownGuild = value; }
+        private set { lock (_selfLock) { if (_ownGuild != value) System.Threading.Interlocked.Increment(ref _versaoGuildas); _ownGuild = value; } }
     }
+
+    // Sobe a cada guild nova (a sua ou de alguém): a tela refiltra sozinha. Antes o
+    // "Só minha guild" só refiltrava ao clicar na caixa — a linha escondida enquanto a
+    // guild era desconhecida continuava escondida depois que ela chegava (18/10/2026).
+    private static int _versaoGuildas;
+    public static int VersaoGuildas => System.Threading.Volatile.Read(ref _versaoGuildas);
 
     // URL do render oficial da SUA arma equipada — resolvida junto com a guild (mesma
     // consulta de nome), mas precisa de uma 2ª chamada à API (a busca por nome não traz
@@ -378,6 +384,8 @@ public static class PlayerRegistry
             if (info.Guild.Length > 0)
             {
                 bool isNewName = !_nameToGuild.ContainsKey(info.Name);
+                if (!_nameToGuild.TryGetValue(info.Name, out var antiga) || antiga != info.Guild)
+                    System.Threading.Interlocked.Increment(ref _versaoGuildas);
                 _nameToGuild[info.Name] = info.Guild;
                 if (isNewName) _nameToGuildOrder.Enqueue(info.Name);
                 TrimOldest(_nameToGuild, _nameToGuildOrder, 20000);
@@ -583,7 +591,7 @@ public static class PlayerRegistry
     // abaixo fica de plano B pra quando o app abriu com o grupo já formado e o jogo
     // ainda não mandou a lista.
     public static bool IsInParty(string name) =>
-        name == SelfName
+        name == "Você" || string.Equals(name, SelfName, StringComparison.OrdinalIgnoreCase)
         || (PartyTracker.Ativo
             ? PartyTracker.Contem(name)
             : _partyMembers.TryGetValue(name, out var last) && DateTime.UtcNow - last < PartyMemberTimeout);

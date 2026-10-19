@@ -509,6 +509,7 @@ public partial class MainWindow : Window
             // ao abrir a aba, ShowPanel redesenha). Antes rodava 3x/s com a aba escondida.
             if (_damageDirty && PanelDamage.Visibility == Visibility.Visible) { _damageDirty = false; RefreshDamagePanel(); }
             AtualizarRotuloDoGrupo();
+            AtualizarFiltroDeGuild();
             if (_valoresMudaram) { _valoresMudaram = false; PreencherValoresDoLoot(); _mortes.PreencherValores(); _bausDirty = true; }
             if (_bausDirty && PanelBaus.Visibility == Visibility.Visible) { _bausDirty = false; RefreshBaus(); }
             if (PanelGrupo.Visibility == Visibility.Visible) RefreshGrupo();
