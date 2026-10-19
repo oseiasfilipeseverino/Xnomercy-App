@@ -22,9 +22,9 @@ var f = new FameSilverTracker();
 // TakeSilver: 100 de prata bruta, 5 de taxa da zona, 10 de taxa da guild (x10.000)
 f.HandleEvent(Ev(62, new() { [0] = 1L, [3] = 1_000_000L, [4] = 50_000L, [5] = 100_000L }));
 Checar(f.TotalSilver == 85, $"prata entra LIQUIDA: 100 - 5 - 10 = 85 ({f.TotalSilver}; a 1.0.66 mostrava 100)");
-// UpdateFame: 100 de fama com Premium e bonus [17]=0,2 -> 150 (o [17] ja vem dentro do [2])
-f.HandleEvent(Ev(82, new() { [0] = 1L, [2] = 1_000_000L, [5] = true, [17] = 0.2f }));
-Checar(f.TotalFame == 150, $"fama: 100 x 1,5 (Premium) = 150, sem multiplicar o [17] de novo ({f.TotalFame})");
+// UpdateFame real (18/10/2026, Premium): o total [1] sobe exatamente o [2] -> o [2] ja tem a Premium
+f.HandleEvent(Ev(82, new() { [0] = 64284L, [1] = 24908052832717L, [2] = 9_930_480L, [3] = 5_551_200L, [4] = 2_837_280L, [5] = true }));
+Checar(f.TotalFame == 993, $"fama Premium: conta o [2] (993), sem x1,5 de novo ({f.TotalFame}; a 1.1.4 mostrava 1489)");
 
 // ── 2. Fragmentos de conexoes diferentes nao se misturam ─────────────────────
 Console.WriteLine("\n-- 2. pacote picado: cada conexao remonta o seu");
@@ -140,6 +140,13 @@ f3.HandleEvent(Ev(81, new() { [0] = 1L, [1] = 167961577008L }));                
 f3.HandleEvent(Ev(84, new() { [0] = new long[5], [1] = 1L, [2] = 600000L }));                       // fama amarela
 f3.HandleEvent(Ev(61, new() { [0] = 1L, [1] = 639234671876950609L, [2] = 639234671884009375L, [3] = 48916L, [4] = 1015, [5] = 1, [6] = 0, [7] = 1, [8] = 26 }));   // coleta
 Checar(f3.TotalFame == 0 && f3.TotalSilver == 0, "vizinhos (81 prata total, 84 fama amarela, 61 coleta) nao viram fama/prata");
+
+Console.WriteLine("\n-- 9b. prata so a SUA: o jogo manda a prata do grupo inteiro");
+PlayerRegistry.HandleOpResponse(new PhotonOperationResponse(1, 0, null, new() { [0] = 64284L, [2] = "Voce", [8] = "1313", [253] = (short)2 }));
+var f4 = new FameSilverTracker();
+f4.HandleEvent(Ev(62, new() { [0] = 63567L, [1] = 42462126, [2] = 65823L, [3] = 2_262_000L, [4] = 113_100L, [8] = 10000 }));   // outro do grupo
+f4.HandleEvent(Ev(62, new() { [0] = 64284L, [1] = 42462200, [2] = 65830L, [3] = 1_000_000L, [8] = 10000 }));                    // voce
+Checar(f4.TotalSilver == 100, $"so a prata que VOCE pegou entra (100; a 1.1.4 somava a do colega tambem: {f4.TotalSilver})");
 
 Console.WriteLine("\n-- 10. filtro 'So minha guild': a sua guild vem do Join [58]");
 PlayerRegistry.HandleOpResponse(new PhotonOperationResponse(1, 0, null, new() { [0] = 15280L, [2] = "LKMAJOR", [8] = "1313", [58] = "XNoMercy", [253] = (short)2 }));

@@ -16,6 +16,11 @@ public static class Novidades
 {
     public static readonly (string Versao, string[] Itens)[] Notas =
     {
+        ("1.1.6", new[]
+        {
+            "Fama corrigida para quem tem Premium: o app contava o bônus da Premium duas vezes e mostrava 50% a mais.",
+            "Prata corrigida: o app somava também a prata que os outros do grupo pegavam. Agora conta só a sua.",
+        }),
         ("1.1.5", new[]
         {
             "Filtro \"Só minha guild\" (Loot Log e Medidor de Dano): o app pega a sua guild direto do jogo ao entrar no mapa e não esconde mais o seu próprio loot.",
