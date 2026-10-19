@@ -1,5 +1,9 @@
 using XnomercyApp.Network;
 
+// Nunca nos dados de verdade: pasta temporaria se o rodar.ps1 nao definiu (Network/PastaDados.cs).
+if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("XNOMERCY_DADOS")))
+    Environment.SetEnvironmentVariable("XNOMERCY_DADOS", System.IO.Path.Combine(System.IO.Path.GetTempPath(), "xnomercy_teste_" + Guid.NewGuid().ToString("N")));
+
 // Exercita o GatheringTracker REAL (a DLL compilada): evento HarvestFinished (61),
 // formato do SAT: [0]=quem [4]=item [5]=normal [6]=bonus coletor [7]=bonus Premium.
 

@@ -26,7 +26,7 @@ public static class PlayerRegistry
     // Nome -> guild, alimentado junto com _byId no NewCharacter. Loot Log só tem o nome
     // (o evento 277 já manda texto, não ObjectId), então precisa desse caminho separado
     // pro filtro "só guild" do Loot Log.
-    private static readonly ConcurrentDictionary<string, string> _nameToGuild = new();
+    private static readonly ConcurrentDictionary<string, string> _nameToGuild = new(StringComparer.OrdinalIgnoreCase);
 
     // Ordem de inserção de _byId/_nameToGuild — usada só pra podar os mais antigos
     // (ver TrimOldest) em vez de zerar tudo de uma vez ao bater o teto. _mobs segue
@@ -411,8 +411,7 @@ public static class PlayerRegistry
             _diagCount++;
             try
             {
-                var dir = System.IO.Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp");
+                var dir = XnomercyApp.Network.PastaDados.Raiz;
                 System.IO.Directory.CreateDirectory(dir);
                 var parms = string.Join(" ", evt.Parameters.OrderBy(k => k.Key)
                     .Select(kv => $"[{kv.Key}]={DiagVal(kv.Value)}"));
@@ -595,6 +594,19 @@ public static class PlayerRegistry
         || (PartyTracker.Ativo
             ? PartyTracker.Contem(name)
             : _partyMembers.TryGetValue(name, out var last) && DateTime.UtcNow - last < PartyMemberTimeout);
+
+    /// <summary>
+    /// Nome pra mandar pra FORA do app (CSV, Loot Logger, texto pro Discord): a sua
+    /// linha se chama "Você" na tela, e "Você" num ranking colado no Discord não diz
+    /// quem é (18/10/2026). Sem o seu nome ainda conhecido, fica "Você".
+    /// </summary>
+    public static string NomeParaFora(string nome) =>
+        nome == "Você" && SelfName is string eu && eu.Length > 0 ? eu : nome;
+
+    /// <summary>Quem está no grupo agora, numa string — muda quando o grupo muda (a tela refiltra).</summary>
+    public static string AssinaturaDoGrupo() =>
+        string.Join("|", (PartyTracker.Ativo ? PartyTracker.Nomes() : NomesNoGrupoPeloRateio())
+                         .Select(n => n.ToLowerInvariant()).OrderBy(n => n, StringComparer.Ordinal));
 
     public static bool IsInPartyById(long objectId) => objectId == SelfObjectId || IsInParty(NameOf(objectId));
 

@@ -3,6 +3,10 @@ using System.IO;
 using System.Reflection;
 using XnomercyApp.Network;
 
+// Nunca nos dados de verdade: pasta temporaria se o rodar.ps1 nao definiu (Network/PastaDados.cs).
+if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("XNOMERCY_DADOS")))
+    Environment.SetEnvironmentVariable("XNOMERCY_DADOS", System.IO.Path.Combine(System.IO.Path.GetTempPath(), "xnomercy_teste_" + Guid.NewGuid().ToString("N")));
+
 // Exercita a calibracao automatica dos numeros BAIXOS (EventOffset) e o Leave
 // (PlayerRegistry/GroupGear) na DLL REAL. Simula um patch que insere um evento no
 // comeco da lista: todos os numeros dali pra frente andam +1.

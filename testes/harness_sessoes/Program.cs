@@ -2,6 +2,10 @@ using System.IO;
 using System.Text.Json.Nodes;
 using XnomercyApp.Network;
 
+// Nunca nos dados de verdade: pasta temporaria se o rodar.ps1 nao definiu (Network/PastaDados.cs).
+if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("XNOMERCY_DADOS")))
+    Environment.SetEnvironmentVariable("XNOMERCY_DADOS", System.IO.Path.Combine(System.IO.Path.GetTempPath(), "xnomercy_teste_" + Guid.NewGuid().ToString("N")));
+
 // Teste de regressao com DADO REAL: repassa cada sessao gravada em testes/sessoes/
 // (botao "Exportar sessao p/ analise" do app, anonimizada) pela DLL REAL.
 // Regras:

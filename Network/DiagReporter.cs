@@ -15,8 +15,7 @@ namespace XnomercyApp.Network;
 /// </summary>
 public static class DiagReporter
 {
-    private static string Pasta => System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp");
+    private static string Pasta => XnomercyApp.Network.PastaDados.Raiz;
 
     /// <summary>Apaga os logs de calibração das versões antigas. Chamado uma vez na abertura.</summary>
     public static void LimparArquivosAntigos()

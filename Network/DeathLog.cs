@@ -46,13 +46,12 @@ public sealed class DeathLog
     public DeathLog(string? arquivo)
     {
         _arquivo = arquivo;
-        if (arquivo == null || !File.Exists(arquivo)) return;
-        try { _mortes.AddRange((JsonSerializer.Deserialize<List<Morte>>(File.ReadAllText(arquivo)) ?? new()).Take(MaxMortes)); }
-        catch { /* arquivo estragado: começa vazio */ }
+        if (arquivo == null) return;
+        if (!ArquivoSeguro.Ler<List<Morte>>(arquivo, out var lidas)) { _arquivo = null; return; }   // ver ArquivoSeguro
+        _mortes.AddRange((lidas ?? new()).Take(MaxMortes));
     }
 
-    public static string CaminhoPadrao => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp", "mortes.json");
+    public static string CaminhoPadrao => System.IO.Path.Combine(XnomercyApp.Network.PastaDados.Raiz, "mortes.json");
 
     public List<Morte> Mortes() { lock (_lock) return _mortes.ToList(); }
 
@@ -104,14 +103,8 @@ public sealed class DeathLog
     private void Gravar()
     {
         if (_arquivo == null) return;
-        try
-        {
-            string json;
-            lock (_lock) json = JsonSerializer.Serialize(_mortes);
-            Directory.CreateDirectory(Path.GetDirectoryName(_arquivo)!);
-            File.WriteAllText(_arquivo + ".tmp", json);
-            File.Move(_arquivo + ".tmp", _arquivo, overwrite: true);
-        }
-        catch { /* melhor esforço */ }
+        string json;
+        lock (_lock) json = JsonSerializer.Serialize(_mortes);
+        ArquivoSeguro.Gravar(_arquivo, json);
     }
 }

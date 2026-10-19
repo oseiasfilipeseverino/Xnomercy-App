@@ -158,8 +158,7 @@ public static class PartyCalibrationLog
             _total++;
             try
             {
-                var dir = System.IO.Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp");
+                var dir = XnomercyApp.Network.PastaDados.Raiz;
                 System.IO.Directory.CreateDirectory(dir);
                 System.IO.File.AppendAllText(
                     System.IO.Path.Combine(dir, "party_diag.txt"),

@@ -13,9 +13,9 @@ namespace XnomercyApp.Network;
 ///   [0] = nomes  [3] = quantidades em FixPoint (valor × 10.000)  [4] = horários em ticks .NET (UTC)
 ///
 /// Reconhecido pelo FORMATO, não pelo número da operação (que muda com patch): três
-/// listas do mesmo tamanho, nomes de verdade e horários plausíveis. O envio não é
-/// automático de propósito: o jogo pode mandar o registro de PRATA da guild no mesmo
-/// formato, e o oficial vê o que vai antes de mandar.
+/// listas do mesmo tamanho, nomes de verdade e horários plausíveis. O registro de
+/// PRATA da guild vem no mesmo formato, então o envio só é automático quando o app viu
+/// o pedido da aba de ENERGIA ([1]=2); sem ver o pedido, o oficial confere antes.
 /// </summary>
 public static class GuildEnergyLog
 {
@@ -25,8 +25,8 @@ public static class GuildEnergyLog
     private static readonly long TicksMin = new System.DateTime(2017, 1, 1).Ticks;   // lançamento do Albion
     private static readonly long TicksMax = new System.DateTime(2100, 1, 1).Ticks;
 
-    /// <summary>Disparado quando chega um registro reconhecido.</summary>
-    public static event System.Action<List<Entrada>>? Lido;
+    /// <summary>Registro reconhecido; o bool diz se o app VIU o pedido da aba de energia (pode ir sozinho pro site).</summary>
+    public static event System.Action<List<Entrada>, bool>? Lido;
 
     // ── Qual ABA do registro foi aberta (sessão real de 18/10/2026) ─────────────
     // O pedido do registro (op 159) leva [1]=aba, [2]=a partir de qual linha (200,
@@ -54,7 +54,7 @@ public static class GuildEnergyLog
         var lista = Ler(op.Parameters);
         if (lista == null) return;
         CaptureHealth.Marcar("Energia da guild");
-        Lido?.Invoke(lista);
+        Lido?.Invoke(lista, _ultimaAba == AbaEnergia);
     }
 
     public static List<Entrada>? Ler(IReadOnlyDictionary<byte, object?> p)

@@ -3,6 +3,10 @@ using System.IO;
 using System.Reflection;
 using XnomercyApp.Network;
 
+// Nunca nos dados de verdade: pasta temporaria se o rodar.ps1 nao definiu (Network/PastaDados.cs).
+if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("XNOMERCY_DADOS")))
+    Environment.SetEnvironmentVariable("XNOMERCY_DADOS", System.IO.Path.Combine(System.IO.Path.GetTempPath(), "xnomercy_teste_" + Guid.NewGuid().ToString("N")));
+
 // Exercita na DLL REAL os quatro recursos vindos do SAT: pesca (GatheringTracker),
 // faccao e Might & Favor (FactionTracker), bau e banco (StorageTracker) e perdas
 // na morte (DeathLog). Numeros do SAT; a faixa de cima com o deslocamento +1.
@@ -44,7 +48,9 @@ Checar(!g.HandleEvent(Recompensa(51, 1), agoraUtc: t0.AddSeconds(301)), "trocou 
 Console.WriteLine("\n-- 2. faccao e Might & Favor");
 var f = new FactionTracker();
 Checar(f.HandleEvent(Ev(85, new() { [2] = (byte)3, [3] = 1_500_000L, [4] = 2_000_000L, [9] = 99_000_000L })), "UpdateCurrency (85) com [4]");
-Checar(f.HandleEvent(Ev(85, new() { [0] = 3L, [2] = 7L, [3] = 500_000L, [5] = 0L, [9] = 121_055_585L })), "UpdateCurrency no formato REAL, sem [4] (conta o [3])");
+// Formato REAL (25 de 25 nos diagnosticos de ago/set e nas sessoes de 18/10): [0]=3 e o mesmo
+// ganho/saldo do Might & Favor que vem junto -> e' o Favor repetido, nao ponto de faccao.
+Checar(f.HandleEvent(Ev(85, new() { [0] = 3L, [2] = 7L, [3] = 102_337L, [5] = 0L, [9] = 213_310_080L })), "85 da moeda do Favor: reconhecido");
 Checar(f.HandleEvent(Ev(86, new() { [0] = (byte)3, [1] = 4_000_000L, [3] = 1L })), "UpdateFactionStanding (86)");
 // Formato REAL (diagnosticos de 01/09): [1] Might [3] [4] Favor [6] [7] total [9] e dois dicionarios [10]/[11]
 var dic = new Dictionary<object, object?>();
@@ -52,8 +58,8 @@ Checar(f.HandleEvent(Ev(497, new() { [0] = 0L, [1] = 300_000L, [3] = 1L, [4] = 1
        "Might & Favor no formato real (SAT 496 + 1)");
 Checar(!f.HandleEvent(Ev(497, new() { [1] = 300_000L, [4] = 120_000L, [7] = 9_000_000L })), "sem os dicionarios [10]/[11]: nao e' Might & Favor");
 var tot = f.Totais();
-Checar(tot.Pontos == 250 && tot.Moedas == 150 && tot.Bandeira == 400 && tot.Might == 30 && tot.Favor == 12,
-       $"pontos 200 + 50, moedas 150, bandeira 400, Might 30, Favor 12 ({tot})");
+Checar(tot.Pontos == 200 && tot.Moedas == 150 && tot.Bandeira == 400 && tot.Might == 30 && tot.Favor == 12,
+       $"pontos 200 (o 85 do Favor NAO soma de novo; a 1.1.8 mostrava 210), moedas 150, bandeira 400, Might 30, Favor 12 ({tot})");
 Checar(!f.HandleEvent(Ev(85, new() { [2] = "texto", [3] = 1L, [4] = 1L })), "85 com texto no lugar da cidade: nao e' faccao");
 f.Reset();
 Checar(f.Totais().Pontos == 0, "reiniciar zera");

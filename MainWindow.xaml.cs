@@ -79,6 +79,10 @@ public sealed class LootFeedRow : INotifyPropertyChanged
     public long Quantity { get; init; }
     public string LooterGuild { get; init; } = "";
     public string FromGuild { get; init; } = "";
+    // Quem pegou era do seu grupo NA HORA do loot. O filtro "Só meu grupo" olhava só o
+    // grupo de AGORA: quem saiu (ou ficou 2 min sem dividir fama) sumia da lista junto
+    // com o que pegou enquanto estava com você (18/10/2026).
+    public bool DoGrupo { get; init; }
 }
 
 /// <summary>
@@ -232,6 +236,7 @@ public partial class MainWindow : Window
         try
         {
             SelfLootDetector.SelfLootDetected -= OnSelfLootDetected;
+            GuildEnergyLog.Lido -= OnEnergiaLida;
             ItemValues.Salvar();
             _mapas.Salvar();
             if (_onEnteredDungeon is not null) DungeonTimerTracker.EnteredDungeon -= _onEnteredDungeon;
@@ -319,6 +324,11 @@ public partial class MainWindow : Window
                 IsSilver = false,
                 IsMob = false,
                 ItemIndex = idx,
+                // Antes sem o item cru: o "Exportar p/ Loot Logger" pulava todo o seu loot.
+                ItemUniqueName = ItemCatalog.GetUniqueName(idx) ?? "",
+                ItemPlainName = name,
+                Quantity = qty,
+                DoGrupo = true,
                 Valor = ItemValues.Valor(idx) is long v ? v * qty : null,
             };
             _lootFeed.Insert(0, row);
@@ -412,6 +422,12 @@ public partial class MainWindow : Window
         _ = ItemCatalog.EnsureLoadedAsync(); // carrega em segundo plano, mesma base de nomes do site
         _ = SpellCatalog.EnsureLoadedAsync(); // idem, pra resolver nome de habilidade na quebra por skill
         _ = CheckForUpdateAsync();
+        // E de hora em hora: o app fica aberto o dia inteiro (o "X" só esconde), e quem
+        // não fechava nunca via versão nova — em 18/10/2026 um usuário ficou na 1.1.4 com
+        // a 1.1.8 publicada.
+        var timerAtualizacao = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromHours(1) };
+        timerAtualizacao.Tick += (_, _) => { if (_pendingUpdate == null) _ = CheckForUpdateAsync(); };
+        timerAtualizacao.Start();
 
         ListLootEvents.ItemsSource = _lootRows;
         ListMarkedEvents.ItemsSource = _markedRows;
@@ -472,6 +488,7 @@ public partial class MainWindow : Window
         _capture.OpRequestReceived += _vendas.HandleOpRequest;            // compra/venda instantânea (aba Vendas)
         _vendas.Mudou += () => Dispatcher.BeginInvoke(() => { if (PanelVendas.Visibility == Visibility.Visible) RefreshVendas(); });
         GuildEnergyLog.Lido += OnEnergiaLida;
+        IniciarEnvioDeEnergia();   // envio automático + o que ficou pendente da última vez
         // Calibração automática da numeração de eventos (ver Network/EventOffset.cs): avisa
         // quando um patch do jogo desloca os códigos, em vez de o app ficar mudo.
         EventOffset.Mudou += d => Dispatcher.BeginInvoke(() =>
@@ -490,9 +507,10 @@ public partial class MainWindow : Window
         // Em vez de atualizar a UI a cada evento (em combate são centenas/seg, o que
         // travava a thread de captura e fazia perder pacotes), os trackers só marcam
         // "sujo" e um timer redesenha no máximo ~3x/seg, na thread da UI.
+        // Desligar/sair do Windows com o app aberto: guarda a sessão como o "Sair" faz.
+        if (Application.Current != null) Application.Current.SessionEnding += (_, _) => GuardarSessaoAoSair();
         DiagReporter.LimparArquivosAntigos();   // logs de calibração das versões antigas (iam pro Discord)
-        EventOffset.Arquivo = System.IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp", "numeracao.json");
+        EventOffset.Arquivo = System.IO.Path.Combine(XnomercyApp.Network.PastaDados.Raiz, "numeracao.json");
         EventOffset.Carregar();   // numeração conferida no jogo na última sessão (patch de 18/10: +1 -> 0)
         ItemValues.Carregar();   // valores que o jogo já mostrou em sessões anteriores
         ItemValues.Mudou += () => _valoresMudaram = true;
@@ -510,6 +528,7 @@ public partial class MainWindow : Window
             if (_damageDirty && PanelDamage.Visibility == Visibility.Visible) { _damageDirty = false; RefreshDamagePanel(); }
             AtualizarRotuloDoGrupo();
             AtualizarFiltroDeGuild();
+            RefiltrarSeOGrupoMudou();
             if (_valoresMudaram) { _valoresMudaram = false; PreencherValoresDoLoot(); _mortes.PreencherValores(); _bausDirty = true; }
             if (_bausDirty && PanelBaus.Visibility == Visibility.Visible) { _bausDirty = false; RefreshBaus(); }
             if (PanelGrupo.Visibility == Visibility.Visible) RefreshGrupo();

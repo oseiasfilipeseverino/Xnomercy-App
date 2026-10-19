@@ -41,8 +41,7 @@ public partial class App : Application
     {
         try
         {
-            var dir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp");
+            var dir = XnomercyApp.Network.PastaDados.Raiz;
             Directory.CreateDirectory(dir);
             File.AppendAllText(Path.Combine(dir, "errors.log"),
                 $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {ex}\n\n");

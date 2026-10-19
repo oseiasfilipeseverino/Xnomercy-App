@@ -27,6 +27,8 @@ public static class SpellCatalog
     private static bool _loaded;
     private static readonly SemaphoreSlim _lock = new(1, 1);
 
+    private static string CachePath => System.IO.Path.Combine(XnomercyApp.Network.PastaDados.Raiz, "spells_cache.xml");
+
     public static async Task EnsureLoadedAsync()
     {
         if (_loaded) return;
@@ -35,47 +37,8 @@ public static class SpellCatalog
         {
             if (_loaded) return;
 
-            var cachePath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "XnomercyApp", "spells_cache.xml");
-            var etagPath = cachePath + ".etag";
-
-            string? xml = null;
-            try
-            {
-                using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-                var request = new HttpRequestMessage(HttpMethod.Get, SpellsUrl);
-                // Mesma lógica de cache condicional do ItemCatalog — evita rebaixar o
-                // spells.xml inteiro toda vez que o app abre se ele não mudou.
-                if (File.Exists(etagPath))
-                {
-                    var cachedEtag = (await File.ReadAllTextAsync(etagPath)).Trim();
-                    if (cachedEtag.Length > 0)
-                        request.Headers.TryAddWithoutValidation("If-None-Match", cachedEtag);
-                }
-
-                using var response = await http.SendAsync(request);
-                if (response.StatusCode == System.Net.HttpStatusCode.NotModified && File.Exists(cachePath))
-                {
-                    xml = await File.ReadAllTextAsync(cachePath);
-                }
-                else
-                {
-                    response.EnsureSuccessStatusCode();
-                    xml = await response.Content.ReadAsStringAsync();
-                    Directory.CreateDirectory(Path.GetDirectoryName(cachePath)!);
-                    await File.WriteAllTextAsync(cachePath, xml);
-                    if (response.Headers.ETag is not null)
-                        await File.WriteAllTextAsync(etagPath, response.Headers.ETag.ToString());
-                }
-            }
-            catch
-            {
-                if (File.Exists(cachePath))
-                    xml = await File.ReadAllTextAsync(cachePath);
-            }
-
-            if (xml is null) return;
+            string? xml = await CacheBaixado.ObterAsync(SpellsUrl, CachePath, TimeSpan.FromSeconds(30));
+            if (xml is null) { CacheBaixado.TentarDeNovo(EnsureLoadedAsync); return; }
 
             var doc = XDocument.Parse(xml);
             int index = 0;
@@ -102,8 +65,10 @@ public static class SpellCatalog
         }
         catch
         {
-            // Sem internet e sem cache local na 1ª execução: fica sem nomes de skill,
-            // o Medidor de Dano continua funcionando só com os índices numéricos.
+            // Conteúdo ilegível (cache cortado): apaga cache e ETag e tenta de novo — antes
+            // o Medidor ficava sem nome de habilidade pra sempre (ver CacheBaixado).
+            CacheBaixado.Invalidar(CachePath);
+            CacheBaixado.TentarDeNovo(EnsureLoadedAsync);
         }
         finally
         {

@@ -5,6 +5,19 @@
 # cp1252 e a suite quebra no primeiro acento, parecendo falha de codigo.
 $env:PYTHONIOENCODING = 'utf-8'
 
+# Pasta de dados TEMPORARIA pros testes (ver Network/PastaDados.cs). Sem isto os
+# testes que abrem a janela real liam e gravavam os baus, mapas, lutas e sessoes
+# de verdade em %LocalAppData%\XnomercyApp de quem roda a suite.
+$env:XNOMERCY_DADOS = Join-Path ([System.IO.Path]::GetTempPath()) ("xnomercy_testes_" + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Force $env:XNOMERCY_DADOS | Out-Null
+# Os catalogos (itens, magias, mapas) baixados ficam no cache de verdade: copia pra
+# nao baixar 50 MB a cada rodada. So leitura do original.
+$dadosReais = Join-Path $env:LOCALAPPDATA 'XnomercyApp'
+foreach ($c in 'items_cache.json', 'items_cache.json.etag', 'spells_cache.xml', 'spells_cache.xml.etag', 'world_cache.json', 'world_cache.json.etag') {
+    $origem = Join-Path $dadosReais $c
+    if (Test-Path $origem) { Copy-Item $origem $env:XNOMERCY_DADOS }
+}
+
 $falhou = 0
 foreach ($t in 'test_xaml', 'test_codigos', 'test_grupo') {
     Write-Host "`n--- $t ---"
@@ -110,6 +123,8 @@ if ($LASTEXITCODE -ne 0) { $falhou++ }
 Write-Host "`n--- harness_janela (janela real recebe fama e prata) ---"
 dotnet run --project "$PSScriptRoot\harness_janela\harness_janela.csproj" -c Release --nologo
 if ($LASTEXITCODE -ne 0) { $falhou++ }
+
+Remove-Item -Recurse -Force $env:XNOMERCY_DADOS -ErrorAction SilentlyContinue
 
 if ($falhou -gt 0) {
     Write-Host "`n$falhou teste(s) reprovaram" -ForegroundColor Red

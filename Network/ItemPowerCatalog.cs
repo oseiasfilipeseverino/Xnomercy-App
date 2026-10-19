@@ -35,37 +35,15 @@ public static class ItemPowerCatalog
     /// </summary>
     public static async Task EnsureLoadedAsync(bool soCache = false)
     {
-        var cache = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                                 "XnomercyApp", "items_raw_cache.json");
+        var cache = System.IO.Path.Combine(XnomercyApp.Network.PastaDados.Raiz, "items_raw_cache.json");
         if (soCache && !File.Exists(cache)) return;
         if (Carregado || Interlocked.CompareExchange(ref _carregando, 1, 0) != 0) return;
         try
         {
-            var etagPath = cache + ".etag";
-            string? json = null;
-            try
-            {
-                using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
-                var req = new HttpRequestMessage(HttpMethod.Get, Url);
-                if (File.Exists(etagPath) && File.Exists(cache))
-                    req.Headers.TryAddWithoutValidation("If-None-Match", (await File.ReadAllTextAsync(etagPath)).Trim());
-                using var resp = await http.SendAsync(req);
-                if (resp.StatusCode == System.Net.HttpStatusCode.NotModified && File.Exists(cache))
-                    json = await File.ReadAllTextAsync(cache);
-                else
-                {
-                    resp.EnsureSuccessStatusCode();
-                    json = await resp.Content.ReadAsStringAsync();
-                    Directory.CreateDirectory(Path.GetDirectoryName(cache)!);
-                    await File.WriteAllTextAsync(cache, json);
-                    if (resp.Headers.ETag is not null) await File.WriteAllTextAsync(etagPath, resp.Headers.ETag.ToString());
-                }
-            }
-            catch
-            {
-                if (File.Exists(cache)) json = await File.ReadAllTextAsync(cache);
-            }
-            if (json != null) await Task.Run(() => Carregar(json));
+            string? json = await CacheBaixado.ObterAsync(Url, cache, TimeSpan.FromSeconds(60));
+            if (json == null) { if (!soCache) CacheBaixado.TentarDeNovo(() => EnsureLoadedAsync()); return; }
+            try { await Task.Run(() => Carregar(json)); }
+            catch { CacheBaixado.Invalidar(cache); if (!soCache) CacheBaixado.TentarDeNovo(() => EnsureLoadedAsync()); }
         }
         catch { /* sem IP: o painel do grupo mostra só a arma */ }
         finally { Interlocked.Exchange(ref _carregando, 0); }

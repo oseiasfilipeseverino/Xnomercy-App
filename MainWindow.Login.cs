@@ -25,9 +25,7 @@ public partial class MainWindow
     {
         // Perfil próprio do app (separado do Chrome do usuário) — guarda sessão/cookies
         // de login do Discord entre execuções, sem misturar com o navegador pessoal.
-        var userDataFolder = System.IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "XnomercyApp", "WebView2");
+        var userDataFolder = System.IO.Path.Combine(XnomercyApp.Network.PastaDados.Raiz, "WebView2");
 
         try
         {

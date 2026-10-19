@@ -83,6 +83,7 @@ public partial class MainWindow
             Quantity = isSilver ? amount / 10000 : amount,
             LooterGuild = PlayerRegistry.GuildOfName(looter),
             FromGuild = isMob ? "" : PlayerRegistry.GuildOfName(from),
+            DoGrupo = PlayerRegistry.IsInParty(looter),
         };
         return true;
     }
@@ -116,7 +117,7 @@ public partial class MainWindow
         // Com o roster vazio isto esconde TUDO. Ver AtualizarRotuloDoGrupo: o
         // rótulo da caixa avisa quando não há ninguém detectado, senão a tela em
         // branco é indistinguível de "não caiu loot".
-        if (ChkPartyOnlyLoot.IsChecked == true && !PlayerRegistry.IsInParty(r.Looter)) return false;
+        if (ChkPartyOnlyLoot.IsChecked == true && !r.DoGrupo && !PlayerRegistry.IsInParty(r.Looter)) return false;
         return true;
     }
 
@@ -163,6 +164,22 @@ public partial class MainWindow
     /// instrução.
     /// </remarks>
     private int _versaoGuildasVista = -1;
+    private string? _grupoVisto;
+
+    /// <summary>
+    /// "Só meu grupo": quem entra no grupo depois aparece sem precisar desmarcar e marcar
+    /// a caixa (o filtro só era refeito no clique — mesmo defeito do "Só minha guild").
+    /// </summary>
+    private void RefiltrarSeOGrupoMudou()
+    {
+        bool loot = ChkPartyOnlyLoot.IsChecked == true, dano = ChkPartyOnlyDamage.IsChecked == true;
+        if (!loot && !dano) { _grupoVisto = null; return; }
+        string agora = PlayerRegistry.AssinaturaDoGrupo();
+        if (agora == _grupoVisto) return;
+        _grupoVisto = agora;
+        if (loot) { _lootFeedView?.Refresh(); AtualizarTotalDoLoot(); }
+        if (dano) _damageDirty = true;   // o medidor só redesenhava no próximo golpe
+    }
 
     /// <summary>
     /// "Só minha guild": mostra qual guild o app está usando, avisa quando ainda não
@@ -258,7 +275,7 @@ public partial class MainWindow
             sb.Append(r.Timestamp.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")).Append(';')
               .Append(';')                                         // looted_by__alliance
               .Append(Csv(GuildAtual(r.Looter, r.LooterGuild))).Append(';')
-              .Append(Csv(r.Looter)).Append(';')
+              .Append(Csv(PlayerRegistry.NomeParaFora(r.Looter))).Append(';')
               .Append(Csv(r.ItemUniqueName)).Append(';')
               .Append(Csv(r.ItemPlainName)).Append(';')
               .Append(r.Quantity).Append(';')
@@ -313,7 +330,7 @@ public partial class MainWindow
         foreach (var r in _lootFeed)
         {
             if (!LootRowVisible(r)) continue;
-            sb.AppendLine($"{r.Time};{Csv(r.Looter)};{Csv(GuildAtual(r.Looter, r.LooterGuild))};{Csv(r.Item)};{Csv(r.From)};{(r.Valor is long v ? v.ToString() : "")}");
+            sb.AppendLine($"{r.Time};{Csv(PlayerRegistry.NomeParaFora(r.Looter))};{Csv(GuildAtual(r.Looter, r.LooterGuild))};{Csv(r.Item)};{Csv(r.From)};{(r.Valor is long v ? v.ToString() : "")}");
             linhas++;
         }
         return sb.ToString();

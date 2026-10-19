@@ -16,6 +16,17 @@ public static class Novidades
 {
     public static readonly (string Versao, string[] Itens)[] Notas =
     {
+        ("1.1.9", new[]
+        {
+            "Registro de energia da guild vai sozinho pro site quando alguém da gestão abre a aba de Energia no jogo, sem clicar. Site fora do ar ou sem login: o app guarda e manda depois.",
+            "Pontos de facção corrigidos: o app mostrava o Favor repetido como ponto de facção.",
+            "A sessão é salva também ao fechar o app (antes só no \"Parar captura\") e não aparece mais repetida no histórico.",
+            "Baús, mapas, lutas e mortes protegidos: o app guarda a versão anterior e não apaga mais os dados se um arquivo não abrir.",
+            "O app abre uma vez só: abrir de novo traz a janela que já estava aberta. E procura atualização de hora em hora.",
+            "\"Só meu grupo\" mantém o loot de quem era do grupo na hora, e a lista se atualiza quando alguém entra.",
+            "Copiar e Exportar levam o nome do seu personagem no lugar de \"Você\". O seu loot agora vai no Exportar p/ Loot Logger.",
+            "Valor do loot: se a consulta de preço falhar, o app tenta de novo em 2 minutos (antes ficava horas sem valor).",
+        }),
         ("1.1.8", new[]
         {
             "\"Só minha guild\" mostra qual guild o app está usando, ou avisa \"guild ainda não detectada\" (troque de mapa com a captura ligada).",
@@ -91,8 +102,7 @@ public static class Novidades
         }),
     };
 
-    private static string Arquivo => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp", "versao_vista.txt");
+    private static string Arquivo => System.IO.Path.Combine(XnomercyApp.Network.PastaDados.Raiz, "versao_vista.txt");
 
     public static string VersaoAtual =>
         System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0";

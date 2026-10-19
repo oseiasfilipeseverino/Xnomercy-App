@@ -48,21 +48,14 @@ public static class ItemValues
     /// <summary>Pra testes: a busca no mercado pode ser trocada por um dicionário fixo.</summary>
     public static Func<IReadOnlyList<string>, Task<Dictionary<string, long>>>? BuscarMercado { get; set; }
 
-    private static string Arquivo => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp", "valores_itens.json");
+    private static string Arquivo => System.IO.Path.Combine(XnomercyApp.Network.PastaDados.Raiz, "valores_itens.json");
 
     /// <summary>Lê o que o jogo já mostrou em sessões anteriores e liga o salvamento periódico.</summary>
     public static void Carregar()
     {
-        try
-        {
-            if (File.Exists(Arquivo))
-            {
-                var d = JsonSerializer.Deserialize<Dictionary<int, long>>(File.ReadAllText(Arquivo));
-                if (d != null) foreach (var kv in d) _jogo.TryAdd(kv.Key, kv.Value);
-            }
-        }
-        catch { /* arquivo estragado: começa do zero, o jogo repõe */ }
+        // Ilegível: começa do zero (o jogo repõe), mas o arquivo antigo fica guardado.
+        if (ArquivoSeguro.Ler<Dictionary<int, long>>(Arquivo, out var d) && d != null)
+            foreach (var kv in d) _jogo.TryAdd(kv.Key, kv.Value);
         _timerSalvar ??= new Timer(_ => Salvar(), null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
     }
 
@@ -70,14 +63,8 @@ public static class ItemValues
     {
         if (!_sujo) return;
         _sujo = false;
-        try
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(Arquivo)!);
-            var tmp = Arquivo + ".tmp";
-            File.WriteAllText(tmp, JsonSerializer.Serialize(_jogo.ToDictionary(kv => kv.Key, kv => kv.Value)));
-            File.Move(tmp, Arquivo, overwrite: true);
-        }
-        catch { _sujo = true; }
+        if (!ArquivoSeguro.Gravar(Arquivo, JsonSerializer.Serialize(_jogo.ToDictionary(kv => kv.Key, kv => kv.Value))))
+            _sujo = true;
     }
 
     /// <summary>Evento de item novo com valor? Guarda. true se aprendeu algo.</summary>
@@ -137,9 +124,16 @@ public static class ItemValues
                 var lote = _naFila.Keys.Take(40).ToList();
                 foreach (var u in lote) _naFila.TryRemove(u, out _);
                 Dictionary<string, long> precos;
-                try { precos = await (BuscarMercado ?? ConsultarAodpAsync)(lote); }
-                catch { precos = new(); }
                 var agora = DateTime.UtcNow;
+                try { precos = await (BuscarMercado ?? ConsultarAodpAsync)(lote); }
+                catch
+                {
+                    // Falha de rede/limite NÃO é "sem preço": antes o lote inteiro ficava
+                    // marcado como sem valor por 6 horas e o loot não mostrava valor nenhum.
+                    // Marca como vencido daqui a 2 min: o próximo loot desses itens pergunta de novo.
+                    foreach (var u in lote) _mercado[u] = (0, agora - ValidadeMercado + TimeSpan.FromMinutes(2));
+                    continue;
+                }
                 foreach (var u in lote)
                     _mercado[u] = (precos.TryGetValue(u, out var p) ? p : 0, agora);
                 if (precos.Count > 0) Mudou?.Invoke();

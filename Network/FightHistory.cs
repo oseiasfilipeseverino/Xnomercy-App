@@ -31,6 +31,10 @@ public sealed class FightHistory
         public string Mapa { get; set; } = "";
         public long DanoTotal { get; set; }
         public List<Linha> Jogadores { get; set; } = new();
+        // Seu personagem quando a luta foi salva: no texto/CSV o "Você" vira esse nome.
+        public string Eu { get; set; } = "";
+
+        private string Fora(string nome) => nome == "Você" && Eu.Length > 0 ? Eu : nome;
 
         public string Titulo =>
             $"{InicioUtc.ToLocalTime():dd/MM HH:mm}" + (Mapa.Length > 0 ? $" · {Mapa}" : "") +
@@ -50,7 +54,7 @@ public sealed class FightHistory
             foreach (var j in Jogadores)
             {
                 double pct = DanoTotal > 0 ? j.Dano * 100.0 / DanoTotal : 0;
-                sb.AppendLine($"{pos++}. {j.Nome} — {j.Dano:N0} ({pct:0.0}%)" +
+                sb.AppendLine($"{pos++}. {Fora(j.Nome)} — {j.Dano:N0} ({pct:0.0}%)" +
                               (j.Dps > 0 ? $" | DPS {j.Dps:N0}" : "") +
                               (j.Cura > 0 ? $" | cura {j.Cura:N0}" : "") +
                               (j.Recebido > 0 ? $" | recebeu {j.Recebido:N0}" : ""));
@@ -64,7 +68,7 @@ public sealed class FightHistory
             sb.AppendLine("Posicao;Jogador;Dano;DPS;Cura efetiva;Overheal;Dano recebido");
             int pos = 1;
             foreach (var j in Jogadores)
-                sb.AppendLine($"{pos++};{(j.Nome.Contains(';') ? '"' + j.Nome + '"' : j.Nome)};{j.Dano};{j.Dps};{j.Cura};{j.Overheal};{j.Recebido}");
+                sb.AppendLine($"{pos++};{(Fora(j.Nome).Contains(';') ? '"' + Fora(j.Nome) + '"' : Fora(j.Nome))};{j.Dano};{j.Dps};{j.Cura};{j.Overheal};{j.Recebido}");
             return sb.ToString();
         }
     }
@@ -77,13 +81,12 @@ public sealed class FightHistory
     public FightHistory(string? arquivo)
     {
         _arquivo = arquivo;
-        if (arquivo == null || !File.Exists(arquivo)) return;
-        try { _lutas.AddRange((JsonSerializer.Deserialize<List<Luta>>(File.ReadAllText(arquivo)) ?? new()).Take(MaxLutas)); }
-        catch { /* arquivo estragado: começa vazio */ }
+        if (arquivo == null) return;
+        if (!ArquivoSeguro.Ler<List<Luta>>(arquivo, out var lidas)) { _arquivo = null; return; }   // ver ArquivoSeguro
+        _lutas.AddRange((lidas ?? new()).Take(MaxLutas));
     }
 
-    public static string CaminhoPadrao => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp", "lutas.json");
+    public static string CaminhoPadrao => System.IO.Path.Combine(XnomercyApp.Network.PastaDados.Raiz, "lutas.json");
 
     public List<Luta> Lutas() { lock (_lock) return _lutas.ToList(); }
 
@@ -105,6 +108,7 @@ public sealed class FightHistory
             Mapa = mapa ?? "",
             DanoTotal = jogadores.Sum(j => j.Dano),
             Jogadores = jogadores,
+            Eu = PlayerRegistry.SelfName ?? "",
         };
         lock (_lock)
         {
@@ -124,14 +128,8 @@ public sealed class FightHistory
     private void Gravar()
     {
         if (_arquivo == null) return;
-        try
-        {
-            string json;
-            lock (_lock) json = JsonSerializer.Serialize(_lutas);
-            Directory.CreateDirectory(Path.GetDirectoryName(_arquivo)!);
-            File.WriteAllText(_arquivo + ".tmp", json);
-            File.Move(_arquivo + ".tmp", _arquivo, overwrite: true);
-        }
-        catch { /* melhor esforço */ }
+        string json;
+        lock (_lock) json = JsonSerializer.Serialize(_lutas);
+        ArquivoSeguro.Gravar(_arquivo, json);
     }
 }

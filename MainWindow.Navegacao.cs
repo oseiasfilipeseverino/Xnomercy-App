@@ -104,11 +104,15 @@ public partial class MainWindow
         Hide();
     }
 
-    private void TrayIcon_DoubleClick(object sender, RoutedEventArgs e)
+    private void TrayIcon_DoubleClick(object sender, RoutedEventArgs e) => MostrarJanela();
+
+    /// <summary>Traz a janela de volta (da bandeja ou de trás de outras) — também quando o app é aberto de novo.</summary>
+    public void MostrarJanela()
     {
         Show();
-        WindowState = WindowState.Normal;
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
         Activate();
+        Topmost = true; Topmost = false;   // vem pra frente mesmo com o jogo em tela cheia por trás
     }
 
     private async void TrayMenu_Exit_Click(object sender, RoutedEventArgs e)
@@ -118,6 +122,7 @@ public partial class MainWindow
         // fechava o app em vez de clicar "Parar captura". Espera até 5s pelo envio.
         await Task.CompletedTask;   // nada mais é enviado ao sair (ver DiagReporter)
         _exitRequested = true;
+        GuardarSessaoAoSair();
         DesassinarEventosEstaticos();
         _capture.Dispose();
         Close();

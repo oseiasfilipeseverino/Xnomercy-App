@@ -1,5 +1,9 @@
 using XnomercyApp;
 
+// Nunca nos dados de verdade: pasta temporaria se o rodar.ps1 nao definiu (Network/PastaDados.cs).
+if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("XNOMERCY_DADOS")))
+    Environment.SetEnvironmentVariable("XNOMERCY_DADOS", System.IO.Path.Combine(System.IO.Path.GetTempPath(), "xnomercy_teste_" + Guid.NewGuid().ToString("N")));
+
 // Exercita o Novidades REAL: quais notas aparecem depois de uma atualizacao.
 
 int falhas = 0;

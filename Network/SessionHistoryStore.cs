@@ -30,8 +30,7 @@ public static class SessionHistoryStore
 {
     private const int MaxEntries = 50; // limite pra não crescer sem fim numa conta usada há meses
 
-    private static string FilePath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp", "sessions.json");
+    private static string FilePath => System.IO.Path.Combine(XnomercyApp.Network.PastaDados.Raiz, "sessions.json");
 
     public static List<SessionHistoryEntry> Load() => TryLoad(out var list) ? list : new();
 
@@ -62,8 +61,7 @@ public static class SessionHistoryStore
     {
         try
         {
-            var dir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp");
+            var dir = XnomercyApp.Network.PastaDados.Raiz;
             Directory.CreateDirectory(dir);
             File.AppendAllText(Path.Combine(dir, "errors.log"),
                 $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [SessionHistory] {msg}\n");
@@ -93,9 +91,13 @@ public static class SessionHistoryStore
                     return;   // na dúvida, não escreve — melhor não gravar do que apagar
                 }
             }
+            // Mesma sessão (mesmo início) guardada de novo — parar e religar a captura, ou
+            // fechar o app depois de já ter parado: substitui, não duplica (o sessions.json
+            // de um usuário tinha duas linhas da mesma sessão de 30/07).
+            list.RemoveAll(x => x.StartTime == entry.StartTime);
             list.Insert(0, entry);
             if (list.Count > MaxEntries) list.RemoveRange(MaxEntries, list.Count - MaxEntries);
-            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp");
+            var dir = XnomercyApp.Network.PastaDados.Raiz;
             Directory.CreateDirectory(dir);
 
             // Grava num temporário e só então troca pelo definitivo. WriteAllText

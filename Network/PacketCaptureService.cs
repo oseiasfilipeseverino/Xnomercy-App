@@ -163,8 +163,7 @@ public sealed class PacketCaptureService : IDisposable
         DiagSampleHex.Add(hex);
         try
         {
-            var dir = System.IO.Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp");
+            var dir = XnomercyApp.Network.PastaDados.Raiz;
             System.IO.Directory.CreateDirectory(dir);
             System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "diag_samples.txt"),
                 $"len={appPayload.Length}  {hex}\n");
@@ -467,8 +466,7 @@ public sealed class PacketCaptureService : IDisposable
     {
         try
         {
-            var dir = System.IO.Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp");
+            var dir = XnomercyApp.Network.PastaDados.Raiz;
             System.IO.Directory.CreateDirectory(dir);
             var sb = new System.Text.StringBuilder();
             sb.AppendLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Captura iniciada — adaptadores em uso:");
@@ -731,8 +729,7 @@ public sealed class PacketCaptureService : IDisposable
             _opDiagCount++;
             try
             {
-                var dir = System.IO.Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp");
+                var dir = XnomercyApp.Network.PastaDados.Raiz;
                 System.IO.Directory.CreateDirectory(dir);
                 var text = string.Join(" ", parms.OrderBy(k => k.Key).Select(kv => $"[{kv.Key}]={OpVal(kv.Value)}"));
                 // O horário entrou junto: sem ele, e como o arquivo acumula entre

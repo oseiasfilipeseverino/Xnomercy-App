@@ -45,8 +45,7 @@ public partial class MainWindow
 
             try
             {
-                var dir = System.IO.Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp");
+                var dir = XnomercyApp.Network.PastaDados.Raiz;
                 System.IO.Directory.CreateDirectory(dir);
                 System.IO.File.WriteAllText(System.IO.Path.Combine(dir, "net_diag.txt"), report);
                 // Fica no PC; vai junto quando o player usar "Enviar erro p/ liderança".
@@ -542,8 +541,7 @@ public partial class MainWindow
             _diagCount++;
             try
             {
-                var dir = System.IO.Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp");
+                var dir = XnomercyApp.Network.PastaDados.Raiz;
                 System.IO.Directory.CreateDirectory(dir);
                 var parms = string.Join(" ", evt.Parameters.OrderBy(k => k.Key)
                     .Select(kv => $"[{kv.Key}]={DiagVal(kv.Value)}"));
@@ -599,8 +597,7 @@ public partial class MainWindow
             _diagNamedCount++;
             try
             {
-                var dir = System.IO.Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp");
+                var dir = XnomercyApp.Network.PastaDados.Raiz;
                 System.IO.Directory.CreateDirectory(dir);
                 var parms = string.Join(" ", evt.Parameters.OrderBy(k => k.Key)
                     .Select(kv => $"[{kv.Key}]={DiagVal(kv.Value)}"));

@@ -45,7 +45,7 @@ public sealed class StorageTracker
     // GUID da aba -> (nome, lugar, é da guild)
     private readonly Dictionary<string, (string Nome, string Lugar, bool Guild)> _abas = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Bau> _baus = new(StringComparer.OrdinalIgnoreCase);
-    private readonly string? _arquivo;
+    private string? _arquivo;
     private const int MaxObjetos = 30_000, MaxBaus = 200;
 
     public event Action? Mudou;
@@ -53,17 +53,15 @@ public sealed class StorageTracker
     public StorageTracker(string? arquivo)
     {
         _arquivo = arquivo;
-        if (arquivo == null || !File.Exists(arquivo)) return;
-        try
-        {
-            foreach (var b in JsonSerializer.Deserialize<List<Bau>>(File.ReadAllText(arquivo)) ?? new())
-                _baus[b.Guid] = b;
-        }
-        catch { /* arquivo estragado: começa vazio */ }
+        if (arquivo == null) return;
+        // Antes: ilegível -> vazio -> o próximo baú aberto gravava "[]" por cima de
+        // tudo (o baus.json de um usuário ficou assim em 18/10/2026). Ver ArquivoSeguro.
+        if (!ArquivoSeguro.Ler<List<Bau>>(arquivo, out var lidos)) { _arquivo = null; return; }
+        foreach (var b in lidos ?? new())
+            _baus[b.Guid] = b;
     }
 
-    public static string CaminhoPadrao => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp", "baus.json");
+    public static string CaminhoPadrao => System.IO.Path.Combine(XnomercyApp.Network.PastaDados.Raiz, "baus.json");
 
     public List<Bau> Baus() { lock (_lock) return _baus.Values.OrderByDescending(b => b.VistoUtc).ToList(); }
 
@@ -151,15 +149,9 @@ public sealed class StorageTracker
     private void Gravar()
     {
         if (_arquivo == null) return;
-        try
-        {
-            string json;
-            lock (_lock) json = JsonSerializer.Serialize(_baus.Values.ToList());
-            Directory.CreateDirectory(Path.GetDirectoryName(_arquivo)!);
-            File.WriteAllText(_arquivo + ".tmp", json);
-            File.Move(_arquivo + ".tmp", _arquivo, overwrite: true);
-        }
-        catch { /* melhor esforço */ }
+        string json;
+        lock (_lock) json = JsonSerializer.Serialize(_baus.Values.ToList());
+        ArquivoSeguro.Gravar(_arquivo, json);   // a versão anterior fica em baus.json.bak
     }
 
     private static List<string>? Guids(object? v)

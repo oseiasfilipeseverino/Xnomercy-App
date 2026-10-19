@@ -3,6 +3,10 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using XnomercyApp.Network;
 
+// Nunca nos dados de verdade: pasta temporaria se o rodar.ps1 nao definiu (Network/PastaDados.cs).
+if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("XNOMERCY_DADOS")))
+    Environment.SetEnvironmentVariable("XNOMERCY_DADOS", System.IO.Path.Combine(System.IO.Path.GetTempPath(), "xnomercy_teste_" + Guid.NewGuid().ToString("N")));
+
 // Exercita o DamageMeterTracker REAL (a DLL compilada), nao uma reimplementacao.
 // O estado do PlayerRegistry e privado, entao e ajustado por reflexao.
 

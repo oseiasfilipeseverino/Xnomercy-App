@@ -182,7 +182,7 @@ public static class EventOffset
         {
             string json;
             lock (_lock) json = $"{{\"alto\":{_delta},\"dano\":{_deltaDano},\"nomes\":{_deltaNomes}}}";
-            System.IO.File.WriteAllText(Arquivo, json);
+            ArquivoSeguro.Gravar(Arquivo, json);   // troca de uma vez: nunca fica cortado
         }
         catch { }
     }

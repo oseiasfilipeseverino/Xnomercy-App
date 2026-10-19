@@ -68,22 +68,18 @@ public sealed class MapHistory
     public MapHistory(string? arquivo)
     {
         _arquivo = arquivo;
-        if (arquivo == null || !File.Exists(arquivo)) return;
-        try
-        {
-            var a = JsonSerializer.Deserialize<Arquivo>(File.ReadAllText(arquivo));
-            if (a == null) return;
-            // Visita/run aberta de uma sessão anterior: fecha com o fim conhecido.
-            foreach (var v in a.Visitas) v.FimUtc ??= v.InicioUtc;
-            foreach (var r in a.Runs) r.FimUtc ??= r.InicioUtc;
-            _visitas.AddRange(a.Visitas.Take(MaxVisitas));
-            _runs.AddRange(a.Runs.Take(MaxRuns));
-        }
-        catch { /* arquivo estragado: começa vazio */ }
+        if (arquivo == null) return;
+        // Ilegível não vira "vazio gravado por cima" (ver ArquivoSeguro).
+        if (!ArquivoSeguro.Ler<Arquivo>(arquivo, out var a)) { _arquivo = null; return; }
+        if (a == null) return;
+        // Visita/run aberta de uma sessão anterior: fecha com o fim conhecido.
+        foreach (var v in a.Visitas) v.FimUtc ??= v.InicioUtc;
+        foreach (var r in a.Runs) r.FimUtc ??= r.InicioUtc;
+        _visitas.AddRange(a.Visitas.Take(MaxVisitas));
+        _runs.AddRange(a.Runs.Take(MaxRuns));
     }
 
-    public static string CaminhoPadrao => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp", "mapas.json");
+    public static string CaminhoPadrao => System.IO.Path.Combine(XnomercyApp.Network.PastaDados.Raiz, "mapas.json");
 
     public string? MapaAtual { get { lock (_lock) return _atual?.Nome; } }
 
@@ -167,15 +163,9 @@ public sealed class MapHistory
     public void Salvar()
     {
         if (_arquivo == null) return;
-        try
-        {
-            string json;
-            lock (_lock) json = JsonSerializer.Serialize(new Arquivo { Visitas = _visitas.ToList(), Runs = _runs.ToList() });
-            Directory.CreateDirectory(Path.GetDirectoryName(_arquivo)!);
-            File.WriteAllText(_arquivo + ".tmp", json);
-            File.Move(_arquivo + ".tmp", _arquivo, overwrite: true);
-        }
-        catch { /* gravar é melhor esforço: o histórico na tela continua */ }
+        string json;
+        lock (_lock) json = JsonSerializer.Serialize(new Arquivo { Visitas = _visitas.ToList(), Runs = _runs.ToList() });
+        ArquivoSeguro.Gravar(_arquivo, json);   // melhor esforço: o histórico na tela continua
     }
 
     private static Visita Copia(Visita v) => new()

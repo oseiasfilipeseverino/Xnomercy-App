@@ -20,38 +20,17 @@ public static class MapCatalog
     private static readonly ConcurrentDictionary<string, string> _nomes = new(StringComparer.OrdinalIgnoreCase);
     private static int _carregando;
 
+    private static string CachePath => System.IO.Path.Combine(XnomercyApp.Network.PastaDados.Raiz, "world_cache.json");
+
     public static async Task EnsureLoadedAsync()
     {
         if (!_nomes.IsEmpty || Interlocked.CompareExchange(ref _carregando, 1, 0) != 0) return;
         try
         {
-            var cache = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                                     "XnomercyApp", "world_cache.json");
-            var etagPath = cache + ".etag";
-            string? json = null;
-            try
-            {
-                using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-                var req = new HttpRequestMessage(HttpMethod.Get, Url);
-                if (File.Exists(etagPath) && File.Exists(cache))
-                    req.Headers.TryAddWithoutValidation("If-None-Match", (await File.ReadAllTextAsync(etagPath)).Trim());
-                using var resp = await http.SendAsync(req);
-                if (resp.StatusCode == System.Net.HttpStatusCode.NotModified && File.Exists(cache))
-                    json = await File.ReadAllTextAsync(cache);
-                else
-                {
-                    resp.EnsureSuccessStatusCode();
-                    json = await resp.Content.ReadAsStringAsync();
-                    Directory.CreateDirectory(Path.GetDirectoryName(cache)!);
-                    await File.WriteAllTextAsync(cache, json);
-                    if (resp.Headers.ETag is not null) await File.WriteAllTextAsync(etagPath, resp.Headers.ETag.ToString());
-                }
-            }
-            catch
-            {
-                if (File.Exists(cache)) json = await File.ReadAllTextAsync(cache);
-            }
-            if (json != null) Carregar(json);
+            string? json = await CacheBaixado.ObterAsync(Url, CachePath, TimeSpan.FromSeconds(30));
+            if (json == null) { CacheBaixado.TentarDeNovo(EnsureLoadedAsync); return; }
+            try { Carregar(json); }
+            catch { CacheBaixado.Invalidar(CachePath); CacheBaixado.TentarDeNovo(EnsureLoadedAsync); }
         }
         catch { /* sem nome de mapa: o histórico mostra o índice */ }
         finally { Interlocked.Exchange(ref _carregando, 0); }

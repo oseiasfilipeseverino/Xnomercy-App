@@ -321,7 +321,7 @@ public partial class MainWindow
         sb.AppendLine("Posicao;Jogador;Dano;% Dano;DPS;Cura efetiva;Overheal;Dano recebido");
         int pos = 1;
         foreach (var r in _damageRows)
-            sb.AppendLine($"{pos++};{Csv(r.Player)};{r.Damage};{r.DamagePct};{r.Dps};{r.Healing};{r.Overheal};{r.Taken}");
+            sb.AppendLine($"{pos++};{Csv(PlayerRegistry.NomeParaFora(r.Player))};{r.Damage};{r.DamagePct};{r.Dps};{r.Healing};{r.Overheal};{r.Taken}");
         try
         {
             System.IO.File.WriteAllText(dlg.FileName, sb.ToString(), System.Text.Encoding.UTF8);
@@ -344,7 +344,7 @@ public partial class MainWindow
         sb.AppendLine("Medidor de Dano — XnoMercy");
         int pos = 1;
         foreach (var r in _damageRows)
-            sb.AppendLine($"{pos++}. {r.Player} — {r.Damage:N0} ({r.DamagePct})" +
+            sb.AppendLine($"{pos++}. {PlayerRegistry.NomeParaFora(r.Player)} — {r.Damage:N0} ({r.DamagePct})" +
                           (r.Dps > 0 ? $" | DPS {r.Dps:N0}" : "") +
                           (r.Healing > 0 ? $" | cura {r.Healing:N0}" : "") +
                           (r.Taken > 0 ? $" | recebeu {r.Taken:N0}" : ""));

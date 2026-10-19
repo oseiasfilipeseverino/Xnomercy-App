@@ -26,9 +26,38 @@ public static class Program
             return;
         }
 
+        // UMA cópia só (18/10/2026). O "X" esconde o app na bandeja; abrir de novo pelo
+        // atalho subia uma SEGUNDA cópia: duas capturas, e as duas gravando os mesmos
+        // arquivos (baús, mapas, lutas) — a última a gravar apagava o que a outra tinha.
+        // Agora a segunda só pede pra primeira aparecer e fecha. Na troca de versão, a
+        // antiga ainda pode estar saindo: espera ela soltar antes de desistir.
+        using var unica = new System.Threading.Mutex(false, @"Local\XnomercyApp.UmaCopia");
+        bool minha;
+        try { minha = unica.WaitOne(0); }
+        catch (System.Threading.AbandonedMutexException) { minha = true; }   // a outra morreu sem soltar
+        if (!minha)
+        {
+            try
+            {
+                if (System.Threading.EventWaitHandle.TryOpenExisting(@"Local\XnomercyApp.Mostrar", out var aparecer))
+                    using (aparecer) aparecer.Set();
+            }
+            catch { /* sem como avisar: segue esperando */ }
+            try { minha = unica.WaitOne(TimeSpan.FromSeconds(15)); }
+            catch (System.Threading.AbandonedMutexException) { minha = true; }
+            if (!minha) return;   // a outra cópia está aberta e já apareceu
+        }
+        using var pedidoMostrar = new System.Threading.EventWaitHandle(false, System.Threading.EventResetMode.AutoReset, @"Local\XnomercyApp.Mostrar");
+
         var app = new App();
         app.InitializeComponent();
+        new System.Threading.Thread(() =>
+        {
+            while (pedidoMostrar.WaitOne())
+                app.Dispatcher.BeginInvoke(() => (app.MainWindow as MainWindow)?.MostrarJanela());
+        }) { IsBackground = true, Name = "uma-copia" }.Start();
         app.Run();
+        try { unica.ReleaseMutex(); } catch { }
     }
 
     private static bool IsRunningAsAdministrator()

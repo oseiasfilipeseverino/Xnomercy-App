@@ -1,6 +1,10 @@
 using XnomercyApp;
 using XnomercyApp.Network;
 
+// Nunca nos dados de verdade: pasta temporaria se o rodar.ps1 nao definiu (Network/PastaDados.cs).
+if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("XNOMERCY_DADOS")))
+    Environment.SetEnvironmentVariable("XNOMERCY_DADOS", System.IO.Path.Combine(System.IO.Path.GetTempPath(), "xnomercy_teste_" + Guid.NewGuid().ToString("N")));
+
 // Exercita o GuildEnergyLog REAL (a DLL compilada): a resposta do jogo quando o
 // oficial abre o registro de energia, no formato que o SAT (Triky313) documenta
 // em GetGuildAccountLogsResponse: [0]=nomes [3]=quantidades FixPoint [4]=ticks UTC.
@@ -48,6 +52,22 @@ Checar(MainWindow.ResumoEnvioEnergia("{\"status\":200,\"novos\":2,\"repetidos\":
 Checar(MainWindow.ResumoEnvioEnergia("{\"status\":403}", out ok).Contains("Só a gestão") && !ok, "membro comum: explica que e' so gestao");
 Checar(MainWindow.ResumoEnvioEnergia("{\"erro\":\"login\"}", out ok).Contains("login") && !ok, "deslogado: pede login");
 Checar(!string.IsNullOrEmpty(MainWindow.ResumoEnvioEnergia("", out ok)) && !ok, "site sem resposta: avisa, nao some");
+
+Console.WriteLine("\n-- envio automatico so com a aba de ENERGIA confirmada");
+bool? confirmada = null;
+Action<List<GuildEnergyLog.Entrada>, bool> ouvir = (_, c) => confirmada = c;
+GuildEnergyLog.Lido += ouvir;
+var respEnergia = new PhotonOperationResponse(1, 0, null, new() { [0] = new string?[] { "SrAmok" }, [3] = new long[] { -100000 }, [4] = new long[] { Ticks(2026, 10, 18, 20, 0, 0) }, [253] = (short)159 });
+GuildEnergyLog.HandleOpResponse(respEnergia);
+Checar(confirmada == false, "resposta sem ver o pedido da aba: NAO vai sozinha (pode ser a aba de prata)");
+GuildEnergyLog.Pedido(new Dictionary<byte, object?> { [1] = (byte)2, [2] = 0, [3] = 101, [253] = (short)159 });
+GuildEnergyLog.HandleOpResponse(respEnergia);
+Checar(confirmada == true, "pedido da aba 2 (energia) visto: vai sozinha");
+GuildEnergyLog.Pedido(new Dictionary<byte, object?> { [1] = (byte)0, [2] = 0, [3] = 101, [253] = (short)159 });
+confirmada = null;
+GuildEnergyLog.HandleOpResponse(respEnergia);
+Checar(confirmada == null, "pedido de OUTRA aba: a resposta nem e' lida como energia");
+GuildEnergyLog.Lido -= ouvir;
 
 Console.WriteLine(falhas == 0 ? "\nOK: registro de energia da guild" : $"\nFALHOU: {falhas}");
 return falhas == 0 ? 0 : 1;

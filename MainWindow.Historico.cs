@@ -58,6 +58,17 @@ public partial class MainWindow
         RefreshSessionHistory();
     }
 
+    /// <summary>
+    /// Fechar o app com a captura ligada (Sair na bandeja, reiniciar pra atualizar,
+    /// desligar o PC) também guarda a sessão. Antes só "Parar captura" guardava, e quem
+    /// fechava direto perdia o histórico: o de um usuário parou em 30/07 sem nenhum aviso.
+    /// </summary>
+    private void GuardarSessaoAoSair()
+    {
+        try { if (_capturing) SaveSessionToHistory(); } catch { /* fechando: não pode travar a saída */ }
+        ItemValues.Salvar();
+    }
+
     /// <summary>O SEU loot no feed: quantos itens e o valor estimado somado.</summary>
     private (int Itens, long Valor) SeuLoot()
     {

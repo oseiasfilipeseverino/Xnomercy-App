@@ -20,6 +20,8 @@ public static class ItemCatalog
     private static bool _loaded;
     private static readonly SemaphoreSlim _lock = new(1, 1);
 
+    private static string CachePath => System.IO.Path.Combine(XnomercyApp.Network.PastaDados.Raiz, "items_cache.json");
+
     public static async Task EnsureLoadedAsync()
     {
         if (_loaded) return;
@@ -28,49 +30,8 @@ public static class ItemCatalog
         {
             if (_loaded) return;
 
-            var cachePath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "XnomercyApp", "items_cache.json");
-            var etagPath = cachePath + ".etag";
-
-            string? json = null;
-            try
-            {
-                using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-                var request = new HttpRequestMessage(HttpMethod.Get, ItemsUrl);
-                // If-None-Match com o ETag salvo da última vez — raw.githubusercontent.com
-                // responde 304 (sem corpo) se o arquivo não mudou, evitando rebaixar o
-                // items.json inteiro (alguns MB) toda vez que o app abre.
-                if (File.Exists(etagPath))
-                {
-                    var cachedEtag = (await File.ReadAllTextAsync(etagPath)).Trim();
-                    if (cachedEtag.Length > 0)
-                        request.Headers.TryAddWithoutValidation("If-None-Match", cachedEtag);
-                }
-
-                using var response = await http.SendAsync(request);
-                if (response.StatusCode == System.Net.HttpStatusCode.NotModified && File.Exists(cachePath))
-                {
-                    json = await File.ReadAllTextAsync(cachePath);
-                }
-                else
-                {
-                    response.EnsureSuccessStatusCode();
-                    json = await response.Content.ReadAsStringAsync();
-                    Directory.CreateDirectory(Path.GetDirectoryName(cachePath)!);
-                    await File.WriteAllTextAsync(cachePath, json);
-                    if (response.Headers.ETag is not null)
-                        await File.WriteAllTextAsync(etagPath, response.Headers.ETag.ToString());
-                }
-            }
-            catch
-            {
-                // Sem internet/erro de rede — usa o cache local da última vez que funcionou.
-                if (File.Exists(cachePath))
-                    json = await File.ReadAllTextAsync(cachePath);
-            }
-
-            if (json is null) return;
+            string? json = await CacheBaixado.ObterAsync(ItemsUrl, CachePath, TimeSpan.FromSeconds(30));
+            if (json is null) { CacheBaixado.TentarDeNovo(EnsureLoadedAsync); return; }   // sem internet e sem cache
 
             using var doc = JsonDocument.Parse(json);
             foreach (var item in doc.RootElement.EnumerateArray())
@@ -95,8 +56,10 @@ public static class ItemCatalog
         }
         catch
         {
-            // Cache local indisponível (ex: outra instância do app com o arquivo aberto)
-            // e sem internet: fica sem nomes de item, resolve só pelo Index numérico.
+            // Conteúdo ilegível (cache cortado): apaga cache e ETag e tenta de novo — antes
+            // ficava sem nome de item pra sempre (ver CacheBaixado).
+            CacheBaixado.Invalidar(CachePath);
+            CacheBaixado.TentarDeNovo(EnsureLoadedAsync);
         }
         finally
         {

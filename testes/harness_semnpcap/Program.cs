@@ -1,6 +1,10 @@
 using System.IO;
 using XnomercyApp.Network;
 
+// Nunca nos dados de verdade: pasta temporaria se o rodar.ps1 nao definiu (Network/PastaDados.cs).
+if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("XNOMERCY_DADOS")))
+    Environment.SetEnvironmentVariable("XNOMERCY_DADOS", System.IO.Path.Combine(System.IO.Path.GetTempPath(), "xnomercy_teste_" + Guid.NewGuid().ToString("N")));
+
 // Exercita a captura SEM Npcap REAL: o datagrama IP cru (como o raw socket do
 // Windows entrega) vira UDP e segue o mesmo caminho do Npcap ate virar evento.
 // Um evento de dano REAL (testes/pacotes_reais.txt) e' embrulhado em ENet + UDP + IP.

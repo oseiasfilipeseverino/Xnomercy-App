@@ -18,6 +18,13 @@ public sealed class FactionTracker
     private readonly object _lock = new();
     private double _pontos, _moedas, _bandeira, _might, _favor;
 
+    // O 85 é a atualização de QUALQUER moeda: [0]=tipo, [3]=ganho, [9]=saldo. Nos 25
+    // eventos 85 dos diagnósticos de agosto/setembro e nas sessões de 18/10/2026, todos
+    // tinham [0]=3 e vinham colados num 496/497 (Might & Favor) com o MESMO ganho ([4])
+    // e o MESMO saldo ([7]): é o Favor de novo, e a tela somava ele também como "pontos
+    // de facção". O [9] do 496 varia (0, 2, 3): não é o tipo da moeda.
+    private const int MoedaDoFavor = 3;
+
     public event Action? Mudou;
 
     public (long Pontos, long Moedas, long Bandeira, long Might, long Favor) Totais()
@@ -39,6 +46,12 @@ public sealed class FactionTracker
         // [4] quando vier; senão o [3] (o que foi ganho neste evento).
         if (c == GameEventCodes.UpdateCurrency && Cidade(2) && Num(3))
         {
+            // Moeda do Favor: quem conta é o 496 (abaixo). Reconhecido, mas não soma.
+            if (p.TryGetValue(0, out var tipo) && PhotonParam.ToLong(tipo) == MoedaDoFavor && p.ContainsKey(9))
+            {
+                CaptureHealth.Marcar("Facção e Might & Favor");
+                return true;
+            }
             lock (_lock)
             {
                 if (Num(4)) { _moedas += V(3); _pontos += V(4); }

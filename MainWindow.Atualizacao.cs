@@ -53,8 +53,7 @@ public partial class MainWindow
             // localmente nem remotamente por que ninguém recebia atualização.
             try
             {
-                var dir = System.IO.Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp");
+                var dir = XnomercyApp.Network.PastaDados.Raiz;
                 System.IO.Directory.CreateDirectory(dir);
                 System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "update_check.log"),
                     $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {ex.GetType().Name}: {ex.Message}\n");
@@ -67,6 +66,7 @@ public partial class MainWindow
     {
         if (_updateMgr == null || _pendingUpdate == null) return;
         _exitRequested = true;
+        GuardarSessaoAoSair();
         DesassinarEventosEstaticos();
         _capture.Dispose();
         _updateMgr.ApplyUpdatesAndRestart(_pendingUpdate);

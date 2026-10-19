@@ -3,6 +3,10 @@ using System.Reflection;
 using XnomercyApp;
 using XnomercyApp.Network;
 
+// Nunca nos dados de verdade: pasta temporaria se o rodar.ps1 nao definiu (Network/PastaDados.cs).
+if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("XNOMERCY_DADOS")))
+    Environment.SetEnvironmentVariable("XNOMERCY_DADOS", System.IO.Path.Combine(System.IO.Path.GetTempPath(), "xnomercy_teste_" + Guid.NewGuid().ToString("N")));
+
 // Exercita as correcoes da revisao de 18/10/2026 na DLL REAL do app:
 // prata liquida, fama, remontagem de fragmentos por conexao, compra na hora
 // confirmada pela resposta, saude da captura, privacidade do diagnostico,
@@ -155,6 +159,58 @@ PlayerRegistry.HandleEvent(Ev(29, new() { [0] = 9001L, [1] = "Aliado", [8] = "xn
 PlayerRegistry.HandleEvent(Ev(29, new() { [0] = 9002L, [1] = "Inimigo", [8] = "Black Order", [40] = new short[10] }));
 Checar(PlayerRegistry.MesmaGuild("Aliado"), "mesma guild mesmo com maiusculas diferentes");
 Checar(!PlayerRegistry.MesmaGuild("Inimigo") && !PlayerRegistry.MesmaGuild("Desconhecido"), "outra guild e guild desconhecida: fora do filtro");
+
+Console.WriteLine("\n-- 11. arquivo ilegivel nao vira 'vazio gravado por cima' (baus.json de 18/10)");
+string pastaT = Path.Combine(PastaDados.Raiz, "teste_arquivos");
+Directory.CreateDirectory(pastaT);
+string arqBaus = Path.Combine(pastaT, "baus.json");
+File.WriteAllText(arqBaus, "[{\"Guid\":\"AB\",\"Nome\":\"Recursos\",\"Itens\":[{\"Indi");   // cortado no meio
+var baus = new StorageTracker(arqBaus);
+byte[] G16(int n) { var b = new byte[16]; b[0] = (byte)n; return b; }
+baus.HandleEvent(Ev(32, new() { [0] = 5001L, [1] = 52, [2] = 10 }));
+baus.HandleEvent(Ev(99, new() { [0] = 7L, [1] = G16(3), [3] = new long[] { 5001 } }));   // abriu um bau: grava
+var guardado = Directory.GetFiles(pastaT, "baus.json.ilegivel-*");
+Checar(guardado.Length == 1 && File.ReadAllText(guardado[0]).Contains("Recursos"),
+       $"o ilegivel foi GUARDADO de lado antes de gravar ({guardado.Length} copia)");
+File.WriteAllText(arqBaus, "[]"); File.Delete(arqBaus);
+ArquivoSeguro.Gravar(arqBaus, "[{\"Guid\":\"V1\"}]");
+ArquivoSeguro.Gravar(arqBaus, "[{\"Guid\":\"V2\"}]");
+File.WriteAllText(arqBaus, "{lixo");
+Checar(ArquivoSeguro.Ler<List<StorageTracker.Bau>>(arqBaus, out var doBak) && doBak?.Single().Guid == "V1",
+       $"principal estragado: volta da versao anterior (.bak) ({doBak?.FirstOrDefault()?.Guid})");
+
+Console.WriteLine("\n-- 12. historico de sessoes: a mesma sessao nao duplica");
+var ini = new DateTime(2026, 10, 18, 20, 0, 0);
+SessionHistoryStore.Append(new SessionHistoryEntry { StartTime = ini, EndTime = ini.AddHours(1), Fame = 100 });
+SessionHistoryStore.Append(new SessionHistoryEntry { StartTime = ini, EndTime = ini.AddHours(2), Fame = 250 });
+var sess = SessionHistoryStore.Load();
+Checar(sess.Count(s => s.StartTime == ini) == 1 && sess.First().Fame == 250,
+       $"parar e religar / fechar depois de parar: 1 linha, a mais nova ({sess.Count} linha(s))");
+Checar(!File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp", "sessions.json"))
+       || PastaDados.Raiz != Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XnomercyApp"),
+       $"teste gravou na pasta TEMPORARIA, nao nos dados de verdade ({PastaDados.Raiz})");
+
+Console.WriteLine("\n-- 13. 'Voce' vira o seu nome no que sai do app (Discord, CSV)");
+PlayerRegistry.HandleOpResponse(new PhotonOperationResponse(1, 0, null, new() { [0] = 77001L, [2] = "Dono", [8] = "1313", [253] = (short)2 }));
+Checar(PlayerRegistry.NomeParaFora("Você") == "Dono" && PlayerRegistry.NomeParaFora("Outro") == "Outro", "NomeParaFora");
+var luta = new FightHistory.Luta { Eu = "Dono", DanoTotal = 10, Jogadores = { new FightHistory.Linha { Nome = "Você", Dano = 10 } } };
+Checar(luta.Texto().Contains("1. Dono") && luta.Csv().Contains(";Dono;"), "luta salva copiada/exportada com o nome, nao 'Voce'");
+
+Console.WriteLine("\n-- 14. preco do mercado: falha de rede nao vira 'sem preco por 6 horas'");
+try { ItemCatalog.EnsureLoadedAsync().GetAwaiter().GetResult(); } catch { }
+string? uniqT = ItemCatalog.GetUniqueName(9233);
+if (uniqT == null) Console.WriteLine("  info   catalogo de itens indisponivel: teste 14 pulado");
+else
+{
+    ItemValues.BuscarMercado = _ => throw new System.Net.Http.HttpRequestException("sem internet");
+    ItemValues.Valor(9233);
+    Thread.Sleep(1500);
+    var merc = (System.Collections.IDictionary)typeof(ItemValues).GetField("_mercado", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!;
+    var quando = merc.Contains(uniqT) ? ((ValueTuple<long, DateTime>)merc[uniqT]!).Item2 : DateTime.MaxValue;
+    Checar(DateTime.UtcNow - quando > TimeSpan.FromHours(5.9),
+           $"depois da falha o item volta a ser perguntado em ~2 min (marcado {DateTime.UtcNow - quando:hh\\:mm} atras de proposito)");
+    ItemValues.BuscarMercado = null;
+}
 
 Console.WriteLine(falhas == 0 ? "\nOK: correcoes da revisao" : $"\nFALHOU: {falhas}");
 return falhas == 0 ? 0 : 1;
