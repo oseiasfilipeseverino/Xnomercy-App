@@ -11,6 +11,9 @@ int falhas = 0;
 void Checar(bool cond, string rotulo) { if (!cond) falhas++; Console.WriteLine($"  {(cond ? "ok   " : "FALHA")}  {rotulo}"); }
 PhotonEvent Ev(int code, Dictionary<byte, object?> p) { p[252] = (short)code; return new(1, p); }
 
+// catalogo de itens (cache local; baixa so se nao tiver) pro teste da arma
+try { ItemCatalog.EnsureLoadedAsync().GetAwaiter().GetResult(); } catch { }
+
 var t = new Thread(() =>
 {
     var app = new App();
@@ -28,10 +31,33 @@ var t = new Thread(() =>
     Console.WriteLine($"  info   tela: fama '{Txt("TxtFameTotal").Text}', prata '{Txt("TxtSilverTotal").Text}'");
     Checar(Txt("TxtFameTotal").Text.Replace(".", "").Replace(",", "") == "10114", "fama do evento real aparece na aba (10.114)");
     Checar(Txt("TxtSilverTotal").Text.Replace(".", "").Replace(",", "") == "329", "prata liquida do evento real aparece (385 - 19 - 36 = 329)");
+
+    // "So minha guild" no Loot Log: o CSV exportado sai so com a sua guild
+    PlayerRegistry.HandleOpResponse(new PhotonOperationResponse(1, 0, null, new() { [0] = 64284L, [2] = "Dono", [8] = "1313", [58] = "XNoMercy", [253] = (short)2 }));
+    on.Invoke(w, new object[] { Ev(29, new() { [0] = 9001L, [1] = "Aliado", [8] = "xnomercy", [40] = new short[10] }) });
+    on.Invoke(w, new object[] { Ev(29, new() { [0] = 9002L, [1] = "Inimigo", [8] = "Black Order", [40] = new short[10] }) });
+    var feed = (System.Collections.ObjectModel.ObservableCollection<LootFeedRow>)typeof(MainWindow)
+        .GetField("_lootFeed", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(w)!;
+    foreach (var (quem, item) in new[] { ("Aliado", "Bolsa"), ("Inimigo", "Capa"), ("Você", "Espada") })
+        feed.Add(new LootFeedRow { Time = "12:00:00", Timestamp = DateTime.Now, Looter = quem, Item = item, From = "Morto", ItemUniqueName = "T4_BAG", ItemPlainName = item, Quantity = 1 });
+    var csv = typeof(MainWindow).GetMethod("MontarCsvLoot", BindingFlags.NonPublic | BindingFlags.Instance)!;
+    ((CheckBox)w.FindName("ChkGuildOnlyLoot")).IsChecked = false;
+    object[] a0 = { 0 };
+    csv.Invoke(w, a0);
+    Checar((int)a0[0] == 3, $"sem filtro: exporta todo mundo ({a0[0]})");
+    ((CheckBox)w.FindName("ChkGuildOnlyLoot")).IsChecked = true;
+    object[] a1 = { 0 };
+    var texto = (string)csv.Invoke(w, a1)!;
+    Checar((int)a1[0] == 2 && texto.Contains("Aliado;xnomercy") && texto.Contains("Você;XNoMercy") && !texto.Contains("Inimigo"),
+           $"'So minha guild' marcado: CSV so com a guild (voce + aliado, sem o inimigo) ({a1[0]})");
+
+    // Arma no medidor: a sua vem do jogo (90), e quem ja estava na tela tambem
+    on.Invoke(w, new object[] { Ev(90, new() { [0] = 64284L, [2] = new short[] { 9233, 0, 0, 0, 0, 0, 0, 0, 0, 0 } }) });
+    Checar(!string.IsNullOrEmpty(GroupGear.MinhaArma()), $"sua arma lida do jogo, sem depender da API ({GroupGear.MinhaArma()})");
     w.Close();
     app.Shutdown();
 });
 t.SetApartmentState(ApartmentState.STA);
 t.Start(); t.Join();
-Console.WriteLine(falhas == 0 ? "\nOK: janela recebe fama e prata" : $"\nFALHOU: {falhas}");
+Console.WriteLine(falhas == 0 ? "\nOK: janela recebe fama e prata; export do filtro de guild; sua arma" : $"\nFALHOU: {falhas}");
 return falhas == 0 ? 0 : 1;

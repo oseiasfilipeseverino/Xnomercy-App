@@ -64,7 +64,18 @@ public static class GroupGear
             if (!p.TryGetValue(2, out var e) || Lista(e) is not int[] equip) return;
             if (id == PlayerRegistry.SelfObjectId) _meuEquipEvento = equip;
             else if (_porId.TryGetValue(id, out var info)) info.Equip = equip;
-            else return;
+            else
+            {
+                // Quem já estava na tela quando a captura ligou não tem NewCharacter: antes
+                // a troca de item dele era jogada fora e o medidor ficava sem a arma. Se o
+                // nome já é conhecido por outro caminho, guarda (sessão real de 18/10/2026).
+                string nome = PlayerRegistry.NameOf(id);
+                if (nome.Length == 0 || nome.StartsWith('#') || nome == "Você") return;
+                var nova = new Info { Nome = nome, Equip = equip };
+                _porId[id] = nova;
+                _idPorNome[nome] = id;
+                _ultimoPorNome[nome] = nova;
+            }
             Mudou?.Invoke();
         }
     }
@@ -79,6 +90,17 @@ public static class GroupGear
     /// <summary>Arma (unique name) do último equipamento visto desse nome — pro ícone do medidor.</summary>
     public static string? ArmaPorNome(string nome) =>
         _ultimoPorNome.TryGetValue(nome, out var i) && i.Equip is { Length: > 0 } e && e[0] > 0 ? ItemCatalog.GetUniqueName(e[0]) : null;
+
+    /// <summary>
+    /// A SUA arma (unique name): do jogo quando você troca de item, senão da API do Albion.
+    /// O medidor usava só a API, que atrasa — o "Você" ficava sem ícone enquanto a aba
+    /// Grupo já mostrava a arma (18/10/2026).
+    /// </summary>
+    public static string? MinhaArma()
+    {
+        if (_meuEquipEvento is { Length: > 0 } e && e[0] > 0) return ItemCatalog.GetUniqueName(e[0]);
+        return _meuEquipApi is { Length: > 0 } a && !string.IsNullOrEmpty(a[0]) ? a[0] : null;
+    }
 
     /// <summary>Resposta de INSPEÇÃO: [0]=GUID [1]=equipamento [3]=IP real. Reconhecida pelo formato.</summary>
     public static bool HandleOpResponse(PhotonOperationResponse op) => HandleInspecao(op.Parameters);

@@ -226,18 +226,19 @@ public partial class MainWindow
         int exportadas = 0;
         foreach (var r in _lootFeed)
         {
+            if (!LootRowVisible(r)) continue;                     // exporta o que está na tela ("Só minha guild" etc.)
             if (r.IsSilver || r.IsMob) continue;                  // ver comentário acima
             if (r.ItemUniqueName.Length == 0) continue;            // sem item_id o Viewer não resolve
             if (r.Looter.Length == 0 || r.From.Length == 0) continue;
             sb.Append(r.Timestamp.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")).Append(';')
               .Append(';')                                         // looted_by__alliance
-              .Append(Csv(r.LooterGuild)).Append(';')
+              .Append(Csv(GuildAtual(r.Looter, r.LooterGuild))).Append(';')
               .Append(Csv(r.Looter)).Append(';')
               .Append(Csv(r.ItemUniqueName)).Append(';')
               .Append(Csv(r.ItemPlainName)).Append(';')
               .Append(r.Quantity).Append(';')
               .Append(';')                                         // looted_from__alliance
-              .Append(Csv(r.FromGuild)).Append(';')
+              .Append(Csv(GuildAtual(r.From, r.FromGuild))).Append(';')
               .AppendLine(Csv(r.From));
             exportadas++;
         }
@@ -264,14 +265,11 @@ public partial class MainWindow
             DefaultExt = ".csv",
         };
         if (dlg.ShowDialog() != true) return;
-        var sb = new System.Text.StringBuilder();
-        sb.AppendLine("Hora;Quem pegou;Item;De quem;Valor estimado (prata)");
-        foreach (var r in _lootFeed)
-            sb.AppendLine($"{r.Time};{Csv(r.Looter)};{Csv(r.Item)};{Csv(r.From)};{(r.Valor is long v ? v.ToString() : "")}");
+        string csv = MontarCsvLoot(out int linhas);
         try
         {
-            System.IO.File.WriteAllText(dlg.FileName, sb.ToString(), System.Text.Encoding.UTF8);
-            TxtCaptureStatus.Text = $"Exportado: {System.IO.Path.GetFileName(dlg.FileName)}";
+            System.IO.File.WriteAllText(dlg.FileName, csv, System.Text.Encoding.UTF8);
+            TxtCaptureStatus.Text = $"Exportado: {linhas} linha(s) — {System.IO.Path.GetFileName(dlg.FileName)}";
         }
         catch (Exception ex)
         {
@@ -279,6 +277,29 @@ public partial class MainWindow
             // não dava nenhum feedback — parecia que o botão "Exportar CSV" não fazia nada.
             TxtCaptureStatus.Text = $"Falha ao exportar: {ex.Message}";
         }
+    }
+
+    /// <summary>CSV do Loot Log com os mesmos filtros da tela ("Só minha guild", "Só meu grupo", mobs).</summary>
+    private string MontarCsvLoot(out int linhas)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("Hora;Quem pegou;Guild;Item;De quem;Valor estimado (prata)");
+        linhas = 0;
+        foreach (var r in _lootFeed)
+        {
+            if (!LootRowVisible(r)) continue;
+            sb.AppendLine($"{r.Time};{Csv(r.Looter)};{Csv(GuildAtual(r.Looter, r.LooterGuild))};{Csv(r.Item)};{Csv(r.From)};{(r.Valor is long v ? v.ToString() : "")}");
+            linhas++;
+        }
+        return sb.ToString();
+    }
+
+    // A guild de quem pegou pode chegar DEPOIS do loot (o jogador entra na tela, ou
+    // só aparece após a troca de mapa): na hora de exportar, usa a mais nova que souber.
+    private static string GuildAtual(string nome, string guildDaLinha)
+    {
+        string g = nome == "Você" ? PlayerRegistry.OwnGuild : PlayerRegistry.GuildOfName(nome);
+        return string.IsNullOrWhiteSpace(g) ? guildDaLinha : g;
     }
 
     private static string Csv(string s) =>

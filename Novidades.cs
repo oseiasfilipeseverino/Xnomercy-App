@@ -16,6 +16,11 @@ public static class Novidades
 {
     public static readonly (string Versao, string[] Itens)[] Notas =
     {
+        ("1.1.7", new[]
+        {
+            "Exportar CSV e Exportar p/ Loot Logger seguem os filtros da tela: com \"Só minha guild\" marcado, o arquivo sai só com a sua guild. O CSV ganhou a coluna Guild.",
+            "Medidor de Dano: a sua arma aparece do lado do \"Você\" (vem direto do jogo) e a arma dos outros acompanha quando eles trocam de item.",
+        }),
         ("1.1.6", new[]
         {
             "Fama corrigida para quem tem Premium: o app contava o bônus da Premium duas vezes e mostrava 50% a mais.",

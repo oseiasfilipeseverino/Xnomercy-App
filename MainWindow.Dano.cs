@@ -86,14 +86,18 @@ public partial class MainWindow
             {
                 // Você nunca tem PlayerInfo (o jogo não manda NewCharacter de você
                 // mesmo) — a arma vem de uma consulta separada à API pública do Albion.
-                icon = PlayerRegistry.OwnWeaponIconUrl;
+                icon = GroupGear.MinhaArma() is string minha && minha.Length > 0
+                    ? $"https://render.albiononline.com/v1/item/{minha}.png?size=64"
+                    : PlayerRegistry.OwnWeaponIconUrl;
             }
             else
             {
                 var info = PlayerRegistry.Get(e.LastObjectId);
                 // Quem saiu da tela não tem mais o número (Leave): a arma vem do último
                 // equipamento visto pelo nome.
-                var uniq = info != null && info.MainHand > 0 ? ItemCatalog.GetUniqueName(info.MainHand) : GroupGear.ArmaPorNome(e.Name);
+                // O GroupGear acompanha a troca de item (90); o NewCharacter só a arma da chegada.
+                var uniq = GroupGear.ArmaPorNome(e.Name)
+                           ?? (info != null && info.MainHand > 0 ? ItemCatalog.GetUniqueName(info.MainHand) : null);
                 if (!string.IsNullOrEmpty(uniq))
                     icon = $"https://render.albiononline.com/v1/item/{uniq}.png?size=64";
             }
