@@ -16,6 +16,10 @@ public static class Novidades
 {
     public static readonly (string Versao, string[] Itens)[] Notas =
     {
+        ("1.1.10", new[]
+        {
+            "Corrigido para quem usa ExitLag: o app contava fama, prata, loot e dano EM DOBRO (o ExitLag manda cada pacote por duas rotas e o app somava as duas cópias).",
+        }),
         ("1.1.9", new[]
         {
             "Registro de energia da guild vai sozinho pro site quando alguém da gestão abre a aba de Energia no jogo, sem clicar. Site fora do ar ou sem login: o app guarda e manda depois.",

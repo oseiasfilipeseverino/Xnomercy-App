@@ -60,6 +60,30 @@ Checar(saidas.Count == 2, $"duas mensagens inteiras ({saidas.Count})");
 Checar(saidas.Count == 2 && saidas.Any(x => x.SequenceEqual(msgA)) && saidas.Any(x => x.SequenceEqual(msgB)),
        "cada uma so com os proprios bytes (antes A1+B2 fechavam uma mensagem misturada)");
 
+// ── 2b. Comando repetido (ExitLag manda cada pacote por duas rotas) ─────────
+Console.WriteLine("\n-- 2b. o mesmo comando chegando duas vezes conta UMA (ExitLag, 20/10/2026)");
+byte[] Confiavel(short peer, int challenge, int timestamp, int seq, byte[] mensagem)
+{
+    var b = new List<byte>();
+    void I16(short v) { b.Add((byte)(v >> 8)); b.Add((byte)v); }
+    void I32(int v) { b.Add((byte)(v >> 24)); b.Add((byte)(v >> 16)); b.Add((byte)(v >> 8)); b.Add((byte)v); }
+    I16(peer); b.Add(0); b.Add(1); I32(timestamp); I32(challenge);   // cabecalho do pacote (o timestamp muda por rota)
+    b.Add(6); b.Add(0); b.Add(1); b.Add(0); I32(12 + mensagem.Length); I32(seq);   // SendReliable
+    b.AddRange(mensagem);
+    return b.ToArray();
+}
+EnetPacketParser.Reset();
+var fama = Enumerable.Repeat((byte)0x82, 24).ToArray();
+int Saidas(byte[] p) => EnetPacketParser.ExtractApplicationPayloads(p).Count();
+int contadas = Saidas(Confiavel(7, 999, 1000, 41, fama)) + Saidas(Confiavel(7, 999, 1003, 41, fama));   // mesma seq, pacote diferente por fora
+Checar(contadas == 1, $"mesma mensagem por duas rotas: conta 1 ({contadas}; antes 2 — fama e prata em dobro)");
+contadas = Saidas(Confiavel(7, 999, 1010, 42, fama));
+Checar(contadas == 1, "o MESMO conteudo com sequencia nova (fama igual de novo, legitima): conta");
+contadas = Saidas(Confiavel(8, 555, 1000, 41, fama));
+Checar(contadas == 1, "outra conexao com a mesma sequencia: conta");
+Checar(EnetPacketParser.ComandosRepetidos == 1, $"repetidos ignorados: {EnetPacketParser.ComandosRepetidos}");
+EnetPacketParser.Reset();
+
 // ── 3. Compra na hora confirmada pela resposta do jogo ───────────────────────
 Console.WriteLine("\n-- 3. compra na hora: vale so se o jogo aceitar");
 var m = new MarketMailTracker();

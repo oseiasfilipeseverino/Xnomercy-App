@@ -92,6 +92,8 @@ public static class SessaoGravada
                 ["app"] = versaoApp,
                 ["gravadoUtc"] = _inicioUtc.ToString("o"),
                 ["eu"] = "Voce",
+                // Cópias do mesmo comando ignoradas (ExitLag por duas rotas, reenvio do servidor).
+                ["comandosRepetidos"] = EnetPacketParser.ComandosRepetidos,
                 ["deslocamentos"] = new JsonObject
                 {
                     ["alto"] = EventOffset.Delta, ["dano"] = EventOffset.DeltaDano, ["nomes"] = EventOffset.DeltaNomes,

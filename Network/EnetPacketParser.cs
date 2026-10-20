@@ -49,7 +49,50 @@ public static class EnetPacketParser
     private static readonly TimeSpan PendingTtl = TimeSpan.FromSeconds(10);
     private const int MaxMessageBytes = 4 * 1024 * 1024;   // sanidade contra header corrompido
 
-    public static void Reset() => _pending.Clear();
+    // ── Comando repetido (20/10/2026) ─────────────────────────────────────────
+    // Com o ExitLag, 51% de uma sessão real chegou EM DOBRO: ele manda cada pacote
+    // por duas rotas, e cada cópia vem com um embrulho diferente por fora — o
+    // dedup do pacote inteiro (PacketCaptureService.IsDuplicatePayload) não pega.
+    // O resultado era fama, prata, loot e dano contados duas vezes. O servidor
+    // também reenvia comando confiável quando acha que o anterior se perdeu.
+    //
+    // O comando em si é idêntico nas cópias (traz a própria sequência), e dois
+    // comandos diferentes nunca são iguais byte a byte: a chave é a conexão +
+    // o hash dos bytes do comando, guardada por alguns segundos.
+    private static readonly Dictionary<(short Peer, int Challenge, ulong Hash), long> _comandosVistos = new();
+    private static readonly object _comandosLock = new();
+    private static readonly long JanelaComandoTicks = TimeSpan.FromSeconds(10).Ticks;
+    private const int MaxComandosVistos = 50_000;
+
+    /// <summary>Quantos comandos repetidos foram ignorados (diagnóstico).</summary>
+    public static long ComandosRepetidos;
+
+    private static bool ComandoJaVisto(short peer, int challenge, byte[] dados, int inicio, int tamanho, long agora)
+    {
+        ulong h = 14695981039346656037UL;
+        for (int i = inicio; i < inicio + tamanho; i++) { h ^= dados[i]; h *= 1099511628211UL; }
+        var chave = (peer, challenge, h);
+        lock (_comandosLock)
+        {
+            if (_comandosVistos.TryGetValue(chave, out var visto) && agora - visto < JanelaComandoTicks)
+            {
+                ComandosRepetidos++;
+                return true;
+            }
+            _comandosVistos[chave] = agora;
+            if (_comandosVistos.Count > MaxComandosVistos)
+                foreach (var k in _comandosVistos.Where(kv => agora - kv.Value >= JanelaComandoTicks).Select(kv => kv.Key).ToList())
+                    _comandosVistos.Remove(k);
+            return false;
+        }
+    }
+
+    public static void Reset()
+    {
+        _pending.Clear();
+        lock (_comandosLock) _comandosVistos.Clear();
+        ComandosRepetidos = 0;
+    }
 
     private static void PrunePending(long nowTicks)
     {
@@ -100,6 +143,14 @@ public static class EnetPacketParser
                 yield break; // pacote truncado/mal formado — para a leitura aqui
 
             int payloadLen = (int)payloadLenLong;
+
+            // Cópia do mesmo comando (ExitLag por duas rotas, reenvio do servidor): pula.
+            if ((commandType == CommandSendReliable || commandType == CommandSendUnreliable || commandType == CommandSendFragment)
+                && ComandoJaVisto(peerId, challenge, udpData, cmdStart, commandLength, DateTime.UtcNow.Ticks))
+            {
+                r.Skip(payloadLen);
+                continue;
+            }
 
             if (commandType == CommandSendUnreliable)
             {
