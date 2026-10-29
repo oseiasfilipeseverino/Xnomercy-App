@@ -7,3 +7,6 @@ publish_test/
 release_test/
 publish/
 Releases/
+# Registro das ferramentas do Claude Code (comandos e caminhos da maquina).
+receipts/
+review-receipts/
