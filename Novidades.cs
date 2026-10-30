@@ -16,6 +16,11 @@ public static class Novidades
 {
     public static readonly (string Versao, string[] Itens)[] Notas =
     {
+        ("1.1.12", new[]
+        {
+            "Histórico de sessões mais seguro: se o antivírus segurar o arquivo por um instante, o histórico não some mais, e o app guarda uma cópia da versão anterior.",
+            "Os arquivos de erro do app param de crescer sem limite (ficam em até 1 MB).",
+        }),
         ("1.1.11", new[]
         {
             "Com ExitLag, \"Só minha guild\" deve achar a sua guild: o app jogava fora a mensagem do jogo que traz a guild enquanto procurava a porta do ExitLag.",
