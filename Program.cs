@@ -76,12 +76,37 @@ public static class Program
             {
                 UseShellExecute = true,
                 Verb = "runas",
-                Arguments = string.Join(' ', args),
+                Arguments = JuntarArgumentos(args),
             });
         }
         catch (System.ComponentModel.Win32Exception)
         {
             // Usuário cancelou o UAC — só fecha, sem o app pela metade.
         }
+    }
+
+    /// <summary>
+    /// Monta a linha de comando pro app relançado receber os MESMOS argumentos.
+    /// Era string.Join(' ', args): um argumento com espaço (caminho em
+    /// "C:\Users\Fulano Silva\...") chegava partido em dois (revisão de 29/10, A-09).
+    /// Regras do Windows: aspas em volta, \ antes de aspas e no fim dobrada.
+    /// </summary>
+    public static string JuntarArgumentos(IEnumerable<string> args) => string.Join(' ', args.Select(Citar));
+
+    private static string Citar(string a)
+    {
+        if (a.Length > 0 && a.IndexOfAny(new[] { ' ', '\t', '\n', '\v', '"' }) < 0) return a;
+        var sb = new System.Text.StringBuilder("\"");
+        int barras = 0;
+        foreach (char ch in a)
+        {
+            if (ch == '\\') { barras++; continue; }
+            if (ch == '"') sb.Append('\\', barras * 2 + 1);
+            else sb.Append('\\', barras);
+            sb.Append(ch);
+            barras = 0;
+        }
+        sb.Append('\\', barras * 2).Append('"');
+        return sb.ToString();
     }
 }

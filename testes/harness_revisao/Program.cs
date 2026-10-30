@@ -246,5 +246,65 @@ else
     ItemValues.BuscarMercado = null;
 }
 
+// -- 15. Revisao de 29/10: A-08, A-09, A-10 -----------------------------------
+Console.WriteLine("\n-- 15. arquivo travado, argumentos com espaco, log com teto");
+var pasta15 = PastaDados.Raiz;
+Directory.CreateDirectory(pasta15);
+var arqSess = Path.Combine(pasta15, "sessions.json");
+SessionHistoryStore.Clear();
+var ini15 = new DateTime(2026, 10, 29, 20, 0, 0);
+SessionHistoryStore.Append(new SessionHistoryEntry { StartTime = ini15, EndTime = ini15.AddHours(1), Fame = 1 });
+SessionHistoryStore.Append(new SessionHistoryEntry { StartTime = ini15.AddDays(1), EndTime = ini15.AddDays(1).AddHours(1), Fame = 2 });
+// Antivirus segurando o arquivo: ninguem le, mas mover ainda e' permitido
+// (FileShare.Delete) - era assim que o historico ia pro .corrompido.
+using (new FileStream(arqSess, FileMode.Open, FileAccess.Read, FileShare.Delete))
+{
+    Checar(!ArquivoSeguro.Ler<List<SessionHistoryEntry>>(arqSess, out _), "arquivo travado: Ler devolve false (quem chama nao grava por cima)");
+    SessionHistoryStore.Append(new SessionHistoryEntry { StartTime = ini15.AddDays(2), EndTime = ini15.AddDays(2).AddHours(1), Fame = 3 });
+}
+Checar(!Directory.GetFiles(pasta15, "sessions.json.*").Any(x => x.Contains("ilegivel") || x.Contains("corrompido")),
+       "travado nao e' estragado: o historico nao foi tirado do lugar");
+Checar(SessionHistoryStore.Load().Count == 2, $"as 2 sessoes continuam la ({SessionHistoryStore.Load().Count}; antes o historico recomecava vazio)");
+Checar(File.Exists(arqSess + ".bak"), "sessions.json agora tem .bak");
+File.WriteAllText(arqSess, "[{\"StartTime\":");    // estragado de verdade
+Checar(SessionHistoryStore.Load().Count == 1, "estragado: volta pela versao anterior (.bak)");
+SessionHistoryStore.Clear();
+Checar(SessionHistoryStore.Load().Count == 0, "limpar o historico apaga o .bak junto (nao reaparece)");
+
+string[] argsOrig = { "--processStart", @"C:\Users\Fulano Silva\app.exe", "diz \"oi\"", @"pasta com espaco\", "", "simples" };
+var linhaCmd = XnomercyApp.Program.JuntarArgumentos(argsOrig);
+var volta = Win.Partir("app.exe " + linhaCmd);
+Checar(volta.Skip(1).SequenceEqual(argsOrig),
+       $"relancar como admin: o Windows parte a linha de volta nos MESMOS argumentos ({string.Join(" | ", volta.Skip(1))})");
+
+LogArquivo.TetoBytes = 200;
+var errLog = Path.Combine(pasta15, "errors.log");
+for (int i = 0; i < 20; i++) LogArquivo.Erro("teste", new string('x', 50));
+Checar(new FileInfo(errLog).Length <= 400 && File.Exists(errLog + ".1"),
+       $"errors.log passa do teto e vira .1 ({new FileInfo(errLog).Length} bytes; antes crescia pra sempre)");
+LogArquivo.TetoBytes = 1024 * 1024;
+
 Console.WriteLine(falhas == 0 ? "\nOK: correcoes da revisao" : $"\nFALHOU: {falhas}");
 return falhas == 0 ? 0 : 1;
+
+static class Win
+{
+    [System.Runtime.InteropServices.DllImport("shell32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr CommandLineToArgvW(string linha, out int n);
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+    private static extern IntPtr LocalFree(IntPtr p);
+
+    /// <summary>Parte a linha como o Windows parte pro programa (a mesma regra do .NET).</summary>
+    public static string[] Partir(string linha)
+    {
+        var p = CommandLineToArgvW(linha, out int n);
+        try
+        {
+            var r = new string[n];
+            for (int i = 0; i < n; i++)
+                r[i] = System.Runtime.InteropServices.Marshal.PtrToStringUni(System.Runtime.InteropServices.Marshal.ReadIntPtr(p, i * IntPtr.Size))!;
+            return r;
+        }
+        finally { LocalFree(p); }
+    }
+}

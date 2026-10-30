@@ -165,9 +165,14 @@ public sealed class PacketCaptureService : IDisposable
 
     private void SampleHex(byte[] appPayload)
     {
-        if (DiagSampleHex.Count >= MaxSamples) return;
-        string hex = Convert.ToHexString(appPayload);
-        DiagSampleHex.Add(hex);
+        string hex;
+        // Uma thread por adaptador: List sem trava podia passar do teto ou corromper.
+        lock (DiagSampleHex)
+        {
+            if (DiagSampleHex.Count >= MaxSamples) return;
+            hex = Convert.ToHexString(appPayload);
+            DiagSampleHex.Add(hex);
+        }
         try
         {
             var dir = XnomercyApp.Network.PastaDados.Raiz;
@@ -473,8 +478,6 @@ public sealed class PacketCaptureService : IDisposable
     {
         try
         {
-            var dir = XnomercyApp.Network.PastaDados.Raiz;
-            System.IO.Directory.CreateDirectory(dir);
             var sb = new System.Text.StringBuilder();
             sb.AppendLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Captura iniciada — adaptadores em uso:");
             foreach (var d in _devices)
@@ -484,7 +487,7 @@ public sealed class PacketCaptureService : IDisposable
                 if (_devices.Any(x => x.Name == d.Name)) continue;
                 sb.AppendLine($"  fora:  {(string.IsNullOrWhiteSpace(d.Description) ? d.Name : d.Description)}");
             }
-            System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "adaptadores.log"), sb.ToString());
+            LogArquivo.Anexar("adaptadores.log", sb.ToString());   // com teto de tamanho
         }
         catch { /* diagnostico nunca derruba a captura */ }
     }

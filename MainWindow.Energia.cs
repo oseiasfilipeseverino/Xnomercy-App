@@ -211,12 +211,7 @@ public partial class MainWindow
 
     private static void LogEnergia(string msg)
     {
-        try
-        {
-            File.AppendAllText(Path.Combine(Path.GetDirectoryName(ArquivoEnergia)!, "errors.log"),
-                $"[{System.DateTime.Now:yyyy-MM-dd HH:mm:ss}] [Energia] {msg}\n");
-        }
-        catch { }
+        LogArquivo.Erro("Energia", msg);
     }
 
     private static System.Text.Json.Nodes.JsonObject? TryParseObj(string s)

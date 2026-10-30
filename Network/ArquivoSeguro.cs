@@ -31,11 +31,22 @@ public static class ArquivoSeguro
         if (!File.Exists(caminho))
         {
             // Sem o principal mas com o .bak (o app fechou no meio de uma troca): usa o .bak.
-            if (File.Exists(bak) && TentarLer(bak, out valor)) Log($"{Path.GetFileName(caminho)} sumiu; usando o .bak");
+            if (File.Exists(bak) && TentarLer(bak, out valor) == Leitura.Ok) Log($"{Path.GetFileName(caminho)} sumiu; usando o .bak");
             return true;
         }
-        if (TentarLer(caminho, out valor)) return true;
-        if (File.Exists(bak) && TentarLer(bak, out valor))
+        var lido = TentarLer(caminho, out valor);
+        if (lido == Leitura.Ok) return true;
+        if (lido == Leitura.Ocupado)
+        {
+            // Travado (antivírus, backup, outra instância) não é estragado: antes
+            // caía no "ilegível", ia pro .bak ou era tirado do lugar, e o app
+            // recomeçava do zero por um travamento de um segundo (revisão de
+            // 29/10, A-08). Fica onde está e quem chamou não grava por cima.
+            Log($"{Path.GetFileName(caminho)} ocupado por outro programa; nao vou gravar por cima agora");
+            valor = default;
+            return false;
+        }
+        if (File.Exists(bak) && TentarLer(bak, out valor) == Leitura.Ok)
         {
             Log($"{Path.GetFileName(caminho)} ilegivel; usando o .bak");
             return true;
@@ -77,25 +88,34 @@ public static class ArquivoSeguro
 
     public static bool GravarJson<T>(string caminho, T valor) => Gravar(caminho, JsonSerializer.Serialize(valor));
 
-    private static bool TentarLer<T>(string caminho, out T? valor)
+    private enum Leitura { Ok, Ilegivel, Ocupado }
+
+    /// <summary>Ocupado = não deu pra abrir (tenta 3 vezes); Ilegivel = abriu e o conteúdo não é JSON válido.</summary>
+    private static Leitura TentarLer<T>(string caminho, out T? valor)
     {
         valor = default;
-        try
+        for (int tentativa = 1; ; tentativa++)
         {
-            valor = JsonSerializer.Deserialize<T>(File.ReadAllText(caminho));
-            return true;
+            string texto;
+            try { texto = File.ReadAllText(caminho); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                if (ex is FileNotFoundException) return Leitura.Ilegivel;
+                if (tentativa >= 3) return Leitura.Ocupado;
+                System.Threading.Thread.Sleep(200);
+                continue;
+            }
+            try
+            {
+                valor = JsonSerializer.Deserialize<T>(texto);
+                return Leitura.Ok;
+            }
+            catch { return Leitura.Ilegivel; }
         }
-        catch { return false; }
     }
 
     private static void Log(string msg)
     {
-        try
-        {
-            var dir = XnomercyApp.Network.PastaDados.Raiz;
-            Directory.CreateDirectory(dir);
-            File.AppendAllText(Path.Combine(dir, "errors.log"), $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [Arquivo] {msg}\n");
-        }
-        catch { /* sem log não há o que fazer */ }
+        LogArquivo.Erro("Arquivo", msg);
     }
 }

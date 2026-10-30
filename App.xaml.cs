@@ -39,14 +39,8 @@ public partial class App : Application
 
     private static void Log(Exception ex)
     {
-        try
-        {
-            var dir = XnomercyApp.Network.PastaDados.Raiz;
-            Directory.CreateDirectory(dir);
-            File.AppendAllText(Path.Combine(dir, "errors.log"),
-                $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {ex}\n\n");
-        }
-        catch { /* não há o que fazer se nem o log grava */ }
+        // Com teto de tamanho (ver LogArquivo).
+        XnomercyApp.Network.LogArquivo.Anexar("errors.log", $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {ex}\n\n");
 
         // Não vai sozinho pra lugar nenhum (desde 18/10/2026): fica no errors.log e o
         // player manda pelo botão "Enviar erro p/ liderança" se quiser.

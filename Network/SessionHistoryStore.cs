@@ -1,5 +1,4 @@
 using System.IO;
-using System.Text.Json;
 
 namespace XnomercyApp.Network;
 
@@ -35,38 +34,22 @@ public static class SessionHistoryStore
     public static List<SessionHistoryEntry> Load() => TryLoad(out var list) ? list : new();
 
     /// <summary>
-    /// Lê o histórico separando "não tem arquivo" de "não consegui ler". A
-    /// diferença importa: sem ela, uma falha de leitura devolvia lista vazia e o
-    /// Append gravava por cima — o histórico inteiro sumia de vez. Devolve false
-    /// só quando o arquivo existe mas não pôde ser lido.
+    /// Lê pelo ArquivoSeguro, como baús, mapas e lutas (revisão de 29/10, A-08).
+    /// Antes qualquer falha de leitura, até o antivírus segurando o arquivo por um
+    /// instante, era "corrompido": o histórico ia pra sessions.json.corrompido e
+    /// recomeçava vazio, e não havia .bak pra voltar. Devolve false quando não deu
+    /// pra ler e o arquivo continua lá — aí ninguém grava por cima.
     /// </summary>
     private static bool TryLoad(out List<SessionHistoryEntry> list)
     {
-        list = new();
-        if (!File.Exists(FilePath)) return true;
-        try
-        {
-            var json = File.ReadAllText(FilePath);
-            list = JsonSerializer.Deserialize<List<SessionHistoryEntry>>(json) ?? new();
-            return true;
-        }
-        catch (Exception ex)
-        {
-            LogLocal($"falha ao ler o historico: {ex.Message}");
-            return false;
-        }
+        bool ok = ArquivoSeguro.Ler<List<SessionHistoryEntry>>(FilePath, out var lida);
+        list = lida ?? new();
+        return ok;
     }
 
     private static void LogLocal(string msg)
     {
-        try
-        {
-            var dir = XnomercyApp.Network.PastaDados.Raiz;
-            Directory.CreateDirectory(dir);
-            File.AppendAllText(Path.Combine(dir, "errors.log"),
-                $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [SessionHistory] {msg}\n");
-        }
-        catch { /* não há o que fazer se nem o log grava */ }
+        LogArquivo.Erro("SessionHistory", msg);
     }
 
     public static void Append(SessionHistoryEntry entry)
@@ -75,21 +58,11 @@ public static class SessionHistoryStore
         {
             if (!TryLoad(out var list))
             {
-                // Não deu pra ler o que já existia. Gravar agora escreveria uma
-                // lista com UMA entrada por cima de tudo. Guarda o ilegível de
-                // lado — assim dá pra recuperar depois — e recomeça do zero.
-                var quebrado = FilePath + ".corrompido";
-                try
-                {
-                    if (File.Exists(quebrado)) File.Delete(quebrado);
-                    File.Move(FilePath, quebrado);
-                    LogLocal($"historico ilegivel movido para {quebrado}");
-                }
-                catch (Exception ex)
-                {
-                    LogLocal($"nao consegui preservar o historico ilegivel: {ex.Message}");
-                    return;   // na dúvida, não escreve — melhor não gravar do que apagar
-                }
+                // Não deu pra ler o que já existia (ocupado, ou ilegível sem ter
+                // como guardar de lado). Gravar agora escreveria UMA entrada por
+                // cima de tudo: na dúvida, esta sessão fica sem registro.
+                LogLocal("historico nao lido; esta sessao nao foi gravada");
+                return;
             }
             // Mesma sessão (mesmo início) guardada de novo — parar e religar a captura, ou
             // fechar o app depois de já ter parado: substitui, não duplica (o sessions.json
@@ -97,21 +70,8 @@ public static class SessionHistoryStore
             list.RemoveAll(x => x.StartTime == entry.StartTime);
             list.Insert(0, entry);
             if (list.Count > MaxEntries) list.RemoveRange(MaxEntries, list.Count - MaxEntries);
-            var dir = XnomercyApp.Network.PastaDados.Raiz;
-            Directory.CreateDirectory(dir);
-
-            // Grava num temporário e só então troca pelo definitivo. WriteAllText
-            // direto no arquivo real trunca antes de escrever: se o app fechasse
-            // (ou faltasse energia) no meio, o sessions.json ficava cortado.
-            // Com o troco atômico, o arquivo antigo continua íntegro até o novo
-            // estar completo — e se mesmo assim vier ilegível, o TryLoad acima
-            // guarda o original em vez de deixar a gravação apagar tudo.
-            var tmp = FilePath + ".tmp";
-            File.WriteAllText(tmp, JsonSerializer.Serialize(list));
-            if (File.Exists(FilePath))
-                File.Replace(tmp, FilePath, null);
-            else
-                File.Move(tmp, FilePath);
+            // Troca de uma vez e guarda a versão anterior em .bak (ArquivoSeguro).
+            ArquivoSeguro.GravarJson(FilePath, list);
         }
         catch
         {
@@ -121,7 +81,12 @@ public static class SessionHistoryStore
 
     public static void Clear()
     {
-        try { if (File.Exists(FilePath)) File.Delete(FilePath); }
-        catch { /* ignore */ }
+        // O .bak junto: sem o principal, o ArquivoSeguro.Ler volta pelo .bak e o
+        // histórico apagado reapareceria.
+        foreach (var f in new[] { FilePath, FilePath + ".bak" })
+        {
+            try { if (File.Exists(f)) File.Delete(f); }
+            catch { /* ignore */ }
+        }
     }
 }

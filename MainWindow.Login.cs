@@ -201,12 +201,7 @@ public partial class MainWindow
 
     private static void LogNavegacaoBloqueada(string? uri)
     {
-        try
-        {
-            string host = System.Uri.TryCreate(uri, System.UriKind.Absolute, out var u) ? u.Host : "?";
-            System.IO.File.AppendAllText(System.IO.Path.Combine(PastaDados.Raiz, "errors.log"),
-                $"[{System.DateTime.Now:yyyy-MM-dd HH:mm:ss}] [WebView] navegação para fora do site bloqueada: {host}\n");
-        }
-        catch { }
+        string host = System.Uri.TryCreate(uri, System.UriKind.Absolute, out var u) ? u.Host : "?";
+        LogArquivo.Erro("WebView", $"navegação para fora do site bloqueada: {host}");
     }
 }
