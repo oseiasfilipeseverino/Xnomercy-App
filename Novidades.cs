@@ -16,6 +16,13 @@ public static class Novidades
 {
     public static readonly (string Versao, string[] Itens)[] Notas =
     {
+        ("1.1.11", new[]
+        {
+            "Com ExitLag, \"Só minha guild\" deve achar a sua guild: o app jogava fora a mensagem do jogo que traz a guild enquanto procurava a porta do ExitLag.",
+            "Registro de energia: se o site recusar (login vencido ou sem permissão), o app guarda o que estava na fila em vez de apagar.",
+            "A aba de prata da guild não vai mais por engano pro site como se fosse energia.",
+            "A janela de login só abre o site da guild e o login do Discord; links para fora não abrem dentro do app.",
+        }),
         ("1.1.10", new[]
         {
             "Corrigido para quem usa ExitLag: o app contava fama, prata, loot e dano EM DOBRO (o ExitLag manda cada pacote por duas rotas e o app somava as duas cópias).",
