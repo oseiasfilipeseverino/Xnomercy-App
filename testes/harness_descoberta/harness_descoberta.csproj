@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Descoberta de porta (ProcessarUdp com porta nova, como com ExitLag) roda o
+    PacketCaptureService REAL (a DLL compilada do app).
+
+    Precisa do app compilado antes:
+        dotnet build -c Release, sem build incremental   (na pasta do app)
+        dotnet run -c Release                            (nesta pasta)
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <NoWarn>MSB3277</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="XnomercyApp">
+      <HintPath>..\..\bin\Release\net8.0-windows\XnomercyApp.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>

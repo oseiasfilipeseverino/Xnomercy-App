@@ -96,7 +96,12 @@ public partial class MainWindow
             var lote = _energiaAuto.Values.OrderBy(e => e.QuandoUtc).Take(MaxEnergiaPorEnvio).ToList();
             var (status, texto) = await (_postarEnergiaTeste ?? PostarEnergiaAsync)(lote);
             string resumo = ResumoEnvioEnergia(texto, out bool ok);
-            if (ok || status == 400)
+            // 400 só é "dado inválido, nunca vai passar" quando o PRÓPRIO /api/app/energia
+            // responde com {"error": ...}. O 400 do CSRF (sessão sem token, Referer) vem
+            // como página HTML e apagava da fila e do disco até 3000 entradas com
+            // "o site recusou" (29/10/2026). Esse fica na fila e tenta de novo.
+            bool recusaDefinitiva = status == 400 && TryParseObj(texto)?["error"] != null;
+            if (ok || recusaDefinitiva)
             {
                 // Aceito — ou recusado por dado inválido, que nunca vai passar: tira da fila.
                 foreach (var e in lote) _energiaAuto.Remove(Chave(e));
@@ -106,9 +111,12 @@ public partial class MainWindow
             }
             else if (status == 403)
             {
-                _energiaSemPermissao = true;   // não é da gestão: o site não aceita de quem não é
-                _energiaAuto.Clear();
-                GuardarEnergiaPendente();
+                // Não é da gestão: para de tentar NESTA sessão, mas guarda. Antes apagava
+                // a fila e o energia_pendente.json — o registro que um oficial leu com o
+                // site fora sumia quando o app abria logado como outra pessoa (29/10/2026).
+                _energiaSemPermissao = true;
+                AvisoEnergia($"Registro de energia guardado ({_energiaAuto.Count} entrada(s)): " +
+                             "só a gestão pode enviar. Ele vai na próxima vez que um gestor abrir o app.");
             }
             // 401 (sem login no site) ou sem resposta: fica na fila, o timer tenta de novo.
             else if (status == 401 && !_energiaAvisouLogin)

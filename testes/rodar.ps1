@@ -94,6 +94,11 @@ Write-Host "`n--- harness_semnpcap (captura sem Npcap) ---"
 dotnet run --project "$PSScriptRoot\harness_semnpcap\harness_semnpcap.csproj" -c Release --nologo
 if ($LASTEXITCODE -ne 0) { $falhou++ }
 
+# -- Descoberta de porta (ExitLag): a sondagem nao pode engolir o Join (29/10/2026)
+Write-Host "`n--- harness_descoberta (porta nova, Join e primeiros eventos) ---"
+dotnet run --project "$PSScriptRoot\harness_descoberta\harness_descoberta.csproj" -c Release --nologo
+if ($LASTEXITCODE -ne 0) { $falhou++ }
+
 # -- calibracao dos numeros baixos e Leave
 Write-Host "`n--- harness_calibracao (calibracao dos numeros baixos e Leave) ---"
 dotnet run --project "$PSScriptRoot\harness_calibracao\harness_calibracao.csproj" -c Release --nologo

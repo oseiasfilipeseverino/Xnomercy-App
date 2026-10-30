@@ -161,18 +161,29 @@ public static class EventOffset
 
     public static void Carregar()
     {
-        if (Arquivo == null || !System.IO.File.Exists(Arquivo)) return;
+        if (Arquivo == null) return;
+        // O principal e, se ele estiver estragado ou faltando, o ".bak" que o
+        // ArquivoSeguro.Gravar guarda. Antes só o principal: estragado, o app voltava
+        // ao +1 antigo (errado desde o patch de 18/10) até a âncora reaparecer (29/10/2026).
+        foreach (var caminho in new[] { Arquivo, Arquivo + ".bak" })
+            if (TentarCarregar(caminho)) return;
+    }
+
+    private static bool TentarCarregar(string caminho)
+    {
+        if (!System.IO.File.Exists(caminho)) return false;
         try
         {
-            using var doc = System.Text.Json.JsonDocument.Parse(System.IO.File.ReadAllText(Arquivo));
+            using var doc = System.Text.Json.JsonDocument.Parse(System.IO.File.ReadAllText(caminho));
             var r = doc.RootElement;
             int alto = r.GetProperty("alto").GetInt32(), dano = r.GetProperty("dano").GetInt32(), nomes = r.GetProperty("nomes").GetInt32();
-            if (System.Math.Abs(alto) > 3 || System.Math.Abs(dano) > 3 || System.Math.Abs(nomes) > 3) return;
+            if (System.Math.Abs(alto) > 3 || System.Math.Abs(dano) > 3 || System.Math.Abs(nomes) > 3) return false;
             lock (_lock) { _delta = alto; _deltaDano = dano; _deltaNomes = nomes; _fonte = "última sessão conferida"; }
             AplicarAlto(alto);
             GameEventCodes.AplicarDeltasBaixos(dano, nomes);
+            return true;
         }
-        catch { /* arquivo estragado: segue com o padrão */ }
+        catch { return false; /* estragado: tenta o próximo */ }
     }
 
     private static void Salvar()

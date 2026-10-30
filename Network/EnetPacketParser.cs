@@ -102,12 +102,23 @@ public static class EnetPacketParser
             if (nowTicks - kv.Value.UpdatedAtTicks > PendingTtl.Ticks)
                 _pending.TryRemove(kv.Key, out _);
         }
-        // Se ainda estourou (muita coisa recente), esvazia: preferimos perder
-        // remontagens em andamento a crescer sem limite.
-        if (_pending.Count > MaxPendingReassemblies) _pending.Clear();
+        // Se ainda estourou (muita coisa recente), tira as MAIS ANTIGAS até sobrar
+        // folga. Antes esvaziava tudo, inclusive a mensagem grande em andamento
+        // (NewCharacter, Join): as partes já recebidas não voltam — a cópia do
+        // ExitLag e o reenvio do servidor caem no dedup de comando (29/10/2026).
+        if (_pending.Count > MaxPendingReassemblies)
+            foreach (var k in _pending.OrderBy(kv => kv.Value.UpdatedAtTicks)
+                                      .Take(_pending.Count - MaxPendingReassemblies * 3 / 4)
+                                      .Select(kv => kv.Key).ToList())
+                _pending.TryRemove(k, out _);
     }
 
-    public static IEnumerable<byte[]> ExtractApplicationPayloads(byte[] udpData)
+    /// <param name="registrar">false = só OLHAR (sondagem da descoberta de porta):
+    /// não marca comando como visto nem guarda fragmento. Até 29/10/2026 a sondagem
+    /// marcava, e a passada de verdade logo em seguida descartava o mesmo comando
+    /// como "repetido". Com porta nova (sempre, com ExitLag) o Join (op 2, que traz
+    /// a guild) chegava, era sondado e sumia; e os primeiros eventos também.</param>
+    public static IEnumerable<byte[]> ExtractApplicationPayloads(byte[] udpData, bool registrar = true)
     {
         if (udpData.Length < PacketHeaderSize)
             yield break;
@@ -145,7 +156,8 @@ public static class EnetPacketParser
             int payloadLen = (int)payloadLenLong;
 
             // Cópia do mesmo comando (ExitLag por duas rotas, reenvio do servidor): pula.
-            if ((commandType == CommandSendReliable || commandType == CommandSendUnreliable || commandType == CommandSendFragment)
+            if (registrar
+                && (commandType == CommandSendReliable || commandType == CommandSendUnreliable || commandType == CommandSendFragment)
                 && ComandoJaVisto(peerId, challenge, udpData, cmdStart, commandLength, DateTime.UtcNow.Ticks))
             {
                 r.Skip(payloadLen);
@@ -179,6 +191,7 @@ public static class EnetPacketParser
                     continue;
                 }
 
+                if (!registrar) { r.Skip(fragLen); continue; }   // sondagem não mexe na remontagem
                 var fragData = r.ReadBytesRaw(fragLen);
                 long now = DateTime.UtcNow.Ticks;
                 PrunePending(now);

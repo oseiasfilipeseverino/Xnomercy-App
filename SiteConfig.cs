@@ -17,13 +17,30 @@ public static class SiteConfig
     /// O endereço é DO SITE? Compara o domínio exato, com https.
     ///
     /// Antes era `url.StartsWith(BaseUrl)`, e "https://xnomercy.com.qualquercoisa.net"
-    /// também começa com "https://xnomercy.com". O WebView pode navegar pra fora (um
-    /// link do site), e a página certa importa: é nela que o app roda o script que
-    /// posta o registro de energia com a sessão da gestão.
+    /// também começa com "https://xnomercy.com". O login só vale numa página do site
+    /// (é com essa sessão que o app chama /api/me e envia a energia).
     /// </summary>
     public static bool EhDoSite(string? url) =>
         System.Uri.TryCreate(url, System.UriKind.Absolute, out var u)
         && u.Scheme == System.Uri.UriSchemeHttps
         && (u.Host.Equals("xnomercy.com", System.StringComparison.OrdinalIgnoreCase)
             || u.Host.Equals("www.xnomercy.com", System.StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// A janela do app pode ABRIR este endereço? Só o site e o login do Discord.
+    ///
+    /// O app inteiro roda como administrador (a captura precisa), e o WebView vai
+    /// junto. Até 29/10/2026 ele navegava pra qualquer lugar: um link ou redirect
+    /// abria página de terceiro dentro de um processo elevado, com DevTools ligado.
+    /// </summary>
+    public static bool PodeAbrirNoApp(string? url)
+    {
+        if (EhDoSite(url)) return true;
+        if (url == "about:blank") return true;
+        if (!System.Uri.TryCreate(url, System.UriKind.Absolute, out var u) || u.Scheme != System.Uri.UriSchemeHttps)
+            return false;
+        string h = u.Host.ToLowerInvariant();
+        return h == "discord.com" || h.EndsWith(".discord.com")
+            || h == "discordapp.com" || h.EndsWith(".discordapp.com");
+    }
 }

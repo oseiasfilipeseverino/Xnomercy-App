@@ -130,6 +130,16 @@ Checar(!SiteConfig.EhDoSite("https://xnomercy.com.golpe.net/x"), "xnomercy.com.g
 Checar(!SiteConfig.EhDoSite("http://xnomercy.com/") && !SiteConfig.EhDoSite("https://discord.com/") && !SiteConfig.EhDoSite(null),
        "sem https, outro dominio ou vazio: nao");
 
+// 29/10/2026: o WebView (processo elevado) navegava pra qualquer lugar.
+// Reflexao: num app antigo, sem o metodo, isto reprova em vez de nao compilar.
+var podeAbrir = typeof(SiteConfig).GetMethod("PodeAbrirNoApp");
+bool Abre(string? u) => podeAbrir != null && (bool)podeAbrir.Invoke(null, new object?[] { u })!;
+Checar(podeAbrir != null, "existe a lista do que a janela do app pode abrir");
+Checar(Abre("https://xnomercy.com/mercado") && Abre("https://discord.com/oauth2/authorize?x=1")
+       && Abre("https://canary.discord.com/login"), "abre: o site e o login do Discord");
+Checar(!Abre("https://golpe.net/") && !Abre("http://discord.com/") && !Abre("https://discord.com.golpe.net/")
+       && !Abre("file:///C:/Windows/") && !Abre(null), "nao abre: outro site, sem https, imitacao, arquivo local, vazio");
+
 // ── 7. Mob pelo formato (pacote real) ────────────────────────────────────────
 Console.WriteLine("\n-- 7. NewMob (123) do pacote real marca mob; jogador nao");
 string? real = null;

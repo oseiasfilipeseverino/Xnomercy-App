@@ -67,6 +67,14 @@ GuildEnergyLog.Pedido(new Dictionary<byte, object?> { [1] = (byte)0, [2] = 0, [3
 confirmada = null;
 GuildEnergyLog.HandleOpResponse(respEnergia);
 Checar(confirmada == null, "pedido de OUTRA aba: a resposta nem e' lida como energia");
+
+// 29/10/2026: o pedido da aba valia pra sempre. Abrir a de energia e depois a de
+// prata com o pedido perdido na captura mandava a PRATA sozinha como energia.
+GuildEnergyLog.Pedido(new Dictionary<byte, object?> { [1] = (byte)2, [2] = 0, [3] = 101, [253] = (short)159 });
+GuildEnergyLog.HandleOpResponse(respEnergia);          // resposta da aba de energia: ok
+confirmada = null;
+GuildEnergyLog.HandleOpResponse(respEnergia);          // proxima resposta SEM pedido visto (o da prata se perdeu)
+Checar(confirmada == false, $"resposta seguinte sem pedido visto: NAO vai sozinha ({confirmada})");
 GuildEnergyLog.Lido -= ouvir;
 
 Console.WriteLine(falhas == 0 ? "\nOK: registro de energia da guild" : $"\nFALHOU: {falhas}");

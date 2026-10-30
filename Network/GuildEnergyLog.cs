@@ -35,7 +35,14 @@ public static class GuildEnergyLog
     // de cada linha (3 saque, 2 depósito) e [4] as horas. A aba de prata responde
     // no mesmo formato — sem esta trava, prata seria oferecida pro site como energia.
     public const int AbaEnergia = 2;
+    // O pedido só vale para a resposta que vem logo depois dele. Até 29/10/2026 a
+    // aba ficava guardada para sempre: abrir a de energia, depois a de prata com o
+    // pedido perdido na captura, e a resposta da PRATA ia sozinha pro site como
+    // energia (o site deduplica — não dava pra desfazer pelo app).
+    private static readonly long ValidadePedidoMs = 5000;
     private static int? _ultimaAba;
+    private static long _pedidoEm;
+    private static readonly object _lock = new();
 
     public static void HandleOpRequest(PhotonOperationRequest op) => Pedido(op.Parameters);
 
@@ -43,18 +50,24 @@ public static class GuildEnergyLog
     {
         if (p.TryGetValue(253, out var c) && PhotonParam.ToLong(c) == 159
             && p.TryGetValue(1, out var a) && PhotonParam.ToLong(a) is long aba)
-            _ultimaAba = (int)aba;
+            lock (_lock) { _ultimaAba = (int)aba; _pedidoEm = System.Environment.TickCount64; }
     }
 
     public static void HandleOpResponse(PhotonOperationResponse op)
     {
+        bool doRegistro = op.Parameters.TryGetValue(253, out var c) && PhotonParam.ToLong(c) == 159;
+        int? aba;
+        lock (_lock)
+        {
+            aba = System.Environment.TickCount64 - _pedidoEm <= ValidadePedidoMs ? _ultimaAba : null;
+            if (doRegistro) _ultimaAba = null;   // um pedido, uma resposta
+        }
         // Resposta do registro de OUTRA aba (prata, itens...): não é energia.
-        if (op.Parameters.TryGetValue(253, out var c) && PhotonParam.ToLong(c) == 159
-            && _ultimaAba is int aba && aba != AbaEnergia) return;
+        if (doRegistro && aba is int outra && outra != AbaEnergia) return;
         var lista = Ler(op.Parameters);
         if (lista == null) return;
         CaptureHealth.Marcar("Energia da guild");
-        Lido?.Invoke(lista, _ultimaAba == AbaEnergia);
+        Lido?.Invoke(lista, aba == AbaEnergia);
     }
 
     public static List<Entrada>? Ler(IReadOnlyDictionary<byte, object?> p)

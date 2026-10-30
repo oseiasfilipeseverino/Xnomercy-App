@@ -127,10 +127,17 @@ public sealed class PacketCaptureService : IDisposable
         }
 
         bool sawGameEvent = false;
-        foreach (var appPayload in EnetPacketParser.ExtractApplicationPayloads(slice))
+        // registrar: raise — a sondagem não pode marcar comando como visto (ver
+        // EnetPacketParser.ExtractApplicationPayloads).
+        foreach (var appPayload in EnetPacketParser.ExtractApplicationPayloads(slice, registrar: raise))
         {
             if (raise) DiagAppPayloadsExtracted++;
             var msg = PhotonMessageParser.TryParseApplicationMessage(appPayload);
+            // Na sondagem, resposta/pedido de operação com parâmetros também
+            // confirma o formato. Só evento contava: um pacote só com o Join
+            // (op 2, logo no começo da conexão) nunca era processado (29/10/2026).
+            if (!raise && msg is PhotonOperationResponse r0 && r0.Parameters.Count > 0) return true;
+            if (!raise && msg is PhotonOperationRequest q0 && q0.Parameters.Count > 0) return true;
             if (msg is PhotonEvent evt)
             {
                 if (evt.EventCode < 0) continue;   // transporte interno, não é evento do jogo

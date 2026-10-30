@@ -89,8 +89,15 @@ EventOffset.Reset();
 Checar(EventOffset.Delta == 1, "app reabre: comeca no padrao +1...");
 EventOffset.Carregar();
 Checar(EventOffset.Delta == 0 && GameEventCodes.GrabbedLoot == 278 && GameEventCodes.MobKilled == 165, "...e carrega o 0 conferido na ultima sessao (loot 278, mob morto 165)");
+// 29/10/2026: arquivo estragado nao pode voltar ao +1 se o .bak tem o valor conferido
+File.Copy(arqN, arqN + ".bak", true);
+File.WriteAllText(arqN, "{\"alto\":0,\"da");
+EventOffset.Reset();
+EventOffset.Carregar();
+Checar(EventOffset.Delta == 0, $"numeracao.json estragado: usa o .bak, nao volta ao +1 ({EventOffset.Delta})");
 EventOffset.Arquivo = null;
 File.Delete(arqN);
+File.Delete(arqN + ".bak");
 EventOffset.Reset();
 Console.WriteLine(falhas == 0 ? "\nOK: calibracao dos numeros baixos e Leave" : $"\nFALHOU: {falhas}");
 return falhas == 0 ? 0 : 1;

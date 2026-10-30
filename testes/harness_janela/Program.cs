@@ -133,8 +133,16 @@ var t = new Thread(() =>
     Checar(Fila() == 0 && !System.IO.File.Exists(arqEnergia), $"site aceitou: sai da fila e do disco ({Fila()})");
     lida.Invoke(w, new object[] { ent, true });
     Bombear();
+    // 400 do CSRF vem como pagina HTML (sem "error"): NAO e' dado invalido, fica na fila (29/10/2026)
+    EnviarCom(400, "{\"status\":400}");
+    Checar(Fila() == 2 && System.IO.File.Exists(arqEnergia), $"400 sem resposta do proprio site (CSRF): continua na fila e no disco ({Fila()})");
+    EnviarCom(400, "{\"error\":\"Nenhum registro recebido.\",\"status\":400}");
+    Checar(Fila() == 0, $"400 do proprio site (lote invalido): sai da fila ({Fila()})");
+    lida.Invoke(w, new object[] { ent, true });
+    Bombear();
     EnviarCom(403, "{\"error\":\"So a gestao\",\"status\":403}");
-    Checar(Fila() == 0 && (bool)Campo("_energiaSemPermissao"), "403 (quem esta logado nao e' da gestao): para de tentar, sem ficar avisando");
+    Checar(Fila() == 2 && System.IO.File.Exists(arqEnergia) && (bool)Campo("_energiaSemPermissao"),
+           $"403 (quem esta logado nao e' da gestao): para de tentar, mas GUARDA a fila e o arquivo ({Fila()})");
 
     // Fechar o app com a captura ligada guarda a sessao (antes so "Parar captura" guardava)
     typeof(MainWindow).GetField("_capturing", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(w, true);

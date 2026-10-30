@@ -42,6 +42,28 @@ public partial class MainWindow
             return;
         }
 
+        // O app roda como administrador e o WebView vai junto: ele só abre o site e o
+        // login do Discord (SiteConfig.PodeAbrirNoApp). Link pra fora, pop-up e
+        // DevTools ficam desligados (29/10/2026).
+        var cfg = WebView.CoreWebView2.Settings;
+#if !DEBUG
+        cfg.AreDevToolsEnabled = false;
+#endif
+        cfg.AreHostObjectsAllowed = false;
+        cfg.IsWebMessageEnabled = false;
+        WebView.CoreWebView2.NavigationStarting += (_, e) =>
+        {
+            if (SiteConfig.PodeAbrirNoApp(e.Uri)) return;
+            e.Cancel = true;
+            LogNavegacaoBloqueada(e.Uri);
+        };
+        WebView.CoreWebView2.NewWindowRequested += (_, e) =>
+        {
+            e.Handled = true;   // nunca abre outra janela WebView (também elevada)
+            if (SiteConfig.PodeAbrirNoApp(e.Uri)) WebView.CoreWebView2.Navigate(e.Uri);
+            else LogNavegacaoBloqueada(e.Uri);
+        };
+
         // Esconde a navbar do site dentro do app — assim o Craft mostra só o conteúdo
         // do mercado (sem Início/Dashboard/Gestão/etc), e o login fica limpo. Roda antes
         // de cada página renderizar, sem piscar.
@@ -175,5 +197,16 @@ public partial class MainWindow
         // ?to=login pula o pulo extra de cair na home e só depois navegar pro login —
         // fica perceptivelmente mais rápido na troca de tela.
         WebView.CoreWebView2?.Navigate(SiteUrl + "/logout?to=login");
+    }
+
+    private static void LogNavegacaoBloqueada(string? uri)
+    {
+        try
+        {
+            string host = System.Uri.TryCreate(uri, System.UriKind.Absolute, out var u) ? u.Host : "?";
+            System.IO.File.AppendAllText(System.IO.Path.Combine(PastaDados.Raiz, "errors.log"),
+                $"[{System.DateTime.Now:yyyy-MM-dd HH:mm:ss}] [WebView] navegação para fora do site bloqueada: {host}\n");
+        }
+        catch { }
     }
 }
