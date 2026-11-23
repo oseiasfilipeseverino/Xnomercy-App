@@ -393,9 +393,9 @@ public partial class MainWindow : Window
         new System.Windows.Media.BrushConverter().ConvertFromString(hex) as System.Windows.Media.Brush ?? System.Windows.Media.Brushes.Gray;
     // Mesmo modelo do site redesenhado: dourado = ação/navegação ativa, vermelho
     // reservado pra semântica (perigo/perdas). Tokens iguais aos do pg_base.html.
-    private static readonly System.Windows.Media.Brush NavActiveBg = B("#292213");
-    private static readonly System.Windows.Media.Brush NavActiveBrush = B("#c9a227");
-    private static readonly System.Windows.Media.Brush NavIdleBrush   = B("#8CFFFFFF");
+    private static readonly System.Windows.Media.Brush NavActiveBg = B("#271D0F");
+    private static readonly System.Windows.Media.Brush NavActiveBrush = B("#C8963E");
+    private static readonly System.Windows.Media.Brush NavIdleBrush   = B("#ADE6D3AE");
 
     // Pinta a barra de título nativa (a faixa branca do Windows lá em cima) escura,
     // pra combinar com o resto do app — sem isso ela vinha sempre clara/padrão do

@@ -53,13 +53,16 @@
 
   <ItemGroup>
     <Resource Include="icon.ico" />
-    <Resource Include="Fonts\Teko.ttf" />
+    <Resource Include="Fonts\Oswald-Bold.ttf" />
+    <Resource Include="Fonts\BarlowCondensed-Bold.ttf" />
     <Resource Include="Fonts\Barlow-Regular.ttf" />
     <Resource Include="Fonts\Barlow-Medium.ttf" />
     <Resource Include="Fonts\Barlow-SemiBold.ttf" />
     <Resource Include="Icons\fame.png" />
     <Resource Include="Icons\yellow_fame.png" />
     <Resource Include="Icons\silver.png" />
+    <Resource Include="Icons\marca-cobra-128.png" />
+    <Resource Include="Icons\fundo-granulado.jpg" />
   </ItemGroup>
 
 </Project>

@@ -8,12 +8,12 @@
         MouseLeftButtonDown="Window_MouseLeftButtonDown">
     <!-- Mini painel flutuante: fama/h e prata/h sem precisar de alt-tab.
          Sempre no topo, arrastável em qualquer ponto, X pra fechar. -->
-    <Border Background="#E6131313" CornerRadius="8" BorderBrush="#3a2c0d" BorderThickness="1" Padding="12,9">
+    <Border Background="#E60A0707" CornerRadius="8" BorderBrush="#3A2B15" BorderThickness="1" Padding="12,9">
         <StackPanel>
             <Grid Margin="0,0,0,6">
-                <TextBlock Text="XNOMERCY" Foreground="#c9a227" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
+                <TextBlock Text="XNOMERCY" Foreground="#C8963E" FontFamily="{StaticResource FontHead}" FontWeight="Bold" FontSize="13" VerticalAlignment="Center"/>
                 <Button x:Name="BtnClose" Content="✕" Click="BtnClose_Click" HorizontalAlignment="Right"
-                        Background="Transparent" Foreground="#8CFFFFFF" BorderThickness="0" Cursor="Hand"
+                        Background="Transparent" Foreground="#ADE6D3AE" BorderThickness="0" Cursor="Hand"
                         Padding="4,0" FontSize="12"/>
             </Grid>
             <Grid>
@@ -24,18 +24,18 @@
                 <Grid.RowDefinitions>
                     <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
                 </Grid.RowDefinitions>
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="Fama" Foreground="#8CFFFFFF" FontSize="12" Margin="0,1"/>
-                <TextBlock Grid.Row="0" Grid.Column="1" x:Name="TxtOvFame" Text="0 · 0/h" Foreground="#f87171" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,1"/>
-                <TextBlock Grid.Row="1" Grid.Column="0" Text="Prata" Foreground="#8CFFFFFF" FontSize="12" Margin="0,1"/>
-                <TextBlock Grid.Row="1" Grid.Column="1" x:Name="TxtOvSilver" Text="0 · 0/h" Foreground="#e2e8f0" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,1"/>
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="Mobs" Foreground="#8CFFFFFF" FontSize="12" Margin="0,1"/>
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Fama" Foreground="#ADE6D3AE" FontSize="12" Margin="0,1"/>
+                <TextBlock Grid.Row="0" Grid.Column="1" x:Name="TxtOvFame" Text="0 · 0/h" Foreground="#E77D78" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,1"/>
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Prata" Foreground="#ADE6D3AE" FontSize="12" Margin="0,1"/>
+                <TextBlock Grid.Row="1" Grid.Column="1" x:Name="TxtOvSilver" Text="0 · 0/h" Foreground="#E6D3AE" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,1"/>
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Mobs" Foreground="#ADE6D3AE" FontSize="12" Margin="0,1"/>
                 <TextBlock Grid.Row="2" Grid.Column="1" x:Name="TxtOvMobs" Text="0 · 0/h" Foreground="#86efac" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,1"/>
-                <TextBlock Grid.Row="4" Grid.Column="0" Text="Seu DPS" Foreground="#8CFFFFFF" FontSize="12" Margin="0,1"/>
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="Seu DPS" Foreground="#ADE6D3AE" FontSize="12" Margin="0,1"/>
                 <TextBlock Grid.Row="4" Grid.Column="1" x:Name="TxtOvDps" Text="—" Foreground="#fbbf24" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,1"/>
-                <TextBlock Grid.Row="5" Grid.Column="0" Text="Seu loot" Foreground="#8CFFFFFF" FontSize="12" Margin="0,1"/>
-                <TextBlock Grid.Row="5" Grid.Column="1" x:Name="TxtOvLoot" Text="—" Foreground="#c9a227" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,1"/>
-                <TextBlock Grid.Row="3" Grid.Column="0" Text="Sessão" Foreground="#8CFFFFFF" FontSize="12" Margin="0,1"/>
-                <TextBlock Grid.Row="3" Grid.Column="1" x:Name="TxtOvTime" Text="00:00:00" Foreground="#c9a227" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,1"/>
+                <TextBlock Grid.Row="5" Grid.Column="0" Text="Seu loot" Foreground="#ADE6D3AE" FontSize="12" Margin="0,1"/>
+                <TextBlock Grid.Row="5" Grid.Column="1" x:Name="TxtOvLoot" Text="—" Foreground="#C8963E" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,1"/>
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="Sessão" Foreground="#ADE6D3AE" FontSize="12" Margin="0,1"/>
+                <TextBlock Grid.Row="3" Grid.Column="1" x:Name="TxtOvTime" Text="00:00:00" Foreground="#C8963E" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,1"/>
             </Grid>
         </StackPanel>
     </Border>

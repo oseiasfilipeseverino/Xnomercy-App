@@ -8,7 +8,7 @@
         xmlns:local="clr-namespace:XnomercyApp"
         mc:Ignorable="d"
         Title="XnoMercy" Height="800" Width="1280"
-        Background="#131313"
+        Background="#0A0707"
         FontFamily="{StaticResource FontBody}"
         Closing="Window_Closing">
 
@@ -21,16 +21,16 @@
             <Setter Property="Foreground" Value="White"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#242424"/>
+                    <Setter Property="Background" Value="#241F1B"/>
                 </Trigger>
                 <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#2e2e2e"/>
+                    <Setter Property="Background" Value="#2F2A23"/>
                     <Setter Property="Foreground" Value="White"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
         <Style TargetType="Button" x:Key="NavBtn">
-            <Setter Property="Foreground" Value="#8CFFFFFF"/>
+            <Setter Property="Foreground" Value="#ADE6D3AE"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Background" Value="Transparent"/>
@@ -48,12 +48,12 @@
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="BgFill" Property="Background" Value="#222222"/>
+                                <Setter TargetName="BgFill" Property="Background" Value="#241F1B"/>
                             </Trigger>
-                            <DataTrigger Binding="{Binding Background, RelativeSource={RelativeSource TemplatedParent}}" Value="#292213">
-                                <Setter TargetName="BgFill" Property="Background" Value="#292213"/>
-                                <Setter TargetName="Accent" Property="Background" Value="#c9a227"/>
-                                <Setter Property="Foreground" Value="#DEFFFFFF"/>
+                            <DataTrigger Binding="{Binding Background, RelativeSource={RelativeSource TemplatedParent}}" Value="#271D0F">
+                                <Setter TargetName="BgFill" Property="Background" Value="#271D0F"/>
+                                <Setter TargetName="Accent" Property="Background" Value="#C8963E"/>
+                                <Setter Property="Foreground" Value="#F0E6D3AE"/>
                             </DataTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -65,7 +65,7 @@
              "☰" ficava quase saindo da borda quando a barra estava fechada (coluna de
              só 48px de largura), parecendo cortado/torto. -->
         <Style TargetType="Button" x:Key="ToggleBtn">
-            <Setter Property="Foreground" Value="#8CFFFFFF"/>
+            <Setter Property="Foreground" Value="#ADE6D3AE"/>
             <Setter Property="FontSize" Value="16"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
@@ -76,25 +76,13 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#242424"/>
+                                <Setter TargetName="bd" Property="Background" Value="#241F1B"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
-        <!-- Textura "cota de malha", a mesma do site (opcao B, 15/10): aneis
-             entrelacados em dourado quase apagado sobre o fundo #131313. -->
-        <DrawingBrush x:Key="FundoMalha" TileMode="Tile" Viewport="0,0,22,22" ViewportUnits="Absolute" Viewbox="0,0,22,22" ViewboxUnits="Absolute">
-            <DrawingBrush.Drawing>
-                <DrawingGroup>
-                    <GeometryDrawing Brush="#131313"><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,22,22"/></GeometryDrawing.Geometry></GeometryDrawing>
-                    <GeometryDrawing Geometry="M7.5,0 A7.5,7.5 0 0 1 0,7.5 M14.5,0 A7.5,7.5 0 0 0 22,7.5 M0,14.5 A7.5,7.5 0 0 1 7.5,22 M22,14.5 A7.5,7.5 0 0 0 14.5,22 M18.5,11 A7.5,7.5 0 1 1 3.5,11 A7.5,7.5 0 1 1 18.5,11 Z">
-                        <GeometryDrawing.Pen><Pen Brush="#17c9a227" Thickness="1.4"/></GeometryDrawing.Pen>
-                    </GeometryDrawing>
-                </DrawingGroup>
-            </DrawingBrush.Drawing>
-        </DrawingBrush>
         <!-- Icones desenhados (traco), no lugar dos emojis: emoji muda de cara
              conforme a versao do Windows e nao segue a cor do tema. Grade 24x24. -->
         <Geometry x:Key="IcoFama">M12,2.5 L14.9,8.6 L21.5,9.3 L16.6,13.8 L18,20.4 L12,17 L6,20.4 L7.4,13.8 L2.5,9.3 L9.1,8.6 Z</Geometry>
@@ -134,11 +122,11 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock x:Name="UpdateBannerText" Grid.Column="0" Text="" Foreground="White" FontSize="13" VerticalAlignment="Center"/>
+                <TextBlock x:Name="UpdateBannerText" Grid.Column="0" Text="" Foreground="#F0E6D3AE" FontSize="13" VerticalAlignment="Center"/>
                 <Button x:Name="BtnUpdateDownload" Grid.Column="1" Content="Reiniciar e atualizar" Click="BtnUpdateDownload_Click"
-                        Padding="12,5" Background="#1b1b1b" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                        Padding="12,5" Background="#191513" Foreground="#F0E6D3AE" BorderThickness="0" Cursor="Hand"/>
                 <Button x:Name="BtnUpdateDismiss" Grid.Column="2" Content="✕" Click="BtnUpdateDismiss_Click"
-                        Padding="10,5" Margin="8,0,0,0" Background="Transparent" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                        Padding="10,5" Margin="8,0,0,0" Background="Transparent" Foreground="#F0E6D3AE" BorderThickness="0" Cursor="Hand"/>
             </Grid>
         </Border>
 
@@ -149,17 +137,31 @@
         </Grid.ColumnDefinitions>
 
         <!-- Menu lateral (aparece só depois do login) -->
-        <Border x:Name="Sidebar" Grid.Column="0" Background="#1b1b1b" BorderBrush="#2b2b2b" BorderThickness="0,0,1,0" Visibility="Collapsed">
+        <Border x:Name="Sidebar" Grid.Column="0" Background="#191513" BorderBrush="#322C25" BorderThickness="0,0,1,0" Visibility="Collapsed">
             <DockPanel LastChildFill="False">
-                <Button x:Name="BtnToggleSidebar" DockPanel.Dock="Top" Content="☰" Click="ToggleSidebar_Click"
-                        Style="{StaticResource ToggleBtn}" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                <!-- Ícone desenhado no lugar do caractere "☰" (que muda de cara conforme a
+                     fonte do Windows), no mesmo traço dos ícones do menu. -->
+                <Button x:Name="BtnToggleSidebar" DockPanel.Dock="Top" Click="ToggleSidebar_Click"
+                        Style="{StaticResource ToggleBtn}" HorizontalAlignment="Center" Margin="0,8,0,0"
+                        ToolTip="Mostrar ou esconder o menu" AutomationProperties.Name="Mostrar ou esconder o menu">
+                    <Path Data="M4,6 L20,6 M4,12 L20,12 M4,18 L20,18" Style="{StaticResource Ico}" Width="16" Height="16" Opacity=".7"/>
+                </Button>
                 <StackPanel x:Name="SidebarTop" DockPanel.Dock="Top">
-                    <TextBlock Text="XNOMERCY" Foreground="#c9a227" FontFamily="{StaticResource FontHead}" FontWeight="SemiBold" FontSize="28" Margin="20,6,20,12"/>
+                    <!-- Marca igual à barra do site: a cobra com a adaga (abaixo de 64 px o kit
+                         manda usar só a marca, não a logo inteira) e o nome em Oswald. -->
+                    <StackPanel Orientation="Horizontal" Margin="18,4,18,14">
+                        <Border Width="34" Height="34" CornerRadius="4" BorderBrush="#AD1A15" BorderThickness="1">
+                            <Image Source="pack://application:,,,/XnomercyApp;component/Icons/marca-cobra-128.png"
+                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                        </Border>
+                        <TextBlock Text="XNOMERCY" Foreground="#C8963E" FontFamily="{StaticResource FontHead}" FontWeight="Bold"
+                                   FontSize="24" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
                     <Border Height="1" Margin="0,0,0,10">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                <GradientStop Color="#c9a227" Offset="0"/>
-                                <GradientStop Color="#3a2c0d" Offset="0.55"/>
+                                <GradientStop Color="#C8963E" Offset="0"/>
+                                <GradientStop Color="#3A2B15" Offset="0.55"/>
                                 <GradientStop Color="Transparent" Offset="1"/>
                             </LinearGradientBrush>
                         </Border.Background>
@@ -199,7 +201,7 @@
                     <!-- Captura acessível de qualquer aba, não só do Loot Log — pra não
                          precisar entrar lá só pra iniciar/pausar. -->
                     <Button x:Name="BtnCaptureToggle" Content="Iniciar captura" Click="BtnCaptureToggle_Click"
-                            Padding="0,10" Background="#c9a227" Foreground="#111111" BorderThickness="0" Cursor="Hand"
+                            Padding="0,10" Background="#C8963E" Foreground="#0A0707" BorderThickness="0" Cursor="Hand"
                             HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" FontWeight="Bold" Margin="0,0,0,8"/>
                     <!-- Redistribuído em 18/10/2026 pra sobrar espaço pras abas: os botões
                          secundários andam em pares. O "Diagnóstico de rede" fica ESCONDIDO
@@ -207,54 +209,54 @@
                          acelerador de rota, é só voltar o Visibility pra Visible. -->
                     <UniformGrid Columns="2" Margin="0,0,0,8">
                         <Button x:Name="BtnPauseToggle" Content="Pausar" Click="BtnPauseToggle_Click"
-                                Padding="0,7" Background="#2e2e2e" Foreground="White" BorderThickness="0" Cursor="Hand"
+                                Padding="0,7" Background="#2F2A23" Foreground="#F0E6D3AE" BorderThickness="0" Cursor="Hand"
                                 HorizontalContentAlignment="Center" Margin="0,0,4,0"/>
                         <Button x:Name="BtnOverlayToggle" Content="Overlay" Click="BtnOverlayToggle_Click"
-                                Padding="0,7" Background="#2e2e2e" Foreground="White" BorderThickness="0" Cursor="Hand"
+                                Padding="0,7" Background="#2F2A23" Foreground="#F0E6D3AE" BorderThickness="0" Cursor="Hand"
                                 HorizontalContentAlignment="Center" Margin="4,0,0,0"
                                 ToolTip="Mini painel flutuante com fama/prata por hora, sempre visível por cima do jogo"/>
                     </UniformGrid>
                     <UniformGrid Columns="2" Margin="0,0,0,12">
                         <Button x:Name="BtnSaudeCaptura" Content="Saúde" Click="BtnSaudeCaptura_Click"
-                                Padding="0,7" Background="#2e2e2e" Foreground="#c9a227" BorderThickness="0" Cursor="Hand"
+                                Padding="0,7" Background="#2F2A23" Foreground="#C8963E" BorderThickness="0" Cursor="Hand"
                                 HorizontalContentAlignment="Center" Margin="0,0,4,0"
                                 ToolTip="Saúde da captura: mostra, parte por parte (dano, loot, grupo, fama...), quando o app reconheceu cada evento pela última vez — e avisa se o jogo mudou algo num patch."/>
                         <Button x:Name="BtnExportarSessao" Content="Exportar" Click="BtnExportarSessao_Click"
-                                Padding="0,7" Background="#2e2e2e" Foreground="#8CFFFFFF" BorderThickness="0" Cursor="Hand"
+                                Padding="0,7" Background="#2F2A23" Foreground="#ADE6D3AE" BorderThickness="0" Cursor="Hand"
                                 HorizontalContentAlignment="Center" Margin="4,0,0,0"
                                 ToolTip="Exportar sessão p/ análise: salva o formato dos eventos desta captura num arquivo, sem nomes nem chat, pra liderança conferir o que o app reconhece no jogo."/>
                     </UniformGrid>
                     <Button x:Name="BtnNetDiag" Content="Diagnóstico de rede" Click="BtnNetDiag_Click" Visibility="Collapsed"
-                            Padding="0,7" Background="#2e2e2e" Foreground="#c9a227" BorderThickness="0" Cursor="Hand"
+                            Padding="0,7" Background="#2F2A23" Foreground="#C8963E" BorderThickness="0" Cursor="Hand"
                             HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,0,8"
                             ToolTip="Escuta 20s sem filtro de porta e mostra onde o tráfego do jogo realmente está. Use quando a captura não pegar nada (ex: com acelerador de rota tipo ExitLag). Pare a captura antes."/>
                     <Border Height="1" Margin="-6,0,-6,10">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                <GradientStop Color="#2b2b2b" Offset="0"/>
+                                <GradientStop Color="#322C25" Offset="0"/>
                                 <GradientStop Color="Transparent" Offset="1"/>
                             </LinearGradientBrush>
                         </Border.Background>
                     </Border>
                     <DockPanel LastChildFill="True">
                         <Button x:Name="BtnLogout" Content="Sair" Click="BtnLogout_Click" DockPanel.Dock="Right"
-                                Padding="0" Background="Transparent" Foreground="#8CFFFFFF" FontSize="13" Cursor="Hand" BorderThickness="0"
+                                Padding="0" Background="Transparent" Foreground="#ADE6D3AE" FontSize="13" Cursor="Hand" BorderThickness="0"
                                 VerticalAlignment="Center" ToolTip="Sair da conta do site"/>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Ellipse x:Name="CaptureDot" Width="9" Height="9" Fill="#57FFFFFF" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="CaptureStateLabel" Text="Captura parada" Foreground="#8CFFFFFF" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                            <Ellipse x:Name="CaptureDot" Width="9" Height="9" Fill="#6BE6D3AE" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="CaptureStateLabel" Text="Captura parada" Foreground="#ADE6D3AE" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center"/>
                         </StackPanel>
                     </DockPanel>
-                    <TextBlock x:Name="TxtMapaAtual" Text="" Foreground="#8CFFFFFF" FontSize="12" Margin="17,4,0,0" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="TxtMapaAtual" Text="" Foreground="#ADE6D3AE" FontSize="12" Margin="17,4,0,0" TextTrimming="CharacterEllipsis"/>
 
                     <!-- Timer de fechamento de entrada de dungeon aleatória (90s) — visível
                          de qualquer aba, igual o indicador de captura acima. Some quando
                          você sai da dungeon. Ver DungeonTimerTracker.cs. -->
-                    <Border x:Name="PanelDungeonTimer" Visibility="Collapsed" Background="#1a1208" CornerRadius="6"
+                    <Border x:Name="PanelDungeonTimer" Visibility="Collapsed" Background="#19120B" CornerRadius="6"
                             Padding="10,8" Margin="0,10,0,0">
                         <StackPanel>
-                            <TextBlock Text="ENTRADA DA DUNGEON FECHA EM" Foreground="#c9a227" FontSize="12" FontWeight="Bold"/>
-                            <TextBlock x:Name="TxtDungeonTimer" Text="01:30" Foreground="White" FontFamily="{StaticResource FontHead}" FontSize="24" FontWeight="Bold"/>
+                            <TextBlock Text="ENTRADA DA DUNGEON FECHA EM" Foreground="#C8963E" FontFamily="{StaticResource FontLabel}" FontSize="13" FontWeight="Bold"/>
+                            <TextBlock x:Name="TxtDungeonTimer" Text="01:30" Foreground="#F0E6D3AE" FontFamily="{StaticResource FontHead}" FontSize="24" FontWeight="Bold"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -269,64 +271,66 @@
                  manda pro site com um clique. Ver MainWindow.Energia.cs. -->
             <Border x:Name="EnergiaBanner" Visibility="Collapsed" Panel.ZIndex="50" VerticalAlignment="Top"
                     HorizontalAlignment="Center" Margin="0,14,0,0" Padding="16,10" CornerRadius="8"
-                    Background="#F21b1b1b" BorderBrush="#c9a227" BorderThickness="1" MaxWidth="720">
+                    Background="#F2191513" BorderBrush="#C8963E" BorderThickness="1" MaxWidth="720">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock x:Name="TxtEnergiaBanner" Foreground="White" FontSize="13" TextWrapping="Wrap"
+                    <TextBlock x:Name="TxtEnergiaBanner" Foreground="#F0E6D3AE" FontSize="13" TextWrapping="Wrap"
                                VerticalAlignment="Center" MaxWidth="420" Margin="0,0,14,0"/>
                     <Button x:Name="BtnEnergiaEnviar" Content="Enviar ao site" Click="BtnEnergiaEnviar_Click"
-                            Padding="14,6" Background="#c9a227" Foreground="Black" FontWeight="Bold" BorderThickness="0" Cursor="Hand"/>
+                            Padding="14,6" Background="#C8963E" Foreground="Black" FontWeight="Bold" BorderThickness="0" Cursor="Hand"/>
                     <Button x:Name="BtnEnergiaIgnorar" Content="Ignorar" Click="BtnEnergiaIgnorar_Click"
-                            Padding="12,6" Margin="8,0,0,0" Background="#2e2e2e" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                            Padding="12,6" Margin="8,0,0,0" Background="#2F2A23" Foreground="#F0E6D3AE" BorderThickness="0" Cursor="Hand"/>
                 </StackPanel>
             </Border>
 
             <!-- Marca enquanto a tela de login do site carrega (some no 1º carregamento) -->
-            <Grid x:Name="LoginLoading" Background="{StaticResource FundoMalha}">
+            <Grid x:Name="LoginLoading" Background="{StaticResource FundoGranulado}">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="420">
-                    <TextBlock Text="XNOMERCY" FontFamily="{StaticResource FontHead}" FontSize="46" Foreground="#c9a227" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="TxtLoginLoadingStatus" Text="Carregando..." Foreground="#8CFFFFFF" FontSize="14" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" Margin="0,6,0,0"/>
+                    <Image Source="pack://application:,,,/XnomercyApp;component/Icons/marca-cobra-128.png" Width="96" Height="96"
+                           RenderOptions.BitmapScalingMode="HighQuality" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                    <TextBlock Text="XNOMERCY" FontFamily="{StaticResource FontHead}" FontSize="46" Foreground="#C8963E" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="TxtLoginLoadingStatus" Text="Carregando..." Foreground="#ADE6D3AE" FontSize="14" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" Margin="0,6,0,0"/>
                 </StackPanel>
             </Grid>
 
-            <Grid x:Name="PanelLoot" Visibility="Collapsed" Background="{StaticResource FundoMalha}">
+            <Grid x:Name="PanelLoot" Visibility="Collapsed" Background="{StaticResource FundoGranulado}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 <StackPanel Grid.Row="0" Margin="16,12,16,8">
-                    <TextBlock Text="Loot Log" Foreground="#c9a227" FontFamily="{StaticResource FontHead}" FontSize="26" FontWeight="SemiBold"/>
+                    <TextBlock Text="Loot Log" Foreground="#C8963E" FontFamily="{StaticResource FontHead}" FontSize="26" FontWeight="Bold"/>
                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                         <!-- Iniciar/Pausar captura agora fica no menu lateral, acima do "Sair"
                              — acessível de qualquer aba, não só daqui. -->
-                        <TextBlock x:Name="TxtCaptureStatus" Text="Parado" Foreground="#8CFFFFFF" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="TxtCaptureStatus" Text="Parado" Foreground="#ADE6D3AE" VerticalAlignment="Center"/>
                         <Button x:Name="BtnExportCsv" Content="Exportar CSV" Click="BtnExportCsv_Click"
-                                Padding="14,6" Background="#242424" Foreground="White" BorderThickness="0" Cursor="Hand" Margin="20,0,0,0"
+                                Padding="14,6" Background="#241F1B" Foreground="#F0E6D3AE" BorderThickness="0" Cursor="Hand" Margin="20,0,0,0"
                                 ToolTip="Planilha simples pra abrir no Excel"/>
                         <Button x:Name="BtnExportLootLogger" Content="Exportar p/ Loot Logger" Click="BtnExportLootLogger_Click"
-                                Padding="14,6" Background="#242424" Foreground="#c9a227" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"
+                                Padding="14,6" Background="#241F1B" Foreground="#C8963E" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"
                                 ToolTip="Formato aceito pelo AO Loot Logger Viewer (matheus.sampaio.us). Só inclui loot de JOGADOR — prata e saque de mob ficam fora, igual o logger original."/>
                         <Button x:Name="BtnMinhasPerdas" Content="Minhas perdas" Click="BtnMinhasPerdas_Click"
-                                Padding="14,6" Background="#242424" Foreground="#f87171" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"
+                                Padding="14,6" Background="#241F1B" Foreground="#E77D78" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"
                                 ToolTip="O que pegaram do seu corpo quando você morreu, quem pegou e quanto valia"/>
                         <Button x:Name="BtnLootReset" Content="Reiniciar sessão" Click="BtnLootReset_Click"
-                                Padding="14,6" Background="#2e2e2e" Foreground="White" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"/>
+                                Padding="14,6" Background="#2F2A23" Foreground="#F0E6D3AE" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"/>
                         <ToggleButton x:Name="BtnAdvancedMode" Content="Modo avançado" Click="BtnAdvancedMode_Click"
-                                      Padding="14,6" Background="#2e2e2e" Foreground="White" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"/>
+                                      Padding="14,6" Background="#2F2A23" Foreground="#F0E6D3AE" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                         <CheckBox x:Name="ChkHideMob" Content="Esconder saque de monstro" IsChecked="False" Click="LootFilter_Changed"
-                                  Foreground="#DEFFFFFF" VerticalAlignment="Center"/>
+                                  Foreground="#F0E6D3AE" VerticalAlignment="Center"/>
                         <CheckBox x:Name="ChkGuildOnlyLoot" Content="Só minha guild" IsChecked="False" Click="LootFilter_Changed"
-                                  Foreground="#DEFFFFFF" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                                  Foreground="#F0E6D3AE" VerticalAlignment="Center" Margin="16,0,0,0"/>
                         <CheckBox x:Name="ChkPartyOnlyLoot" Content="Só meu grupo" IsChecked="False" Click="LootFilter_Changed"
-                                  Foreground="#DEFFFFFF" VerticalAlignment="Center" Margin="16,0,0,0"/>
-                        <TextBlock x:Name="TxtLootTotal" Text="" Foreground="#c9a227" FontWeight="SemiBold" VerticalAlignment="Center" Margin="24,0,0,0"
+                                  Foreground="#F0E6D3AE" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                        <TextBlock x:Name="TxtLootTotal" Text="" Foreground="#C8963E" FontWeight="SemiBold" VerticalAlignment="Center" Margin="24,0,0,0"
                                    ToolTip="Soma do valor estimado dos itens que estão na lista agora (respeita os filtros). O valor vem do próprio jogo quando ele já mostrou o item; senão, do preço do mercado Americas."/>
                     </StackPanel>
                 </StackPanel>
 
                 <!-- Visão limpa (padrão): feed estilo chat "Fulano pegou X de Y" -->
-                <ListView x:Name="ListCleanLoot" Grid.Row="1" Margin="16,0,16,16" Background="#1b1b1b" Foreground="White" BorderThickness="0" FontSize="13">
+                <ListView x:Name="ListCleanLoot" Grid.Row="1" Margin="16,0,16,16" Background="#191513" Foreground="#F0E6D3AE" BorderThickness="0" FontSize="13">
                     <ListView.ItemContainerStyle>
                         <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -342,53 +346,53 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{Binding Time}" Foreground="#8a8a8a" FontSize="12"
+                                <TextBlock Grid.Column="0" Text="{Binding Time}" Foreground="#8E816B" FontSize="12"
                                            VerticalAlignment="Center" Margin="10,0,0,0"/>
                                 <Image Grid.Column="1" Source="{Binding ItemIcon}" Width="22" Height="22"
                                        VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
                                 <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="8,0,10,0"
                                            FontSize="12" TextTrimming="CharacterEllipsis">
-                                    <Run Text="{Binding Looter, Mode=OneWay}" FontWeight="SemiBold" Foreground="#DEFFFFFF"/>
-                                    <Run Text=" pegou " Foreground="#57FFFFFF"/>
-                                    <Run Text="{Binding Item, Mode=OneWay}" Foreground="#c9a227"/>
-                                    <Run Text=" de " Foreground="#57FFFFFF"/>
-                                    <Run Text="{Binding From, Mode=OneWay}" Foreground="#57FFFFFF"/>
+                                    <Run Text="{Binding Looter, Mode=OneWay}" FontWeight="SemiBold" Foreground="#F0E6D3AE"/>
+                                    <Run Text=" pegou " Foreground="#6BE6D3AE"/>
+                                    <Run Text="{Binding Item, Mode=OneWay}" Foreground="#C8963E"/>
+                                    <Run Text=" de " Foreground="#6BE6D3AE"/>
+                                    <Run Text="{Binding From, Mode=OneWay}" Foreground="#6BE6D3AE"/>
                                 </TextBlock>
                                 <TextBlock Grid.Column="3" Text="{Binding ValorTexto, Mode=OneWay}" ToolTip="{Binding ValorDica, Mode=OneWay}"
-                                           Foreground="#c9a227" FontSize="12" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                           Foreground="#C8963E" FontSize="12" VerticalAlignment="Center" Margin="0,0,12,0"/>
                             </Grid>
                         </DataTemplate>
                     </ListView.ItemTemplate>
                 </ListView>
 
                 <!-- Modo avançado (oculto por padrão): dados brutos pra depuração -->
-                <Grid x:Name="PanelAdvanced" Grid.Row="1" Visibility="Collapsed" Background="{StaticResource FundoMalha}">
+                <Grid x:Name="PanelAdvanced" Grid.Row="1" Visibility="Collapsed" Background="{StaticResource FundoGranulado}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto" MaxHeight="220"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     <StackPanel Grid.Row="0" Margin="0,0,0,8">
-                        <TextBlock Foreground="#8CFFFFFF" FontSize="12" TextWrapping="Wrap"
+                        <TextBlock Foreground="#ADE6D3AE" FontSize="12" TextWrapping="Wrap"
                                    Text="Mostrando todos os eventos de rede decodificados, sem filtro. Clique no botão dourado bem na hora que pegar o item — os eventos próximos ficam fixos na caixa verde abaixo."/>
                         <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
                             <Button x:Name="BtnMarkMoment" Click="BtnMarkMoment_Click"
-                                    Padding="14,6" Background="#c9a227" Foreground="Black" FontWeight="Bold" BorderThickness="0" Cursor="Hand">
+                                    Padding="14,6" Background="#C8963E" Foreground="Black" FontWeight="Bold" BorderThickness="0" Cursor="Hand">
                                 <StackPanel Orientation="Horizontal"><Path Data="{StaticResource IcoPino}" Style="{StaticResource Ico}" Stroke="Black" Width="14" Height="14" Margin="0,0,6,0"/><TextBlock Text="Marquei o momento!"/></StackPanel>
                             </Button>
                             <Button x:Name="BtnClearMarked" Content="Limpar marcados" Click="BtnClearMarked_Click"
-                                    Padding="14,6" Background="#2e2e2e" Foreground="White" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"/>
+                                    Padding="14,6" Background="#2F2A23" Foreground="#F0E6D3AE" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"/>
                         </StackPanel>
                     </StackPanel>
 
-                    <Border Grid.Row="1" Background="#0d1f12" BorderBrush="#242424" BorderThickness="1" Margin="0,0,0,8">
+                    <Border Grid.Row="1" Background="#0d1f12" BorderBrush="#241F1B" BorderThickness="1" Margin="0,0,0,8">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
                             <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="8,6,8,4"><Path Data="{StaticResource IcoPino}" Style="{StaticResource Ico}" Stroke="#4ade80" Width="14" Height="14" Margin="0,0,6,0"/><TextBlock Text="Eventos marcados (candidatos a loot)" Foreground="#4ade80" FontWeight="Bold"/></StackPanel>
-                            <ListView x:Name="ListMarkedEvents" Grid.Row="1" Background="Transparent" Foreground="White" BorderThickness="0" MaxHeight="180">
+                            <ListView x:Name="ListMarkedEvents" Grid.Row="1" Background="Transparent" Foreground="#F0E6D3AE" BorderThickness="0" MaxHeight="180">
                                 <ListView.View>
                                     <GridView>
                                         <GridViewColumn Header="Hora" Width="100" DisplayMemberBinding="{Binding Time}"/>
@@ -400,13 +404,13 @@
                         </Grid>
                     </Border>
 
-                    <ListView x:Name="ListLootEvents" Grid.Row="2" Background="#1b1b1b" Foreground="White" BorderThickness="0">
+                    <ListView x:Name="ListLootEvents" Grid.Row="2" Background="#191513" Foreground="#F0E6D3AE" BorderThickness="0">
                         <ListView.ItemContainerStyle>
                             <Style TargetType="ListViewItem">
                                 <Setter Property="Background" Value="Transparent"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsNearMark}" Value="True">
-                                        <Setter Property="Background" Value="#242424"/>
+                                        <Setter Property="Background" Value="#241F1B"/>
                                         <Setter Property="FontWeight" Value="Bold"/>
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -423,39 +427,43 @@
                 </Grid>
             </Grid>
 
-            <Grid x:Name="PanelDamage" Visibility="Collapsed" Background="{StaticResource FundoMalha}">
+            <Grid x:Name="PanelDamage" Visibility="Collapsed" Background="{StaticResource FundoGranulado}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 <StackPanel Grid.Row="0" Margin="16,12,16,8">
-                    <TextBlock Text="Medidor de Dano — sessão atual" Foreground="#c9a227" FontFamily="{StaticResource FontHead}" FontSize="28" FontWeight="SemiBold"/>
-                    <TextBlock Foreground="#8CFFFFFF" FontSize="12" Margin="0,4,0,8" TextWrapping="Wrap"
+                    <TextBlock Text="Medidor de Dano — sessão atual" Foreground="#C8963E" FontFamily="{StaticResource FontHead}" FontSize="28" FontWeight="Bold"/>
+                    <TextBlock Foreground="#ADE6D3AE" FontSize="12" Margin="0,4,0,8" TextWrapping="Wrap"
                                Text="Ranking de dano e cura por jogador, do que mais deu dano para o que menos deu. DPS conta só o tempo em que a pessoa estava batendo. A cura é a efetiva (passe o mouse para ver o overheal). O que sobrar como #número costuma ser mob ou invocação."/>
                     <StackPanel Orientation="Horizontal">
                         <Button x:Name="BtnDamageReset" Content="Reiniciar sessão" Click="BtnDamageReset_Click"
-                                Padding="14,6" Background="#2e2e2e" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                                Padding="14,6" Background="#2F2A23" Foreground="#F0E6D3AE" BorderThickness="0" Cursor="Hand"/>
                         <Button x:Name="BtnDamageCopy" Content="Copiar medidor" Click="BtnDamageCopy_Click"
-                                Padding="14,6" Background="#242424" Foreground="White" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"/>
+                                Padding="14,6" Background="#241F1B" Foreground="#F0E6D3AE" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"/>
                         <Button x:Name="BtnDamageSave" Content="Salvar luta" Click="BtnDamageSave_Click"
-                                Padding="14,6" Background="#242424" Foreground="#c9a227" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"
+                                Padding="14,6" Background="#241F1B" Foreground="#C8963E" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"
                                 ToolTip="Guarda o medidor como está, com o mapa e a hora. 'Reiniciar sessão' também guarda antes de zerar."/>
                         <Button x:Name="BtnLutasSalvas" Content="Lutas salvas" Click="BtnLutasSalvas_Click"
-                                Padding="14,6" Background="#242424" Foreground="White" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"/>
+                                Padding="14,6" Background="#241F1B" Foreground="#F0E6D3AE" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"/>
                         <Button x:Name="BtnDamageExport" Content="Exportar luta (CSV)" Click="BtnDamageExport_Click"
-                                Padding="14,6" Background="#242424" Foreground="White" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"
+                                Padding="14,6" Background="#241F1B" Foreground="#F0E6D3AE" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"
                                 ToolTip="Salva o medidor como está na tela (dano, DPS, cura, recebido) num arquivo pra revisar a luta depois"/>
+                    </StackPanel>
+                    <!-- Filtros numa linha própria, igual ao Loot Log: na mesma linha dos botões,
+                         em 1280 px o "Só meu grupo" ficava fora da janela e não dava pra clicar. -->
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                         <CheckBox x:Name="ChkShowUnnamed" Content="Mostrar sem nome (#número)" IsChecked="False" Click="DamageFilter_Changed"
-                                  Foreground="#DEFFFFFF" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                                  Foreground="#F0E6D3AE" VerticalAlignment="Center"/>
                         <CheckBox x:Name="ChkGuildOnlyDamage" Content="Só minha guild" IsChecked="False" Click="DamageFilter_Changed"
-                                  Foreground="#DEFFFFFF" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                                  Foreground="#F0E6D3AE" VerticalAlignment="Center" Margin="16,0,0,0"/>
                         <CheckBox x:Name="ChkPartyOnlyDamage" Content="Só meu grupo" IsChecked="False" Click="DamageFilter_Changed"
-                                  Foreground="#DEFFFFFF" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                                  Foreground="#F0E6D3AE" VerticalAlignment="Center" Margin="16,0,0,0"/>
                     </StackPanel>
                 </StackPanel>
                 <Grid Grid.Row="1" Margin="16,0,16,16">
                     <!-- Skill panel agora é overlay flutuante (Panel.ZIndex="10") -->
-                    <ListView x:Name="ListDamage" Background="#1b1b1b" Foreground="White" BorderThickness="0"
+                    <ListView x:Name="ListDamage" Background="#191513" Foreground="#F0E6D3AE" BorderThickness="0"
                               SelectionChanged="ListDamage_SelectionChanged">
                         <ListView.ItemContainerStyle>
                             <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
@@ -475,7 +483,7 @@
                                 <GridViewColumn Header="Dano" Width="110">
                                     <GridViewColumn.CellTemplate>
                                         <DataTemplate>
-                                            <TextBlock Text="{Binding Damage, StringFormat=N0}" FontFamily="{StaticResource FontHead}" FontSize="15" Foreground="White" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Damage, StringFormat=N0}" FontFamily="{StaticResource FontHead}" FontSize="15" Foreground="#F0E6D3AE" VerticalAlignment="Center"/>
                                         </DataTemplate>
                                     </GridViewColumn.CellTemplate>
                                 </GridViewColumn>
@@ -489,11 +497,11 @@
                                                 </Grid.ColumnDefinitions>
                                                 <!-- Barra: estilo simples sem chrome do Windows (fundo escuro,
                                                      preenchimento dourado proporcional a DamagePctValue). -->
-                                                <Border Grid.Column="0" Background="#242424" CornerRadius="3" Height="16" VerticalAlignment="Center">
-                                                    <Border HorizontalAlignment="Left" Background="#c9a227" CornerRadius="3"
+                                                <Border Grid.Column="0" Background="#241F1B" CornerRadius="3" Height="16" VerticalAlignment="Center">
+                                                    <Border HorizontalAlignment="Left" Background="#C8963E" CornerRadius="3"
                                                             Width="{Binding DamagePctValue, Converter={StaticResource PctToWidth}}"/>
                                                 </Border>
-                                                <TextBlock Grid.Column="1" Text="{Binding DamagePct}" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="White"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding DamagePct}" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="#F0E6D3AE"/>
                                             </Grid>
                                         </DataTemplate>
                                     </GridViewColumn.CellTemplate>
@@ -501,7 +509,7 @@
                                 <GridViewColumn Header="DPS" Width="80">
                                     <GridViewColumn.CellTemplate>
                                         <DataTemplate>
-                                            <TextBlock Text="{Binding Dps, StringFormat=N0}" Foreground="#DEFFFFFF" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Dps, StringFormat=N0}" Foreground="#F0E6D3AE" VerticalAlignment="Center"/>
                                         </DataTemplate>
                                     </GridViewColumn.CellTemplate>
                                 </GridViewColumn>
@@ -515,7 +523,7 @@
                                 <GridViewColumn Header="Recebido" Width="100">
                                     <GridViewColumn.CellTemplate>
                                         <DataTemplate>
-                                            <TextBlock Text="{Binding Taken, StringFormat=N0}" Foreground="#f87171" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Taken, StringFormat=N0}" Foreground="#E77D78" VerticalAlignment="Center"/>
                                         </DataTemplate>
                                     </GridViewColumn.CellTemplate>
                                 </GridViewColumn>
@@ -527,7 +535,7 @@
                     <Border x:Name="PanelDamageBySkill"
                             HorizontalAlignment="Right" VerticalAlignment="Top"
                             Width="282" Panel.ZIndex="10"
-                            Background="#161616" BorderBrush="#2a1a06" BorderThickness="1"
+                            Background="#14100E" BorderBrush="#3A2B15" BorderThickness="1"
                             CornerRadius="4" Padding="12" Visibility="Collapsed">
                         <Grid>
                             <Grid.RowDefinitions>
@@ -535,8 +543,8 @@
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
                             <TextBlock x:Name="TxtDamageBySkillTitle" Grid.Row="0" Text="Dano por habilidade — selecione um jogador na lista"
-                                       Foreground="#DEFFFFFF" FontWeight="SemiBold" Margin="0,0,0,8" TextWrapping="Wrap"/>
-                            <ListView x:Name="ListDamageBySkill" Grid.Row="1" Background="Transparent" Foreground="White" BorderThickness="0">
+                                       Foreground="#F0E6D3AE" FontWeight="SemiBold" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                            <ListView x:Name="ListDamageBySkill" Grid.Row="1" Background="Transparent" Foreground="#F0E6D3AE" BorderThickness="0">
                                 <ListView.View>
                                     <GridView>
                                         <GridViewColumn Header="Habilidade" Width="170" DisplayMemberBinding="{Binding Name}"/>
@@ -551,87 +559,87 @@
             </Grid>
 
             <!-- Mostrado quando a conta de teste não tem permissão pra essa aba -->
-            <Grid x:Name="PanelBlocked" Visibility="Collapsed" Background="{StaticResource FundoMalha}">
+            <Grid x:Name="PanelBlocked" Visibility="Collapsed" Background="{StaticResource FundoGranulado}">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="600">
-                    <Path Data="{StaticResource IcoCadeado}" Style="{StaticResource Ico}" Stroke="#dc2626" StrokeThickness="2" Width="52" Height="52" HorizontalAlignment="Center"/>
-                    <TextBlock Text="VOCÊ ESTÁ BLOQUEADO DE ACESSAR ESSA PARTE!" Foreground="#dc2626"
-                               FontFamily="{StaticResource FontHead}" FontSize="30" FontWeight="SemiBold"
+                    <Path Data="{StaticResource IcoCadeado}" Style="{StaticResource Ico}" Stroke="#E04A42" StrokeThickness="2" Width="52" Height="52" HorizontalAlignment="Center"/>
+                    <TextBlock Text="VOCÊ ESTÁ BLOQUEADO DE ACESSAR ESSA PARTE!" Foreground="#E04A42"
+                               FontFamily="{StaticResource FontHead}" FontSize="30" FontWeight="Bold"
                                HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,16,0,0"/>
-                    <TextBlock Text="Fale com a liderança da guild se precisar de acesso." Foreground="#8CFFFFFF"
+                    <TextBlock Text="Fale com a liderança da guild se precisar de acesso." Foreground="#ADE6D3AE"
                                FontSize="13" HorizontalAlignment="Center" Margin="0,10,0,0"/>
                 </StackPanel>
             </Grid>
 
-            <Grid x:Name="PanelFame" Visibility="Collapsed" Background="{StaticResource FundoMalha}">
+            <Grid x:Name="PanelFame" Visibility="Collapsed" Background="{StaticResource FundoGranulado}">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <TextBlock Text="Fama &amp; Prata" Foreground="#c9a227" FontFamily="{StaticResource FontHead}" FontSize="32" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="TxtFameSessionStart" Foreground="#8CFFFFFF" FontSize="12" Margin="0,4,0,16" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Fama &amp; Prata" Foreground="#C8963E" FontFamily="{StaticResource FontHead}" FontSize="32" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="TxtFameSessionStart" Foreground="#ADE6D3AE" FontSize="12" Margin="0,4,0,16" HorizontalAlignment="Center"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <Border Background="#1b1b1b" CornerRadius="6" Padding="30,22" MinWidth="180" Margin="0,0,12,0">
+                        <Border Background="#191513" CornerRadius="6" Padding="30,22" MinWidth="180" Margin="0,0,12,0">
                             <StackPanel>
                                 <Image Source="Icons/fame.png" Width="34" Height="34" HorizontalAlignment="Center"/>
-                                <TextBlock Text="FAMA VERMELHA" Foreground="#8CFFFFFF" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
-                                <TextBlock x:Name="TxtFameTotal" Text="0" Foreground="#f87171" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                <TextBlock x:Name="TxtFamePerHour" Text="0/hora" Foreground="#8CFFFFFF" FontSize="14" HorizontalAlignment="Center"/>
+                                <TextBlock Text="FAMA VERMELHA" Foreground="#C8963E" FontFamily="{StaticResource FontLabel}" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                                <TextBlock x:Name="TxtFameTotal" Text="0" Foreground="#E77D78" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtFamePerHour" Text="0/hora" Foreground="#ADE6D3AE" FontSize="14" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="#1b1b1b" CornerRadius="6" Padding="30,22" MinWidth="180" Margin="0,0,12,0">
+                        <Border Background="#191513" CornerRadius="6" Padding="30,22" MinWidth="180" Margin="0,0,12,0">
                             <StackPanel>
                                 <Image Source="Icons/yellow_fame.png" Width="34" Height="34" HorizontalAlignment="Center"/>
-                                <TextBlock Text="FAMA AMARELA" Foreground="#8CFFFFFF" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                                <TextBlock Text="FAMA AMARELA" Foreground="#C8963E" FontFamily="{StaticResource FontLabel}" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
                                 <TextBlock x:Name="TxtYellowFameTotal" Text="—" Foreground="#fde047" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                <TextBlock x:Name="TxtYellowFamePerHour" Text="0/hora" Foreground="#8CFFFFFF" FontSize="14" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtYellowFamePerHour" Text="0/hora" Foreground="#ADE6D3AE" FontSize="14" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="#1b1b1b" CornerRadius="6" Padding="30,22" MinWidth="180" Margin="0,0,12,0">
+                        <Border Background="#191513" CornerRadius="6" Padding="30,22" MinWidth="180" Margin="0,0,12,0">
                             <StackPanel>
                                 <Image Source="Icons/silver.png" Width="34" Height="34" HorizontalAlignment="Center"/>
-                                <TextBlock Text="PRATA" Foreground="#8CFFFFFF" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
-                                <TextBlock x:Name="TxtSilverTotal" Text="0" Foreground="#e2e8f0" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                <TextBlock x:Name="TxtSilverPerHour" Text="0/hora" Foreground="#8CFFFFFF" FontSize="14" HorizontalAlignment="Center"/>
+                                <TextBlock Text="PRATA" Foreground="#C8963E" FontFamily="{StaticResource FontLabel}" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                                <TextBlock x:Name="TxtSilverTotal" Text="0" Foreground="#E6D3AE" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtSilverPerHour" Text="0/hora" Foreground="#ADE6D3AE" FontSize="14" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
                         <!-- Mobs mortos em mundo aberto (Task #2) — ver OpenWorldKillTracker.cs.
                              Conta pelo evento MobKilled (166), já calibrado, filtrando pelo
                              nome de quem deu o último hit = você. -->
-                        <Border Background="#1b1b1b" CornerRadius="6" Padding="30,22" MinWidth="180">
+                        <Border Background="#191513" CornerRadius="6" Padding="30,22" MinWidth="180">
                             <StackPanel>
                                 <Path Data="{StaticResource IcoEspadas}" Style="{StaticResource Ico}" Stroke="#86efac" Width="34" Height="34" HorizontalAlignment="Center"/>
-                                <TextBlock Text="MOBS MORTOS" Foreground="#8CFFFFFF" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                                <TextBlock Text="MOBS MORTOS" Foreground="#C8963E" FontFamily="{StaticResource FontLabel}" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,6,0,0"/>
                                 <TextBlock x:Name="TxtMobKillsTotal" Text="0" Foreground="#86efac" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                <TextBlock x:Name="TxtMobKillsPerHour" Text="0/hora" Foreground="#8CFFFFFF" FontSize="14" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtMobKillsPerHour" Text="0/hora" Foreground="#ADE6D3AE" FontSize="14" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
-                    <TextBlock x:Name="TxtFaccao" Visibility="Collapsed" Foreground="#c9a227" FontSize="14" FontWeight="SemiBold"
+                    <TextBlock x:Name="TxtFaccao" Visibility="Collapsed" Foreground="#C8963E" FontSize="14" FontWeight="SemiBold"
                                HorizontalAlignment="Center" Margin="0,14,0,0" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="756"/>
                     <Button x:Name="BtnFameReset" Content="Reiniciar sessão" Click="BtnFameReset_Click"
-                            Padding="14,6" Margin="0,20,0,0" Background="#2e2e2e" Foreground="White" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Center"/>
+                            Padding="14,6" Margin="0,20,0,0" Background="#2F2A23" Foreground="#F0E6D3AE" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Center"/>
 
                     <!-- Gráfico da sessão: evolução acumulada de fama e prata, amostrada
                          a cada minuto (ver _sessionSamples). Cada série é normalizada ao
                          próprio máximo — o formato mostra ONDE o farm rendeu, não compara
                          valor absoluto de fama contra prata. -->
-                    <Border x:Name="PanelSessionChart" Background="#1b1b1b" CornerRadius="6" Width="756"
+                    <Border x:Name="PanelSessionChart" Background="#191513" CornerRadius="6" Width="756"
                             Margin="0,20,0,0" Padding="12,10" Visibility="Collapsed">
                         <StackPanel>
                             <Grid Margin="0,0,0,6">
-                                <TextBlock Text="EVOLUÇÃO DA SESSÃO" Foreground="#8CFFFFFF" FontSize="12" FontWeight="Bold"/>
+                                <TextBlock Text="EVOLUÇÃO DA SESSÃO" Foreground="#C8963E" FontFamily="{StaticResource FontLabel}" FontSize="14" FontWeight="Bold"/>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                    <Rectangle Width="10" Height="3" Fill="#f87171" VerticalAlignment="Center"/>
-                                    <TextBlock Text="Fama" Foreground="#8CFFFFFF" FontSize="12" Margin="4,0,10,0"/>
-                                    <Rectangle Width="10" Height="3" Fill="#e2e8f0" VerticalAlignment="Center"/>
-                                    <TextBlock Text="Prata" Foreground="#8CFFFFFF" FontSize="12" Margin="4,0,0,0"/>
+                                    <Rectangle Width="10" Height="3" Fill="#E77D78" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Fama" Foreground="#ADE6D3AE" FontSize="12" Margin="4,0,10,0"/>
+                                    <Rectangle Width="10" Height="3" Fill="#E6D3AE" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Prata" Foreground="#ADE6D3AE" FontSize="12" Margin="4,0,0,0"/>
                                 </StackPanel>
                             </Grid>
                             <Canvas x:Name="SessionChartCanvas" Height="90" Width="416" ClipToBounds="True"/>
-                            <TextBlock x:Name="TxtSessionChartHint" Text="" Foreground="#57FFFFFF" FontSize="12" Margin="0,4,0,0"/>
+                            <TextBlock x:Name="TxtSessionChartHint" Text="" Foreground="#6BE6D3AE" FontSize="12" Margin="0,4,0,0"/>
                         </StackPanel>
                     </Border>
 
                     <!-- Quebra de mobs mortos por tipo — só aparece depois do 1º kill. -->
                     <ListView x:Name="ListMobKills" Margin="0,20,0,0" MaxHeight="220" Width="756"
-                              Background="#1b1b1b" Foreground="White" BorderThickness="0">
+                              Background="#191513" Foreground="#F0E6D3AE" BorderThickness="0">
                         <ListView.View>
                             <GridView>
                                 <GridViewColumn Header="Mob" Width="280" DisplayMemberBinding="{Binding Name}"/>
@@ -648,38 +656,38 @@
                  Só local (SessionHistoryStore.cs), nada é enviado pro servidor. -->
             <!-- Coleta (18/10/2026): o que VOCÊ coletou na sessão, por recurso.
                  Evento HarvestFinished (61) — ver Network/GatheringTracker.cs. -->
-            <Grid x:Name="PanelGathering" Visibility="Collapsed" Background="{StaticResource FundoMalha}">
+            <Grid x:Name="PanelGathering" Visibility="Collapsed" Background="{StaticResource FundoGranulado}">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,40,0,20" Width="756">
-                    <TextBlock Text="Coleta" Foreground="#c9a227" FontFamily="{StaticResource FontHead}" FontSize="32" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="TxtColetaInicio" Foreground="#8CFFFFFF" FontSize="12" Margin="0,4,0,16" HorizontalAlignment="Center"
+                    <TextBlock Text="Coleta" Foreground="#C8963E" FontFamily="{StaticResource FontHead}" FontSize="32" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="TxtColetaInicio" Foreground="#ADE6D3AE" FontSize="12" Margin="0,4,0,16" HorizontalAlignment="Center"
                                Text="Comece a coletar com a captura ligada — cada recurso que você pegar aparece aqui."/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <Border Background="#1b1b1b" CornerRadius="6" Padding="30,22" MinWidth="180" Margin="0,0,12,0">
+                        <Border Background="#191513" CornerRadius="6" Padding="30,22" MinWidth="180" Margin="0,0,12,0">
                             <StackPanel>
-                                <TextBlock Text="TOTAL COLETADO" Foreground="#8CFFFFFF" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                <TextBlock x:Name="TxtColetaTotal" Text="0" Foreground="#e0c060" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                <TextBlock x:Name="TxtColetaHora" Text="0/hora" Foreground="#8CFFFFFF" FontSize="14" HorizontalAlignment="Center"/>
+                                <TextBlock Text="TOTAL COLETADO" Foreground="#C8963E" FontFamily="{StaticResource FontLabel}" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtColetaTotal" Text="0" Foreground="#D2A961" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtColetaHora" Text="0/hora" Foreground="#ADE6D3AE" FontSize="14" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="#1b1b1b" CornerRadius="6" Padding="30,22" MinWidth="180" Margin="0,0,12,0">
+                        <Border Background="#191513" CornerRadius="6" Padding="30,22" MinWidth="180" Margin="0,0,12,0">
                             <StackPanel>
-                                <TextBlock Text="DE BÔNUS" Foreground="#8CFFFFFF" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock Text="DE BÔNUS" Foreground="#C8963E" FontFamily="{StaticResource FontLabel}" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
                                 <TextBlock x:Name="TxtColetaBonus" Text="0" Foreground="#86efac" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                <TextBlock x:Name="TxtColetaBonusDet" Text="coletor + Premium" Foreground="#8CFFFFFF" FontSize="14" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtColetaBonusDet" Text="coletor + Premium" Foreground="#ADE6D3AE" FontSize="14" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="#1b1b1b" CornerRadius="6" Padding="30,22" MinWidth="180">
+                        <Border Background="#191513" CornerRadius="6" Padding="30,22" MinWidth="180">
                             <StackPanel>
-                                <TextBlock Text="COLETAS" Foreground="#8CFFFFFF" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                <TextBlock x:Name="TxtColetaVezes" Text="0" Foreground="#e2e8f0" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                <TextBlock Text="nós coletados" Foreground="#8CFFFFFF" FontSize="14" HorizontalAlignment="Center"/>
+                                <TextBlock Text="COLETAS" Foreground="#C8963E" FontFamily="{StaticResource FontLabel}" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtColetaVezes" Text="0" Foreground="#E6D3AE" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock Text="nós coletados" Foreground="#ADE6D3AE" FontSize="14" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
                     <ItemsControl x:Name="ListColeta" Margin="0,20,0,0">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="#1b1b1b" CornerRadius="6" Padding="12,8" Margin="0,0,0,6">
+                                <Border Background="#191513" CornerRadius="6" Padding="12,8" Margin="0,0,0,6">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="40"/>
@@ -688,48 +696,48 @@
                                         </Grid.ColumnDefinitions>
                                         <Image Source="{Binding Icone}" Width="34" Height="34" VerticalAlignment="Center"/>
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
-                                            <TextBlock Text="{Binding Nome}" Foreground="White" FontSize="14" FontWeight="SemiBold"/>
-                                            <TextBlock Text="{Binding Detalhe}" Foreground="#8CFFFFFF" FontSize="12"/>
+                                            <TextBlock Text="{Binding Nome}" Foreground="#F0E6D3AE" FontSize="14" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Detalhe}" Foreground="#ADE6D3AE" FontSize="12"/>
                                         </StackPanel>
-                                        <TextBlock Grid.Column="2" Text="{Binding Total}" Foreground="#e0c060" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding Total}" Foreground="#D2A961" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
                                     </Grid>
                                 </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                     <Button x:Name="BtnColetaReset" Content="Reiniciar coleta" Click="BtnColetaReset_Click"
-                            Padding="14,6" Margin="0,14,0,0" Background="#2e2e2e" Foreground="White" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Center"/>
+                            Padding="14,6" Margin="0,14,0,0" Background="#2F2A23" Foreground="#F0E6D3AE" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Grid>
 
             <!-- Vendas (18/10/2026): o que você vendeu e comprou no mercado, pelas CARTAS
                  que o jogo manda. Ver Network/MarketMailTracker.cs. -->
             <!-- Baús e Banco (18/10/2026): o que tinha em cada aba do banco/baú que você abriu. Ver MainWindow.Baus.cs. -->
-            <Grid x:Name="PanelBaus" Visibility="Collapsed" Background="{StaticResource FundoMalha}">
+            <Grid x:Name="PanelBaus" Visibility="Collapsed" Background="{StaticResource FundoGranulado}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,40,0,20" Width="756">
-                    <TextBlock Text="Baús e Banco" Foreground="#c9a227" FontFamily="{StaticResource FontHead}" FontSize="32" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    <TextBlock Foreground="#8CFFFFFF" FontSize="12" Margin="0,4,0,12" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="640"
+                    <TextBlock Text="Baús e Banco" Foreground="#C8963E" FontFamily="{StaticResource FontHead}" FontSize="32" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock Foreground="#ADE6D3AE" FontSize="12" Margin="0,4,0,12" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="640"
                                Text="Cada aba do banco ou baú que você abre no jogo fica guardada aqui, com o que tinha dentro e o valor estimado. Dá pra conferir o banco de outra cidade sem ir até lá (mostra como estava na última vez que você abriu)."/>
-                    <TextBlock x:Name="TxtBausResumo" Text="" Foreground="#c9a227" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                    <TextBlock x:Name="TxtBausResumo" Text="" Foreground="#C8963E" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,12"/>
                     <ItemsControl x:Name="ListBaus">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="#1b1b1b" CornerRadius="6" Padding="12,8" Margin="0,0,0,6">
+                                <Border Background="#191513" CornerRadius="6" Padding="12,8" Margin="0,0,0,6">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <StackPanel>
-                                            <TextBlock Text="{Binding Titulo}" Foreground="White" FontSize="14" FontWeight="SemiBold"/>
-                                            <TextBlock Text="{Binding Detalhe}" Foreground="#8CFFFFFF" FontSize="12"/>
-                                            <TextBlock Text="{Binding Itens}" Foreground="#DEFFFFFF" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                            <TextBlock Text="{Binding Titulo}" Foreground="#F0E6D3AE" FontSize="14" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Detalhe}" Foreground="#ADE6D3AE" FontSize="12"/>
+                                            <TextBlock Text="{Binding Itens}" Foreground="#F0E6D3AE" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0"/>
                                         </StackPanel>
                                         <StackPanel Grid.Column="1" VerticalAlignment="Top" Margin="12,0,0,0">
-                                            <TextBlock Text="{Binding Valor}" Foreground="#c9a227" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right"/>
+                                            <TextBlock Text="{Binding Valor}" Foreground="#C8963E" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right"/>
                                             <Button Content="Esquecer" Tag="{Binding Guid}" Click="BtnBauEsquecer_Click" Margin="0,6,0,0"
-                                                    Padding="10,3" Background="#2e2e2e" Foreground="#8CFFFFFF" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Right"/>
+                                                    Padding="10,3" Background="#2F2A23" Foreground="#ADE6D3AE" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Right"/>
                                         </StackPanel>
                                     </Grid>
                                 </Border>
@@ -741,17 +749,17 @@
             </Grid>
 
             <!-- Grupo (18/10/2026): arma e IP de cada membro. Ver MainWindow.Grupo.cs / Network/GroupGear.cs. -->
-            <Grid x:Name="PanelGrupo" Visibility="Collapsed" Background="{StaticResource FundoMalha}">
+            <Grid x:Name="PanelGrupo" Visibility="Collapsed" Background="{StaticResource FundoGranulado}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,40,0,20" Width="756">
-                    <TextBlock Text="Grupo" Foreground="#c9a227" FontFamily="{StaticResource FontHead}" FontSize="32" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    <TextBlock Foreground="#8CFFFFFF" FontSize="12" Margin="0,4,0,12" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="640"
+                    <TextBlock Text="Grupo" Foreground="#C8963E" FontFamily="{StaticResource FontHead}" FontSize="32" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock Foreground="#ADE6D3AE" FontSize="12" Margin="0,4,0,12" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="640"
                                Text="Arma e IP do equipamento de cada pessoa do grupo, lidos do jogo quando ela está na sua tela. O IP do equipamento não conta qualidade nem maestria; o IP REAL aparece quando você inspeciona a pessoa no jogo."/>
-                    <TextBlock x:Name="TxtGrupoResumo" Text="" Foreground="#c9a227" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                    <TextBlock x:Name="TxtGrupoResumo" Text="" Foreground="#C8963E" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,12"/>
                     <ItemsControl x:Name="ListGrupo">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="#1b1b1b" CornerRadius="6" Padding="12,8" Margin="0,0,0,6">
+                                <Border Background="#191513" CornerRadius="6" Padding="12,8" Margin="0,0,0,6">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="40"/>
@@ -760,12 +768,12 @@
                                         </Grid.ColumnDefinitions>
                                         <Image Source="{Binding Icone}" Width="34" Height="34" VerticalAlignment="Center"/>
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
-                                            <TextBlock Text="{Binding Nome}" Foreground="White" FontSize="14" FontWeight="SemiBold"/>
-                                            <TextBlock Text="{Binding Detalhe}" Foreground="#8CFFFFFF" FontSize="12" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding Nome}" Foreground="#F0E6D3AE" FontSize="14" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Detalhe}" Foreground="#ADE6D3AE" FontSize="12" TextWrapping="Wrap"/>
                                         </StackPanel>
                                         <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Ip}" Foreground="#c9a227" FontSize="20" FontWeight="Bold" HorizontalAlignment="Right"/>
-                                            <TextBlock Text="{Binding IpDica}" Foreground="#8CFFFFFF" FontSize="11" HorizontalAlignment="Right"/>
+                                            <TextBlock Text="{Binding Ip}" Foreground="#C8963E" FontSize="20" FontWeight="Bold" HorizontalAlignment="Right"/>
+                                            <TextBlock Text="{Binding IpDica}" Foreground="#ADE6D3AE" FontSize="11" HorizontalAlignment="Right"/>
                                         </StackPanel>
                                     </Grid>
                                 </Border>
@@ -777,92 +785,92 @@
             </Grid>
 
             <!-- Mapas e Dungeons (18/10/2026): visitas por zona e runs de dungeon. Ver MainWindow.Mapas.cs. -->
-            <Grid x:Name="PanelMapas" Visibility="Collapsed" Background="{StaticResource FundoMalha}">
+            <Grid x:Name="PanelMapas" Visibility="Collapsed" Background="{StaticResource FundoGranulado}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,40,0,20" Width="756">
-                    <TextBlock Text="Mapas e Dungeons" Foreground="#c9a227" FontFamily="{StaticResource FontHead}" FontSize="32" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    <TextBlock Foreground="#8CFFFFFF" FontSize="12" Margin="0,4,0,16" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="620"
+                    <TextBlock Text="Mapas e Dungeons" Foreground="#C8963E" FontFamily="{StaticResource FontHead}" FontSize="32" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock Foreground="#ADE6D3AE" FontSize="12" Margin="0,4,0,16" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="620"
                                Text="Cada zona em que você entra, com a fama, a prata, o loot que VOCÊ pegou e os mobs que você matou ali. Salas de dungeon seguidas viram uma run. Fica salvo entre as sessões."/>
-                    <TextBlock Text="RUNS DE DUNGEON" Foreground="#8CFFFFFF" FontSize="13" FontWeight="Bold" Margin="0,0,0,8"/>
-                    <TextBlock x:Name="TxtRunsVazio" Text="Nenhuma run ainda — entre numa dungeon com a captura ligada." Foreground="#57FFFFFF" FontSize="12" Margin="0,0,0,8"/>
+                    <TextBlock Text="RUNS DE DUNGEON" Foreground="#C8963E" FontFamily="{StaticResource FontLabel}" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"/>
+                    <TextBlock x:Name="TxtRunsVazio" Text="Nenhuma run ainda — entre numa dungeon com a captura ligada." Foreground="#6BE6D3AE" FontSize="12" Margin="0,0,0,8"/>
                     <ItemsControl x:Name="ListRuns">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="#1b1b1b" CornerRadius="6" Padding="12,8" Margin="0,0,0,6">
+                                <Border Background="#191513" CornerRadius="6" Padding="12,8" Margin="0,0,0,6">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Titulo}" Foreground="White" FontSize="14" FontWeight="SemiBold"/>
-                                            <TextBlock Text="{Binding Detalhe}" Foreground="#8CFFFFFF" FontSize="12"/>
+                                            <TextBlock Text="{Binding Titulo}" Foreground="#F0E6D3AE" FontSize="14" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Detalhe}" Foreground="#ADE6D3AE" FontSize="12"/>
                                         </StackPanel>
-                                        <TextBlock Grid.Column="1" Text="{Binding Numeros}" Foreground="#c9a227" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" TextAlignment="Right"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Numeros}" Foreground="#C8963E" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" TextAlignment="Right"/>
                                     </Grid>
                                 </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                    <TextBlock Text="HISTÓRICO DE MAPAS" Foreground="#8CFFFFFF" FontSize="13" FontWeight="Bold" Margin="0,18,0,8"/>
+                    <TextBlock Text="HISTÓRICO DE MAPAS" Foreground="#C8963E" FontFamily="{StaticResource FontLabel}" FontSize="14" FontWeight="Bold" Margin="0,18,0,8"/>
                     <ItemsControl x:Name="ListMapas">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="#161616" CornerRadius="6" Padding="12,6" Margin="0,0,0,4">
+                                <Border Background="#14100E" CornerRadius="6" Padding="12,6" Margin="0,0,0,4">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Titulo}" Foreground="#DEFFFFFF" FontSize="13" FontWeight="SemiBold"/>
-                                            <TextBlock Text="{Binding Detalhe}" Foreground="#8CFFFFFF" FontSize="11"/>
+                                            <TextBlock Text="{Binding Titulo}" Foreground="#F0E6D3AE" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Detalhe}" Foreground="#ADE6D3AE" FontSize="11"/>
                                         </StackPanel>
-                                        <TextBlock Grid.Column="1" Text="{Binding Numeros}" Foreground="#DEFFFFFF" FontSize="12" VerticalAlignment="Center" TextAlignment="Right"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Numeros}" Foreground="#F0E6D3AE" FontSize="12" VerticalAlignment="Center" TextAlignment="Right"/>
                                     </Grid>
                                 </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                     <Button x:Name="BtnMapasLimpar" Content="Limpar histórico" Click="BtnMapasLimpar_Click"
-                            Padding="14,6" Margin="0,14,0,0" Background="#2e2e2e" Foreground="White" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Center"/>
+                            Padding="14,6" Margin="0,14,0,0" Background="#2F2A23" Foreground="#F0E6D3AE" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Center"/>
                 </StackPanel>
                 </ScrollViewer>
             </Grid>
 
-            <Grid x:Name="PanelVendas" Visibility="Collapsed" Background="{StaticResource FundoMalha}">
+            <Grid x:Name="PanelVendas" Visibility="Collapsed" Background="{StaticResource FundoGranulado}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,40,0,20" Width="756">
-                    <TextBlock Text="Vendas no mercado" Foreground="#c9a227" FontFamily="{StaticResource FontHead}" FontSize="32" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="TxtVendasDica" Foreground="#8CFFFFFF" FontSize="12" Margin="0,4,0,16" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="600"
+                    <TextBlock Text="Vendas no mercado" Foreground="#C8963E" FontFamily="{StaticResource FontHead}" FontSize="32" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="TxtVendasDica" Foreground="#ADE6D3AE" FontSize="12" Margin="0,4,0,16" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="600"
                                Text="Compras e vendas na hora entram sozinhas. As que concluem depois (suas ordens) chegam por carta: abra a caixa de correio e as cartas no jogo."/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <Border Background="#1b1b1b" CornerRadius="6" Padding="30,22" MinWidth="180" Margin="0,0,12,0">
+                        <Border Background="#191513" CornerRadius="6" Padding="30,22" MinWidth="180" Margin="0,0,12,0">
                             <StackPanel>
-                                <TextBlock Text="VENDIDO" Foreground="#8CFFFFFF" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock Text="VENDIDO" Foreground="#C8963E" FontFamily="{StaticResource FontLabel}" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
                                 <TextBlock x:Name="TxtVendido" Text="0" Foreground="#86efac" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                <TextBlock Text="prata, antes da taxa" Foreground="#8CFFFFFF" FontSize="14" HorizontalAlignment="Center"/>
+                                <TextBlock Text="prata, antes da taxa" Foreground="#ADE6D3AE" FontSize="14" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="#1b1b1b" CornerRadius="6" Padding="30,22" MinWidth="180" Margin="0,0,12,0">
+                        <Border Background="#191513" CornerRadius="6" Padding="30,22" MinWidth="180" Margin="0,0,12,0">
                             <StackPanel>
-                                <TextBlock Text="COMPRADO" Foreground="#8CFFFFFF" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                <TextBlock x:Name="TxtComprado" Text="0" Foreground="#f87171" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                <TextBlock Text="prata" Foreground="#8CFFFFFF" FontSize="14" HorizontalAlignment="Center"/>
+                                <TextBlock Text="COMPRADO" Foreground="#C8963E" FontFamily="{StaticResource FontLabel}" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtComprado" Text="0" Foreground="#E77D78" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock Text="prata" Foreground="#ADE6D3AE" FontSize="14" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="#1b1b1b" CornerRadius="6" Padding="30,22" MinWidth="180">
+                        <Border Background="#191513" CornerRadius="6" Padding="30,22" MinWidth="180">
                             <StackPanel>
-                                <TextBlock Text="SALDO" Foreground="#8CFFFFFF" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                <TextBlock x:Name="TxtSaldoVendas" Text="0" Foreground="#e0c060" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                <TextBlock x:Name="TxtCartasSemValor" Text="vendido − comprado" Foreground="#8CFFFFFF" FontSize="14" HorizontalAlignment="Center"/>
+                                <TextBlock Text="SALDO" Foreground="#C8963E" FontFamily="{StaticResource FontLabel}" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtSaldoVendas" Text="0" Foreground="#D2A961" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtCartasSemValor" Text="vendido − comprado" Foreground="#ADE6D3AE" FontSize="14" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
                     <ItemsControl x:Name="ListVendas" Margin="0,20,0,0">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="#1b1b1b" CornerRadius="6" Padding="12,8" Margin="0,0,0,6">
+                                <Border Background="#191513" CornerRadius="6" Padding="12,8" Margin="0,0,0,6">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="40"/>
@@ -871,8 +879,8 @@
                                         </Grid.ColumnDefinitions>
                                         <Image Source="{Binding Icone}" Width="34" Height="34" VerticalAlignment="Center"/>
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
-                                            <TextBlock Text="{Binding Nome}" Foreground="White" FontSize="14" FontWeight="SemiBold"/>
-                                            <TextBlock Text="{Binding Detalhe}" Foreground="#8CFFFFFF" FontSize="12"/>
+                                            <TextBlock Text="{Binding Nome}" Foreground="#F0E6D3AE" FontSize="14" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Detalhe}" Foreground="#ADE6D3AE" FontSize="12"/>
                                         </StackPanel>
                                         <TextBlock Grid.Column="2" Text="{Binding Valor}" Foreground="{Binding Cor}" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
                                     </Grid>
@@ -881,29 +889,29 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                     <Button x:Name="BtnVendasReset" Content="Limpar" Click="BtnVendasReset_Click"
-                            Padding="14,6" Margin="0,14,0,0" Background="#2e2e2e" Foreground="White" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Center"/>
+                            Padding="14,6" Margin="0,14,0,0" Background="#2F2A23" Foreground="#F0E6D3AE" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Center"/>
                 </StackPanel>
                 </ScrollViewer>
             </Grid>
 
-            <Grid x:Name="PanelSessions" Visibility="Collapsed" Background="{StaticResource FundoMalha}">
+            <Grid x:Name="PanelSessions" Visibility="Collapsed" Background="{StaticResource FundoGranulado}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 <StackPanel Grid.Row="0" Margin="16,12,16,8">
-                    <TextBlock Text="Histórico de Sessões" Foreground="#c9a227" FontFamily="{StaticResource FontHead}" FontSize="26" FontWeight="SemiBold"/>
-                    <TextBlock Foreground="#8CFFFFFF" FontSize="12" Margin="0,4,0,0"
+                    <TextBlock Text="Histórico de Sessões" Foreground="#C8963E" FontFamily="{StaticResource FontHead}" FontSize="26" FontWeight="Bold"/>
+                    <TextBlock Foreground="#ADE6D3AE" FontSize="12" Margin="0,4,0,0"
                                Text="Um resumo é salvo automaticamente sempre que você para a captura. Só fica salvo neste computador."/>
                     <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                         <Button x:Name="BtnExportSessionsCsv" Content="Exportar CSV" Click="BtnExportSessionsCsv_Click"
-                                Padding="14,6" Background="#242424" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                                Padding="14,6" Background="#241F1B" Foreground="#F0E6D3AE" BorderThickness="0" Cursor="Hand"/>
                         <Button x:Name="BtnClearSessionHistory" Content="Limpar histórico" Click="BtnClearSessionHistory_Click"
-                                Padding="14,6" Margin="8,0,0,0" Background="#2e2e2e" Foreground="White" BorderThickness="0" Cursor="Hand"/>
-                        <TextBlock x:Name="TxtSessionsStatus" Text="" Foreground="#8CFFFFFF" FontSize="12" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                                Padding="14,6" Margin="8,0,0,0" Background="#2F2A23" Foreground="#F0E6D3AE" BorderThickness="0" Cursor="Hand"/>
+                        <TextBlock x:Name="TxtSessionsStatus" Text="" Foreground="#ADE6D3AE" FontSize="12" Margin="12,0,0,0" VerticalAlignment="Center"/>
                     </StackPanel>
                 </StackPanel>
-                <ListView x:Name="ListSessionHistory" Grid.Row="1" Margin="16,0,16,16" Background="#1b1b1b" Foreground="White" BorderThickness="0" FontSize="13">
+                <ListView x:Name="ListSessionHistory" Grid.Row="1" Margin="16,0,16,16" Background="#191513" Foreground="#F0E6D3AE" BorderThickness="0" FontSize="13">
                     <ListView.View>
                         <GridView>
                             <GridViewColumn Header="Período" Width="200" DisplayMemberBinding="{Binding Period}"/>

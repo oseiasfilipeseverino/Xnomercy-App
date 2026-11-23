@@ -16,6 +16,12 @@ public static class Novidades
 {
     public static readonly (string Versao, string[] Itens)[] Notas =
     {
+        ("1.1.13", new[]
+        {
+            "Visual novo, igual ao do site: cores, letras e fundo da identidade da guild, e a cobra no ícone e no menu.",
+            "Botões não ficam mais azuis ao passar o mouse, e as barras de rolagem ficaram escuras.",
+            "Medidor de Dano: os filtros foram para uma linha própria. Antes o \"Só meu grupo\" ficava fora da janela.",
+        }),
         ("1.1.12", new[]
         {
             "Histórico de sessões mais seguro: se o antivírus segurar o arquivo por um instante, o histórico não some mais, e o app guarda uma cópia da versão anterior.",
@@ -149,27 +155,27 @@ public static class Novidades
         lista.Children.Add(new TextBlock
         {
             Text = "O que mudou", FontSize = 26, FontWeight = FontWeights.SemiBold,
-            Foreground = (System.Windows.Media.Brush)B.ConvertFrom("#c9a227")!, Margin = new Thickness(0, 0, 0, 12),
+            Foreground = (System.Windows.Media.Brush)B.ConvertFrom("#C8963E")!, Margin = new Thickness(0, 0, 0, 12),
         });
         foreach (var (versao, itens) in pend)
         {
             lista.Children.Add(new TextBlock
             {
                 Text = $"Versão {versao}", FontSize = 14, FontWeight = FontWeights.Bold,
-                Foreground = (System.Windows.Media.Brush)B.ConvertFrom("#DEFFFFFF")!, Margin = new Thickness(0, 8, 0, 4),
+                Foreground = (System.Windows.Media.Brush)B.ConvertFrom("#F0E6D3AE")!, Margin = new Thickness(0, 8, 0, 4),
             });
             foreach (var i in itens)
                 lista.Children.Add(new TextBlock
                 {
                     Text = "•  " + i, TextWrapping = TextWrapping.Wrap, FontSize = 13, Margin = new Thickness(6, 2, 0, 2),
-                    Foreground = (System.Windows.Media.Brush)B.ConvertFrom("#B3FFFFFF")!,
+                    Foreground = (System.Windows.Media.Brush)B.ConvertFrom("#C8E6D3AE")!,
                 });
         }
         var ok = new Button
         {
             Content = "Entendi", Padding = new Thickness(22, 7, 22, 7), Margin = new Thickness(0, 16, 0, 0),
             HorizontalAlignment = HorizontalAlignment.Center, BorderThickness = new Thickness(0),
-            Background = (System.Windows.Media.Brush)B.ConvertFrom("#c9a227")!, Foreground = System.Windows.Media.Brushes.Black,
+            Background = (System.Windows.Media.Brush)B.ConvertFrom("#C8963E")!, Foreground = System.Windows.Media.Brushes.Black,
             FontWeight = FontWeights.Bold,
         };
         lista.Children.Add(ok);
@@ -177,7 +183,7 @@ public static class Novidades
         {
             Title = "O que mudou no app", Width = 620, SizeToContent = SizeToContent.Height, MaxHeight = 700,
             Owner = dono, WindowStartupLocation = WindowStartupLocation.CenterOwner, ResizeMode = ResizeMode.NoResize,
-            Background = (System.Windows.Media.Brush)B.ConvertFrom("#1a1a1a")!,
+            Background = (System.Windows.Media.Brush)B.ConvertFrom("#191513")!,
             Content = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = lista },
         };
         ok.Click += (_, _) => janela.Close();

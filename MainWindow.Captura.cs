@@ -59,7 +59,7 @@ public partial class MainWindow
                 Width = 760,
                 Height = 560,
                 Owner = this,
-                Background = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFrom("#1a1a1a")!,
+                Background = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFrom("#191513")!,
                 Content = new ScrollViewer
                 {
                     VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
@@ -107,7 +107,7 @@ public partial class MainWindow
             Width = 760,
             Height = 560,
             Owner = this,
-            Background = B("#1a1a1a"),
+            Background = B("#191513"),
             Content = MontarConteudoSaude(lista),
         };
 
@@ -119,24 +119,24 @@ public partial class MainWindow
                 Text = _capturing
                     ? (_paused ? "Captura PAUSADA — nada é contado até despausar." : "Captura ligada. Cada linha diz quando o app reconheceu aquela parte pela última vez.")
                     : "Captura parada — ligue a captura para ver os eventos chegando.",
-                Foreground = B("#DEFFFFFF"), FontSize = 13, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 6),
+                Foreground = B("#F0E6D3AE"), FontSize = 13, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 6),
             });
             lista.Children.Add(new TextBlock
             {
                 Text = $"Numeração de eventos: SAT {EventOffset.Delta:+0;-0;0} " +
                        (EventOffset.ConfirmadoEm is DateTime c ? $"(conferida no jogo às {c:HH:mm})" : "(ainda não conferida nesta sessão)"),
-                Foreground = B("#8CFFFFFF"), FontSize = 12, Margin = new Thickness(0, 0, 0, 14),
+                Foreground = B("#ADE6D3AE"), FontSize = 12, Margin = new Thickness(0, 0, 0, 14),
             });
             foreach (var l in CaptureHealth.Linhas())
             {
                 var linha = new Grid { Margin = new Thickness(0, 0, 0, 8) };
                 linha.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(170) });
                 linha.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                var nome = new TextBlock { Text = l.Recurso, Foreground = B("#c9a227"), FontWeight = FontWeights.SemiBold, FontSize = 14 };
+                var nome = new TextBlock { Text = l.Recurso, Foreground = B("#C8963E"), FontWeight = FontWeights.SemiBold, FontSize = 14 };
                 var sit = new TextBlock
                 {
                     Text = l.Situacao, TextWrapping = TextWrapping.Wrap, FontSize = 13,
-                    Foreground = l.Alerta ? B("#f87171") : l.UltimoUtc != null || l.Vistos > 0 ? B("#86efac") : B("#8CFFFFFF"),
+                    Foreground = l.Alerta ? B("#E77D78") : l.UltimoUtc != null || l.Vistos > 0 ? B("#86efac") : B("#ADE6D3AE"),
                 };
                 Grid.SetColumn(sit, 1);
                 linha.Children.Add(nome);
@@ -164,12 +164,12 @@ public partial class MainWindow
         {
             Text = "Usa ExitLag, VPN ou acelerador e quase nada aparece? Pare a captura, deixe o Albion aberto e em jogo " +
                    "(com o acelerador LIGADO) e rode o diagnóstico. Ele salva o net_diag.txt pra liderança analisar.",
-            Foreground = B("#8CFFFFFF"), FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8),
+            Foreground = B("#ADE6D3AE"), FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8),
         });
         var botao = new Button
         {
             Content = "Diagnóstico de rede (ExitLag / VPN)", Padding = new Thickness(14, 6, 14, 6),
-            HorizontalAlignment = HorizontalAlignment.Left, Background = B("#2e2e2e"), Foreground = B("#c9a227"),
+            HorizontalAlignment = HorizontalAlignment.Left, Background = B("#2F2A23"), Foreground = B("#C8963E"),
             BorderThickness = new Thickness(0), Cursor = System.Windows.Input.Cursors.Hand,
         };
         botao.Click += (s, e) => BtnNetDiag_Click(s, e);
@@ -371,9 +371,9 @@ public partial class MainWindow
         }
         else
         {
-            CaptureDot.Fill = _capturing ? B("#22c55e") : B("#57FFFFFF");
+            CaptureDot.Fill = _capturing ? B("#22c55e") : B("#6BE6D3AE");
             CaptureStateLabel.Text = _capturing ? "Capturando" : "Captura parada";
-            CaptureStateLabel.Foreground = _capturing ? B("#22c55e") : B("#8CFFFFFF");
+            CaptureStateLabel.Foreground = _capturing ? B("#22c55e") : B("#ADE6D3AE");
             trayState = _capturing ? "Capturando" : "Captura parada";
         }
         // Único jeito de saber o estado com a janela escondida (fechar pelo "X" só

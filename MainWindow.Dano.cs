@@ -159,18 +159,18 @@ public partial class MainWindow
     {
         var lista = new ListBox
         {
-            Background = B("#161616"), Foreground = B("#DEFFFFFF"), BorderThickness = new Thickness(0), FontSize = 12,
+            Background = B("#14100E"), Foreground = B("#F0E6D3AE"), BorderThickness = new Thickness(0), FontSize = 12,
         };
         var detalhe = new TextBox
         {
             IsReadOnly = true, TextWrapping = TextWrapping.NoWrap, FontFamily = new System.Windows.Media.FontFamily("Consolas"),
-            FontSize = 12, Background = B("#1b1b1b"), Foreground = B("#DEFFFFFF"), BorderThickness = new Thickness(0),
+            FontSize = 12, Background = B("#191513"), Foreground = B("#F0E6D3AE"), BorderThickness = new Thickness(0),
             Padding = new Thickness(12), VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
         };
         Button Botao(string texto) => new()
         {
             Content = texto, Padding = new Thickness(14, 6, 14, 6), Margin = new Thickness(0, 0, 8, 0),
-            Background = B("#2e2e2e"), Foreground = System.Windows.Media.Brushes.White, BorderThickness = new Thickness(0),
+            Background = B("#2F2A23"), Foreground = System.Windows.Media.Brushes.White, BorderThickness = new Thickness(0),
         };
         var copiar = Botao("Copiar"); var exportar = Botao("Exportar CSV"); var apagar = Botao("Apagar esta luta");
         var botoes = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 10, 0, 0) };
@@ -220,7 +220,7 @@ public partial class MainWindow
         Carregar();
         new Window
         {
-            Title = "Lutas salvas", Width = 1000, Height = 600, Owner = this, Background = B("#1a1a1a"), Content = grade,
+            Title = "Lutas salvas", Width = 1000, Height = 600, Owner = this, Background = B("#191513"), Content = grade,
         }.Show();
     }
 

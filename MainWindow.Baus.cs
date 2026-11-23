@@ -56,7 +56,7 @@ public partial class MainWindow
         var texto = new TextBox
         {
             IsReadOnly = true, TextWrapping = TextWrapping.NoWrap, FontFamily = new System.Windows.Media.FontFamily("Consolas"),
-            FontSize = 12, Background = B("#1b1b1b"), Foreground = B("#DEFFFFFF"), BorderThickness = new Thickness(0),
+            FontSize = 12, Background = B("#191513"), Foreground = B("#F0E6D3AE"), BorderThickness = new Thickness(0),
             Padding = new Thickness(14), VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
         };
         void Montar()
@@ -88,7 +88,7 @@ public partial class MainWindow
         var limpar = new Button
         {
             Content = "Apagar histórico de perdas", Padding = new Thickness(14, 6, 14, 6), Margin = new Thickness(0, 10, 0, 0),
-            Background = B("#2e2e2e"), Foreground = System.Windows.Media.Brushes.White, BorderThickness = new Thickness(0),
+            Background = B("#2F2A23"), Foreground = System.Windows.Media.Brushes.White, BorderThickness = new Thickness(0),
             HorizontalAlignment = HorizontalAlignment.Left,
         };
         limpar.Click += (_, _) =>
@@ -102,6 +102,6 @@ public partial class MainWindow
         painel.Children.Add(limpar);
         painel.Children.Add(texto);
         Montar();
-        new Window { Title = "Minhas perdas", Width = 760, Height = 560, Owner = this, Background = B("#1a1a1a"), Content = painel }.Show();
+        new Window { Title = "Minhas perdas", Width = 760, Height = 560, Owner = this, Background = B("#191513"), Content = painel }.Show();
     }
 }

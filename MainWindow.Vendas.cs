@@ -15,7 +15,7 @@ public partial class MainWindow
         public string Nome { get; init; } = "";
         public string Detalhe { get; init; } = "";
         public string Valor { get; init; } = "";
-        public string Cor { get; init; } = "#e2e8f0";
+        public string Cor { get; init; } = "#E6D3AE";
         public string? Icone { get; init; }
     }
 
@@ -41,7 +41,7 @@ public partial class MainWindow
                 _ => "ordem de compra expirou",
             } + (n.Instantanea ? " na hora" : "") + $" · {n.QuandoUtc.ToLocalTime():dd/MM HH:mm}",
             Valor = n.Tipo is MarketMailTracker.Tipo.Venda or MarketMailTracker.Tipo.Compra ? Num(n.Prata) : "—",
-            Cor = n.Tipo == MarketMailTracker.Tipo.Venda ? "#86efac" : n.Tipo == MarketMailTracker.Tipo.Compra ? "#f87171" : "#8CFFFFFF",
+            Cor = n.Tipo == MarketMailTracker.Tipo.Venda ? "#86efac" : n.Tipo == MarketMailTracker.Tipo.Compra ? "#E77D78" : "#ADE6D3AE",
             Icone = $"https://render.albiononline.com/v1/item/{n.Item}.png?size=64",
         }).ToList();
     }

@@ -71,8 +71,8 @@ public partial class MainWindow
             }
             return pl;
         }
-        canvas.Children.Add(MakeLine(s => s.Fame, maxFame, "#f87171"));
-        canvas.Children.Add(MakeLine(s => s.Silver, maxSilver, "#e2e8f0"));
+        canvas.Children.Add(MakeLine(s => s.Fame, maxFame, "#E77D78"));
+        canvas.Children.Add(MakeLine(s => s.Silver, maxSilver, "#E6D3AE"));
         var span = _sessionSamples[^1].At - _sessionSamples[0].At;
         TxtSessionChartHint.Text =
             $"{n} amostras · {span.TotalMinutes:0}min · pico fama {maxFame:N0} · pico prata {maxSilver:N0}";
