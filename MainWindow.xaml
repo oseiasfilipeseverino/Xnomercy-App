@@ -149,7 +149,7 @@
                 <StackPanel x:Name="SidebarTop" DockPanel.Dock="Top">
                     <!-- Marca igual à barra do site: a cobra com a adaga (abaixo de 64 px o kit
                          manda usar só a marca, não a logo inteira) e o nome em Oswald. -->
-                    <StackPanel Orientation="Horizontal" Margin="18,4,18,14">
+                    <StackPanel x:Name="SidebarMarca" Orientation="Horizontal" Margin="18,4,18,14">
                         <Border Width="34" Height="34" CornerRadius="4" BorderBrush="#AD1A15" BorderThickness="1">
                             <Image Source="pack://application:,,,/XnomercyApp;component/Icons/marca-cobra-128.png"
                                    RenderOptions.BitmapScalingMode="HighQuality"/>
@@ -157,7 +157,7 @@
                         <TextBlock Text="XNOMERCY" Foreground="#C8963E" FontFamily="{StaticResource FontHead}" FontWeight="Bold"
                                    FontSize="24" Margin="10,0,0,0" VerticalAlignment="Center"/>
                     </StackPanel>
-                    <Border Height="1" Margin="0,0,0,10">
+                    <Border x:Name="SidebarLinha" Height="1" Margin="0,0,0,10">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                                 <GradientStop Color="#C8963E" Offset="0"/>

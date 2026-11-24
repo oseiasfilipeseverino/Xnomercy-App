@@ -173,7 +173,7 @@ public partial class MainWindow
     {
         _canTracker = canTracker;
         _canCraft = canCraft;
-        SidebarCol.Width = new GridLength(210);
+        AplicarMenuRecolhido(_sidebarCollapsed);   // mantém como a pessoa deixou
         Sidebar.Visibility = Visibility.Visible;
 
         SetActiveNav(NavFame);

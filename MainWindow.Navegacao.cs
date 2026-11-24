@@ -26,9 +26,7 @@ public partial class MainWindow
     private void ToggleSidebar_Click(object sender, RoutedEventArgs e)
     {
         _sidebarCollapsed = !_sidebarCollapsed;
-        SidebarCol.Width = new GridLength(_sidebarCollapsed ? 48 : 210);
-        SidebarTop.Visibility = _sidebarCollapsed ? Visibility.Collapsed : Visibility.Visible;
-        SidebarBottom.Visibility = _sidebarCollapsed ? Visibility.Collapsed : Visibility.Visible;
+        AplicarMenuRecolhido(_sidebarCollapsed);   // MainWindow.Acessibilidade.cs
     }
 
     private void Nav_Click(object sender, RoutedEventArgs e)

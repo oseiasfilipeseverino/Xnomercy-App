@@ -408,6 +408,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        IniciarAcessibilidade();   // acompanha o "Tamanho do texto" do Windows
         SourceInitialized += (_, _) =>
         {
             try

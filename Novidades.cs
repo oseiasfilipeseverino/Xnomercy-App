@@ -16,6 +16,12 @@ public static class Novidades
 {
     public static readonly (string Versao, string[] Itens)[] Notas =
     {
+        ("1.1.14", new[]
+        {
+            "Menu recolhido mostra os ícones das abas: dá para trocar de aba sem abrir o menu (o nome aparece ao passar o mouse).",
+            "O app acompanha o \"Tamanho do texto\" do Windows (Configurações, Acessibilidade).",
+            "Depois de atualizar, o app pede ao Windows para trocar o ícone antigo da barra de tarefas pelo novo.",
+        }),
         ("1.1.13", new[]
         {
             "Visual novo, igual ao do site: cores, letras e fundo da identidade da guild, e a cobra no ícone e no menu.",
@@ -146,6 +152,8 @@ public static class Novidades
         try { if (File.Exists(Arquivo)) vista = File.ReadAllText(Arquivo).Trim(); } catch { }
         string atual = VersaoAtual;
         if (vista == atual) return;
+        // Versão nova aberta pela 1ª vez: reforça o aviso de ícone do gancho do Velopack.
+        IconesDoWindows.Atualizar();
         var pend = Pendentes(vista, atual);
         try { Directory.CreateDirectory(Path.GetDirectoryName(Arquivo)!); File.WriteAllText(Arquivo, atual); } catch { }
         if (pend.Count == 0) return;

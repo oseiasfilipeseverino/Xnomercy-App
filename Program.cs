@@ -14,7 +14,11 @@ public static class Program
         // pós-atualização, etc) e ENCERRA o processo sozinho nesses casos — por isso isso
         // precisa rodar mesmo sem ser administrador (senão o instalador trava pedindo UAC
         // numa hora que ninguém está olhando).
-        VelopackApp.Build().Run();
+        // Depois de atualizar, pede pro Windows reler o ícone (IconesDoWindows: na 1.1.13
+        // a barra de tarefas continuou com o ícone antigo).
+        VelopackApp.Build()
+            .OnAfterUpdateFastCallback(_ => IconesDoWindows.Atualizar())
+            .Run();
 
         // A captura de pacote (Npcap) exige admin. Em vez de forçar isso no manifest (o que
         // quebrava o instalador do Velopack — ele tenta abrir o app recém-instalado sem ser
